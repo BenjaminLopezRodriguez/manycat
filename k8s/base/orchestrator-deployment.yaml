@@ -1,0 +1,68 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: manycat-workspaces
+  namespace: manycat
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: orchestrator
+  namespace: manycat
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: orchestrator
+  template:
+    metadata:
+      labels:
+        app: orchestrator
+    spec:
+      serviceAccountName: sandbox-orchestrator
+      containers:
+        - name: orchestrator
+          image: manycat-orchestrator:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          env:
+            - name: WORKSPACE_ROOT
+              value: /workspace
+            - name: SANDBOX_IMAGE
+              value: manycat-sandbox:latest
+            - name: PREVIEW_HOST
+              value: localhost
+          volumeMounts:
+            - name: workspaces
+              mountPath: /workspace
+            - name: docker-sock
+              mountPath: /var/run/docker.sock
+      volumes:
+        - name: workspaces
+          persistentVolumeClaim:
+            claimName: manycat-workspaces
+        - name: docker-sock
+          hostPath:
+            path: /var/run/docker.sock
+            type: Socket
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: orchestrator
+  namespace: manycat
+spec:
+  type: NodePort
+  selector:
+    app: orchestrator
+  ports:
+    - port: 8080
+      targetPort: 8080
+      nodePort: 30080

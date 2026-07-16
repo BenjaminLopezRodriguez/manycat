@@ -1,0 +1,27 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: manycat
+  namespace: manycat
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: manycat.localhost
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: manycat-app
+                port:
+                  number: 3000
+          - path: /orchestrator(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: orchestrator
+                port:
+                  number: 8080

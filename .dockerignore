@@ -1,0 +1,14 @@
+node_modules
+.next
+.git
+.gitignore
+.env
+.env*.local
+*.md
+.pnpm-store
+agent-harness/.venv
+agent-harness/**/__pycache__
+infra/sandbox-orchestrator/node_modules
+.cursor
+coverage
+*.tsbuildinfo

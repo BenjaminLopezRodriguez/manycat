@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agent
+  namespace: manycat
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: agent
+  template:
+    metadata:
+      labels:
+        app: agent
+    spec:
+      containers:
+        - name: agent
+          image: manycat-agent:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          env:
+            - name: WORKSPACE_ROOT
+              value: /workspace
+            - name: MODEL
+              value: gpt-4o
+          envFrom:
+            - secretRef:
+                name: manycat-secrets
+                optional: true
+          volumeMounts:
+            - name: workspaces
+              mountPath: /workspace
+      volumes:
+        - name: workspaces
+          persistentVolumeClaim:
+            claimName: manycat-workspaces
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: agent
+  namespace: manycat
+spec:
+  selector:
+    app: agent
+  ports:
+    - port: 8000
+      targetPort: 8000
