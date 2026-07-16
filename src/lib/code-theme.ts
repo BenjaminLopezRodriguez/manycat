@@ -1,4 +1,6 @@
 /** Read a resolved CSS custom property as a hex color for Monaco. */
+import type * as Monaco from "monaco-editor";
+
 function cssVarToHex(name: string, fallback: string): string {
   if (typeof document === "undefined") return fallback;
 
@@ -9,7 +11,8 @@ function cssVarToHex(name: string, fallback: string): string {
   const resolved = getComputedStyle(probe).color;
   probe.remove();
 
-  const match = resolved.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+  const rgbPattern = /rgba?\((\d+),\s*(\d+),\s*(\d+)/;
+  const match = rgbPattern.exec(resolved);
   if (!match) return fallback;
 
   const [, r, g, b] = match;
@@ -25,7 +28,7 @@ function withAlpha(hex: string, alphaHex: string) {
   return `${hex}${alphaHex}`;
 }
 
-export function buildMonacoTheme(monaco: typeof import("monaco-editor")) {
+export function buildMonacoTheme(monaco: typeof Monaco) {
   const bg = cssVarToHex("--code-background", "#00123d");
   const fg = cssVarToHex("--code-foreground", "#e8f0ff");
   const accent = cssVarToHex("--code-accent", "#4cff7c");

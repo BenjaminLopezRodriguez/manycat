@@ -92,7 +92,7 @@ export const workflowRouter = createTRPCRouter({
       if (!res.ok) {
         throw new Error(await res.text());
       }
-      return res.json();
+      return res.json() as Promise<{ workflowId: string; status: string }>;
     }),
 
   runAgent: publicProcedure

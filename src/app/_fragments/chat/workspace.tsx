@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import dynamic from "next/dynamic";
-import type { editor } from "monaco-editor";
+import type * as Monaco from "monaco-editor";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { File01Icon, Folder01Icon } from "@hugeicons/core-free-icons";
 
@@ -36,7 +36,7 @@ function EditorSkeleton() {
 
 const MANYCAT_THEME = MANYCAT_EDITOR_THEME;
 
-function defineTheme(monaco: typeof import("monaco-editor")) {
+function defineTheme(monaco: typeof Monaco) {
   buildMonacoTheme(monaco);
 }
 
@@ -69,10 +69,7 @@ export default function Workspace({
   const active = files.find((f) => f.path === activePath) ?? files[0] ?? null;
 
   const handleMount = React.useCallback(
-    (
-      _editor: editor.IStandaloneCodeEditor,
-      monaco: typeof import("monaco-editor"),
-    ) => {
+    (_editor: Monaco.editor.IStandaloneCodeEditor, monaco: typeof Monaco) => {
       defineTheme(monaco);
       monaco.editor.setTheme(MANYCAT_THEME);
     },
@@ -80,10 +77,7 @@ export default function Workspace({
   );
 
   const handleDiffMount = React.useCallback(
-    (
-      _editor: editor.IStandaloneDiffEditor,
-      monaco: typeof import("monaco-editor"),
-    ) => {
+    (_editor: Monaco.editor.IStandaloneDiffEditor, monaco: typeof Monaco) => {
       defineTheme(monaco);
       monaco.editor.setTheme(MANYCAT_THEME);
     },

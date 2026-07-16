@@ -189,7 +189,7 @@ export default function Chat() {
 
   function openDiff(messageId: number) {
     const msg = active.messages.find((m) => m.id === messageId);
-    if (!msg || msg.type !== "diff") return;
+    if (msg?.type !== "diff") return;
     setActiveDiff(msg);
     setActivePath(msg.path);
     setDiffSnapPoint(isMobile ? 0.85 : 1);

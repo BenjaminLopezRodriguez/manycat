@@ -3,6 +3,7 @@
 import * as React from "react";
 
 import { api } from "@/trpc/react";
+import type { AgentEventPayload } from "@/server/api/routers/workflow";
 import {
   agentScripts,
   type Msg,
@@ -21,17 +22,7 @@ function nextId(messages: Msg[]) {
   return messages.reduce((max, m) => Math.max(max, m.id), 0) + 1;
 }
 
-export type AgentEvent =
-  | { kind: "status"; status: Workflow["status"] }
-  | { kind: "append"; message: Msg }
-  | {
-      kind: "patch-workspace";
-      path: string;
-      contents: string;
-      edited?: boolean;
-    }
-  | { kind: "resolve-approval"; messageId: number; resolved: boolean }
-  | { kind: "done" };
+export type AgentEvent = AgentEventPayload;
 
 type UseAgentOptions = {
   workflow: Workflow;
@@ -214,7 +205,7 @@ function useRemoteAgent({
   const runMutation = api.workflow.runAgent.useMutation({
     onSuccess: (data) => {
       for (const event of data.events) {
-        onEventRef.current(event as AgentEvent);
+        onEventRef.current(event);
       }
       if (data.previewUrl && onPreviewUrl) {
         onPreviewUrl(data.previewUrl);
