@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { env } from "@/env";
 import type { Msg, WorkflowStatus } from "@/app/_fragments/chat/data";
+import { dedupeId, slugify } from "@/lib/slug";
 import { createTRPCRouter, publicProcedure } from "@/server/api/trpc";
 
 export type AgentEventPayload =
@@ -25,6 +26,23 @@ function nowTime() {
 
 function isInfraEnabled() {
   return Boolean(env.AGENT_HARNESS_URL && env.SANDBOX_ORCHESTRATOR_URL);
+}
+
+const GITHUB_REPO_RE = /^https:\/\/github\.com\/[\w.-]+\/[\w.-]+(\.git)?$/;
+const SHORTHAND_RE = /^[\w.-]+\/[\w.-]+$/;
+
+function normalizeRepoUrl(raw: string): string {
+  const url = SHORTHAND_RE.test(raw) ? `https://github.com/${raw}` : raw;
+  if (!GITHUB_REPO_RE.test(url)) {
+    throw new Error("repoUrl must be a github.com https URL or owner/repo");
+  }
+  return url;
+}
+
+function repoNameFromUrl(url: string): { owner: string; repo: string } {
+  const match = /github\.com\/([\w.-]+)\/([\w.-]+?)(\.git)?$/.exec(url);
+  if (!match?.[1] || !match[2]) throw new Error("Could not parse repoUrl");
+  return { owner: match[1], repo: match[2] };
 }
 
 async function orchestratorFetch(
@@ -93,6 +111,62 @@ export const workflowRouter = createTRPCRouter({
         throw new Error(await res.text());
       }
       return res.json() as Promise<{ workflowId: string; status: string }>;
+    }),
+
+  importRepo: publicProcedure
+    .input(
+      z.object({
+        repoUrl: z.string().min(1),
+        existingIds: z.array(z.string()).default([]),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      if (!isInfraEnabled()) {
+        throw new Error("Sandbox orchestrator is not configured");
+      }
+
+      const repoUrl = normalizeRepoUrl(input.repoUrl);
+      const { owner, repo } = repoNameFromUrl(repoUrl);
+      const workflowId = dedupeId(slugify(`${owner}-${repo}`), input.existingIds);
+
+      const res = await orchestratorFetch("/sandboxes", {
+        method: "POST",
+        body: JSON.stringify({ workflowId, repoUrl }),
+      });
+
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as {
+          error?: string;
+          stage?: string;
+        } | null;
+        const message = body?.error ?? (await res.text().catch(() => "Import failed"));
+        throw new Error(
+          body?.stage === "clone"
+            ? `Couldn't clone ${owner}/${repo}: ${message}`
+            : message,
+        );
+      }
+
+      return {
+        workflowId,
+        name: repo,
+        repo: `${owner}/${repo}`,
+        status: "idle" as const,
+      };
+    }),
+
+  getSandboxFiles: publicProcedure
+    .input(z.object({ workflowId: z.string().min(1) }))
+    .query(async ({ input }) => {
+      if (!isInfraEnabled()) return { files: [] };
+      const res = await orchestratorFetch(
+        `/sandboxes/${encodeURIComponent(input.workflowId)}/files`,
+      );
+      if (!res.ok) return { files: [] };
+      return res.json() as Promise<{
+        workflowId: string;
+        files: { path: string; contents: string }[];
+      }>;
     }),
 
   runAgent: publicProcedure

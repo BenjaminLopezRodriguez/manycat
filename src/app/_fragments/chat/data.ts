@@ -1,3 +1,5 @@
+import { slugify } from "@/lib/slug";
+
 export type WorkflowStatus = "idle" | "working" | "needs-review" | "done";
 
 export type WorkspaceFile = {
@@ -61,12 +63,32 @@ export type Workflow = {
   workspace: WorkspaceFile[];
 };
 
-export type Contact = {
+export type RunConfig = {
+  kind: "vercel" | "custom" | "none";
+  // TODO(blacksmith): add kind "blacksmith" — fires a GitHub Actions
+  // workflow_dispatch on Blacksmith runners: blacksmith?: { workflow: string; ref?: string }.
+  // Preview-domain mapping attaches here too: lastRun.url would resolve to a stable
+  // per-project subdomain (e.g. https://<project-slug>.preview.manycat.dev) instead
+  // of a one-off deploy URL like Vercel's.
+  vercel?: { projectName?: string };
+  custom?: { command: string };
+};
+
+export type LastRun = {
+  status: "running" | "success" | "failed";
+  url?: string;
+  startedAt: string;
+  finishedAt?: string;
+  log?: string;
+};
+
+export type Project = {
   id: string;
   name: string;
-  initials: string;
-  avatarClass: string;
-  mutuals: number;
+  repo: string;
+  workflowIds: string[];
+  runConfig: RunConfig;
+  lastRun?: LastRun;
 };
 
 export function messagePreview(m: Msg): string {
@@ -371,33 +393,22 @@ export const agentScripts: Record<
   },
 };
 
-export const suggestedContacts: Contact[] = [
-  {
-    id: "pickle",
-    name: "Pickle",
-    initials: "PI",
-    avatarClass: "bg-lime-200 text-lime-900",
-    mutuals: 3,
-  },
-  {
-    id: "miso",
-    name: "Miso",
-    initials: "MI",
-    avatarClass: "bg-orange-200 text-orange-900",
-    mutuals: 2,
-  },
-  {
-    id: "clementine",
-    name: "Clementine",
-    initials: "CL",
-    avatarClass: "bg-violet-200 text-violet-900",
-    mutuals: 5,
-  },
-  {
-    id: "noodle",
-    name: "Noodle",
-    initials: "NO",
-    avatarClass: "bg-teal-200 text-teal-900",
-    mutuals: 1,
-  },
-];
+export function deriveProjectsFromWorkflows(workflows: Workflow[]): Project[] {
+  const byRepo = new Map<string, Project>();
+  for (const w of workflows) {
+    const existing = byRepo.get(w.repo);
+    if (existing) {
+      existing.workflowIds.push(w.id);
+      continue;
+    }
+    byRepo.set(w.repo, {
+      id: slugify(w.repo),
+      name: w.repo.split("/").pop() ?? w.repo,
+      repo: w.repo,
+      workflowIds: [w.id],
+      runConfig: { kind: "none" },
+    });
+  }
+  return [...byRepo.values()];
+}
+

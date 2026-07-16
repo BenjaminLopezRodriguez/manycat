@@ -1,0 +1,30 @@
+- generic [active] [ref=f5e1]:
+  - generic [ref=f5e2]:
+    - navigation [ref=f5e3]:
+      - img "manycat" [ref=f5e4]
+      - button "Projects" [pressed] [ref=f5e5]
+      - button "Workflows" [ref=f5e11]:
+        - generic [ref=f5e12]: "2"
+        - text: Workflows
+    - main [ref=f5e18]:
+      - generic [ref=f5e51]:
+        - generic [ref=f5e52]:
+          - button "Back to projects" [ref=f5e53]
+          - heading "web" [level=2] [ref=f5e54]
+        - generic [ref=f5e55]: shop/web
+        - generic [ref=f5e56]:
+          - generic [ref=f5e57]: Workflows
+          - button "Fix checkout bug needs-review" [ref=f5e59]:
+            - generic [ref=f5e60]: Fix checkout bug
+            - generic [ref=f5e61]: needs-review
+        - generic [ref=f5e62]:
+          - generic [ref=f5e63]: Run
+          - generic [ref=f5e64]:
+            - combobox [ref=f5e65]:
+              - option "None"
+              - option "Vercel"
+              - option "Custom command" [selected]
+            - textbox "Command (e.g. npm test)" [ref=f5e67]: cat README.md
+          - button "Run" [ref=f5e69]
+  - button "Open Next.js Dev Tools" [ref=f5e45] [cursor=pointer]
+  - alert [ref=f5e49]

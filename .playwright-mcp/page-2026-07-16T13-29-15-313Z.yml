@@ -1,0 +1,32 @@
+- generic [ref=f2e1]:
+  - generic [ref=f2e2]:
+    - navigation [ref=f2e3]:
+      - img "manycat" [ref=f2e229]
+      - button "Projects" [active] [pressed] [ref=f2e230]
+      - button "Workflows" [ref=f2e231]:
+        - generic [ref=f2e12]: "2"
+        - text: Workflows
+    - main [ref=f2e18]:
+      - generic [ref=f2e267]:
+        - generic [ref=f2e268]:
+          - heading "Projects" [level=2] [ref=f2e269]
+          - paragraph [ref=f2e270]: Imported repos and their deploys.
+        - generic [ref=f2e271]:
+          - button "web shop/web 1 workflow" [ref=f2e272]:
+            - generic [ref=f2e273]: web
+            - generic [ref=f2e275]: shop/web
+            - generic [ref=f2e276]: 1 workflow
+          - button "marketing manycat/marketing 1 workflow" [ref=f2e277]:
+            - generic [ref=f2e278]: marketing
+            - generic [ref=f2e280]: manycat/marketing
+            - generic [ref=f2e281]: 1 workflow
+          - button "api platform/api 1 workflow" [ref=f2e282]:
+            - generic [ref=f2e283]: api
+            - generic [ref=f2e285]: platform/api
+            - generic [ref=f2e286]: 1 workflow
+          - button "Spoon-Knife octocat/Spoon-Knife 1 workflow" [ref=f2e287]:
+            - generic [ref=f2e288]: Spoon-Knife
+            - generic [ref=f2e290]: octocat/Spoon-Knife
+            - generic [ref=f2e291]: 1 workflow
+  - button "Open Next.js Dev Tools" [ref=f2e46] [cursor=pointer]
+  - alert [ref=f2e40]

@@ -1,0 +1,25 @@
+- generic [ref=f3e2]:
+  - navigation [ref=f3e3]:
+    - img "manycat" [ref=f3e4]
+    - button "Projects" [pressed] [ref=f3e5]
+    - button "Workflows" [ref=f3e11]:
+      - generic [ref=f3e12]: "2"
+      - text: Workflows
+  - main [ref=f3e18]:
+    - generic [ref=f3e20]:
+      - generic [ref=f3e21]:
+        - heading "Projects" [level=2] [ref=f3e22]
+        - paragraph [ref=f3e23]: Imported repos and their deploys.
+      - generic [ref=f3e24]:
+        - button "web shop/web 1 workflow" [ref=f3e25]:
+          - generic [ref=f3e26]: web
+          - generic [ref=f3e28]: shop/web
+          - generic [ref=f3e29]: 1 workflow
+        - button "marketing manycat/marketing 1 workflow" [ref=f3e30]:
+          - generic [ref=f3e31]: marketing
+          - generic [ref=f3e33]: manycat/marketing
+          - generic [ref=f3e34]: 1 workflow
+        - button "api platform/api 1 workflow" [ref=f3e35]:
+          - generic [ref=f3e36]: api
+          - generic [ref=f3e38]: platform/api
+          - generic [ref=f3e39]: 1 workflow

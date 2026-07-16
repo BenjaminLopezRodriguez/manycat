@@ -5,12 +5,15 @@ import Image from "next/image";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Add01Icon,
+  ArrowDown01Icon,
   ArrowLeft01Icon,
   ArrowUpRight01Icon,
   BubbleChatIcon,
   Cancel01Icon,
   CheckmarkCircle02Icon,
   Edit01Icon,
+  GitBranchIcon,
+  Menu01Icon,
   MoreVerticalIcon,
   News01Icon,
   Search01Icon,
@@ -20,6 +23,13 @@ import {
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Marker, MarkerContent } from "@/components/ui/marker";
 import {
@@ -31,22 +41,45 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { slugify } from "@/lib/slug";
 import { cn } from "@/lib/utils";
+import { api } from "@/trpc/react";
 import { applyWorkspacePatch, useAgent, type AgentEvent } from "./agent-sim";
 import {
+  deriveProjectsFromWorkflows,
   initialWorkflows,
   messagePreview,
-  suggestedContacts,
   type ApprovalMsg,
   type DiffMsg,
+  type LastRun,
+  type Project,
   type TextMsg,
+  type Workflow,
   type WorkflowStatus,
 } from "./data";
-import Feed from "./feed";
+import ImportRepoDialog from "./import-repo";
 import MessageList, { InlineDiffEditor } from "./message-list";
+import Projects from "./projects";
 import Workspace from "./workspace";
 
 type View = "feed" | "chats";
+
+const TEAMS = [
+  { id: "personal", name: "Personal", initials: "P" },
+  { id: "acme", name: "Acme Labs", initials: "AL" },
+  { id: "northstar", name: "Northstar", initials: "NS" },
+] as const;
+
+function nowTime() {
+  return new Date().toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function nextMsgId(messages: Workflow["messages"]) {
+  return messages.reduce((max, m) => Math.max(max, m.id), 0) + 1;
+}
 
 const STATUS_LABEL: Record<WorkflowStatus, string> = {
   idle: "idle",
@@ -75,6 +108,9 @@ export default function Chat() {
   const isMobile = useIsMobile();
   const [view, setView] = React.useState<View>("feed");
   const [workflows, setWorkflows] = React.useState(initialWorkflows);
+  const [projects, setProjects] = React.useState<Project[]>(() =>
+    deriveProjectsFromWorkflows(initialWorkflows),
+  );
   const [activeId, setActiveId] = React.useState(initialWorkflows[0]!.id);
   const [chatOpen, setChatOpen] = React.useState(false);
   const [diffsOpen, setDiffsOpen] = React.useState(false);
@@ -84,10 +120,14 @@ export default function Chat() {
   );
   const [activePath, setActivePath] = React.useState<string | null>(null);
   const [activeDiff, setActiveDiff] = React.useState<DiffMsg | null>(null);
-  const [invited, setInvited] = React.useState<string[]>([]);
   const [draft, setDraft] = React.useState("");
   const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
+  const [importOpen, setImportOpen] = React.useState(false);
+  const [navMenuOpen, setNavMenuOpen] = React.useState(false);
+  const [teamId, setTeamId] = React.useState<string>(TEAMS[0].id);
   const bottomRef = React.useRef<HTMLDivElement>(null);
+  const utils = api.useUtils();
+  const activeTeam = TEAMS.find((t) => t.id === teamId) ?? TEAMS[0];
 
   const active = workflows.find((w) => w.id === activeId)!;
   const diffs = active.messages.filter((m): m is DiffMsg => m.type === "diff");
@@ -182,6 +222,144 @@ export default function Chat() {
     }
   }
 
+  function handleImportStart({
+    workflowId,
+    owner,
+    repo,
+  }: {
+    workflowId: string;
+    owner: string;
+    repo: string;
+  }) {
+    const newWorkflow: Workflow = {
+      id: workflowId,
+      name: repo,
+      initials: repo.slice(0, 2).toUpperCase(),
+      avatarClass: "bg-emerald-200 text-emerald-900",
+      repo: `${owner}/${repo}`,
+      status: "working",
+      messages: [
+        {
+          id: 1,
+          type: "agent-status",
+          text: `Cloning ${owner}/${repo}…`,
+          streaming: true,
+          time: nowTime(),
+        },
+      ],
+      workspace: [],
+    };
+    setWorkflows((prev) => [...prev, newWorkflow]);
+    openWorkflow(workflowId);
+
+    const repoFullName = `${owner}/${repo}`;
+    setProjects((prev) => {
+      const existing = prev.find((p) => p.repo === repoFullName);
+      if (existing) {
+        return prev.map((p) =>
+          p.id === existing.id
+            ? { ...p, workflowIds: [...p.workflowIds, workflowId] }
+            : p,
+        );
+      }
+      return [
+        ...prev,
+        {
+          id: slugify(repoFullName),
+          name: repo,
+          repo: repoFullName,
+          workflowIds: [workflowId],
+          runConfig: { kind: "none" },
+        },
+      ];
+    });
+  }
+
+  function handleProjectRunStart(projectId: string) {
+    setProjects((prev) =>
+      prev.map((p) =>
+        p.id === projectId
+          ? {
+              ...p,
+              lastRun: {
+                status: "running",
+                startedAt: new Date().toISOString(),
+              },
+            }
+          : p,
+      ),
+    );
+  }
+
+  function handleProjectRunDone(projectId: string, run: LastRun) {
+    setProjects((prev) =>
+      prev.map((p) => (p.id === projectId ? { ...p, lastRun: run } : p)),
+    );
+  }
+
+  function handleProjectConfigChange(projectId: string, runConfig: Project["runConfig"]) {
+    setProjects((prev) =>
+      prev.map((p) => (p.id === projectId ? { ...p, runConfig } : p)),
+    );
+  }
+
+  async function handleImportSuccess(data: {
+    workflowId: string;
+    name: string;
+    repo: string;
+    status: "idle";
+  }) {
+    const files = await utils.workflow.getSandboxFiles
+      .fetch({ workflowId: data.workflowId })
+      .then((r) => r.files)
+      .catch(() => []); // ponytail: file listing is best-effort, workflow still usable without it
+
+    setWorkflows((prev) =>
+      prev.map((w) =>
+        w.id === data.workflowId
+          ? {
+              ...w,
+              status: "idle",
+              workspace: files,
+              messages: [
+                ...w.messages,
+                {
+                  id: nextMsgId(w.messages),
+                  type: "text",
+                  from: "agent",
+                  text: `Cloned ${data.repo} — ${files.length} files ready.`,
+                  time: nowTime(),
+                },
+              ],
+            }
+          : w,
+      ),
+    );
+  }
+
+  function handleImportError(workflowId: string, message: string) {
+    setWorkflows((prev) =>
+      prev.map((w) =>
+        w.id === workflowId
+          ? {
+              ...w,
+              status: "idle",
+              messages: [
+                ...w.messages,
+                {
+                  id: nextMsgId(w.messages),
+                  type: "text",
+                  from: "agent",
+                  text: message,
+                  time: nowTime(),
+                },
+              ],
+            }
+          : w,
+      ),
+    );
+  }
+
   function switchView(v: View) {
     setView(v);
     setChatOpen(false);
@@ -219,7 +397,7 @@ export default function Chat() {
   const navButtons = (
     <>
       <RailButton
-        label="Feed"
+        label="Projects"
         active={view === "feed"}
         onClick={() => switchView("feed")}
       >
@@ -244,25 +422,59 @@ export default function Chat() {
 
   return (
     <div className="bg-background flex h-dvh w-full flex-col overflow-hidden md:flex-row">
-      <nav className="bg-sidebar-primary text-sidebar-primary-foreground hidden w-16 shrink-0 flex-col items-center gap-2 py-4 md:flex">
-        <Image
-          src="/manycat-logo.png"
-          alt="manycat"
-          width={40}
-          height={40}
-          className="mb-4"
-        />
+      <nav className="bg-sidebar-primary text-sidebar-primary-foreground hidden w-56 shrink-0 flex-col gap-1 px-3 py-4 md:flex">
+        <div className="mb-3 flex items-center gap-2 px-1">
+          <Image
+            src="/manycat-logo.png"
+            alt="manycat"
+            width={36}
+            height={36}
+            className="shrink-0"
+          />
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              className={cn(
+                "hover:bg-sidebar-primary-foreground/10 flex min-w-0 flex-1 items-center gap-1.5 rounded-xl px-2 py-1.5 text-left transition-colors",
+                "outline-none focus-visible:ring-2 focus-visible:ring-sidebar-primary-foreground/30",
+              )}
+            >
+              <span className="min-w-0 flex-1 truncate text-sm font-semibold">
+                {activeTeam.name}
+              </span>
+              <HugeiconsIcon
+                icon={ArrowDown01Icon}
+                size={14}
+                className="text-sidebar-primary-foreground/60 shrink-0"
+              />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="min-w-48">
+              <DropdownMenuRadioGroup value={teamId} onValueChange={setTeamId}>
+                {TEAMS.map((team) => (
+                  <DropdownMenuRadioItem key={team.id} value={team.id}>
+                    <Avatar className="size-6">
+                      <AvatarFallback className="bg-muted text-[10px] font-semibold">
+                        {team.initials}
+                      </AvatarFallback>
+                    </Avatar>
+                    {team.name}
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
         {navButtons}
       </nav>
 
       <main className="flex min-h-0 min-w-0 flex-1">
         {view === "feed" ? (
-          <Feed
+          <Projects
+            projects={projects}
             workflows={workflows}
-            contacts={suggestedContacts}
-            invited={invited}
-            onInvite={(id) => setInvited((prev) => [...prev, id])}
-            onOpenWorkflow={openWorkflow}
+            onOpenWorkflow={(id) => openWorkflow(id)}
+            onRunStart={handleProjectRunStart}
+            onRunDone={handleProjectRunDone}
+            onConfigChange={handleProjectConfigChange}
           />
         ) : (
           <>
@@ -277,6 +489,14 @@ export default function Chat() {
                 <div className="flex items-center gap-1">
                   <Button variant="ghost" size="icon" aria-label="New workflow">
                     <HugeiconsIcon icon={Add01Icon} size={18} />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Import from GitHub"
+                    onClick={() => setImportOpen(true)}
+                  >
+                    <HugeiconsIcon icon={GitBranchIcon} size={18} />
                   </Button>
                   <Button variant="ghost" size="icon" aria-label="Menu">
                     <HugeiconsIcon icon={MoreVerticalIcon} size={18} />
@@ -609,10 +829,113 @@ export default function Chat() {
       </main>
 
       {!(view === "chats" && chatOpen) && (
-        <nav className="bg-sidebar-primary text-sidebar-primary-foreground flex shrink-0 items-center justify-around pb-[env(safe-area-inset-bottom)] md:hidden">
-          {navButtons}
+        <nav className="bg-sidebar-primary text-sidebar-primary-foreground flex shrink-0 items-center gap-3 px-3 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:hidden">
+          <Image
+            src="/manycat-logo.png"
+            alt="manycat"
+            width={32}
+            height={32}
+            className="shrink-0"
+          />
+          <span className="min-w-0 flex-1 truncate text-sm font-semibold">
+            {activeTeam.name}
+          </span>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Open menu"
+            className="text-sidebar-primary-foreground hover:bg-sidebar-primary-foreground/10 hover:text-sidebar-primary-foreground shrink-0"
+            onClick={() => setNavMenuOpen(true)}
+          >
+            <HugeiconsIcon icon={Menu01Icon} size={20} />
+          </Button>
         </nav>
       )}
+
+      <Drawer
+        open={navMenuOpen}
+        onOpenChange={setNavMenuOpen}
+        swipeDirection="down"
+        showSwipeHandle
+      >
+        <DrawerContent className="max-h-[85dvh] md:hidden">
+          <DrawerHeader className="text-left">
+            <DrawerTitle>Menu</DrawerTitle>
+            <DrawerDescription className="sr-only">
+              Navigate and switch team
+            </DrawerDescription>
+          </DrawerHeader>
+          <div className="flex max-h-[min(70dvh,28rem)] flex-col gap-1 overflow-y-auto px-3 pb-6">
+            <p className="text-muted-foreground px-3 pb-1 text-xs font-medium tracking-wide uppercase">
+              Team
+            </p>
+            {TEAMS.map((team) => (
+              <button
+                key={team.id}
+                type="button"
+                onClick={() => {
+                  setTeamId(team.id);
+                  setNavMenuOpen(false);
+                }}
+                className={cn(
+                  "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-colors",
+                  team.id === teamId
+                    ? "bg-muted text-foreground"
+                    : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+                )}
+              >
+                <Avatar className="size-7">
+                  <AvatarFallback className="text-[10px] font-semibold">
+                    {team.initials}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="min-w-0 flex-1 truncate">{team.name}</span>
+                {team.id === teamId ? (
+                  <HugeiconsIcon
+                    icon={CheckmarkCircle02Icon}
+                    size={16}
+                    className="text-primary shrink-0"
+                  />
+                ) : null}
+              </button>
+            ))}
+            <div className="bg-border my-2 h-px" />
+            <p className="text-muted-foreground px-3 pb-1 text-xs font-medium tracking-wide uppercase">
+              Navigate
+            </p>
+            <MobileMenuItem
+              label="Projects"
+              active={view === "feed"}
+              onClick={() => {
+                switchView("feed");
+                setNavMenuOpen(false);
+              }}
+            >
+              <HugeiconsIcon icon={News01Icon} size={20} />
+            </MobileMenuItem>
+            <MobileMenuItem
+              label="Workflows"
+              active={view === "chats"}
+              badge={totalUnread > 0 ? totalUnread : undefined}
+              onClick={() => {
+                switchView("chats");
+                setNavMenuOpen(false);
+              }}
+            >
+              <HugeiconsIcon icon={BubbleChatIcon} size={20} />
+            </MobileMenuItem>
+          </div>
+        </DrawerContent>
+      </Drawer>
+
+      <ImportRepoDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        existingIds={workflows.map((w) => w.id)}
+        onImportStart={handleImportStart}
+        onImportSuccess={handleImportSuccess}
+        onImportError={handleImportError}
+      />
     </div>
   );
 }
@@ -635,21 +958,54 @@ function RailButton({
       aria-label={label}
       aria-pressed={active}
       className={cn(
-        "flex w-full flex-col items-center gap-1 py-2 text-[11px] font-medium transition-colors",
+        "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
         active
-          ? "text-sidebar-primary-foreground"
-          : "text-sidebar-primary-foreground/50 hover:text-sidebar-primary-foreground/80",
+          ? "bg-sidebar-primary-foreground/15 text-sidebar-primary-foreground"
+          : "text-sidebar-primary-foreground/50 hover:bg-sidebar-primary-foreground/10 hover:text-sidebar-primary-foreground/80",
       )}
     >
-      <span
-        className={cn(
-          "flex h-8 w-12 items-center justify-center rounded-full transition-colors",
-          active && "bg-sidebar-primary-foreground/15",
-        )}
-      >
+      <span className="relative flex size-5 shrink-0 items-center justify-center overflow-visible">
         {children}
       </span>
       {label}
+    </button>
+  );
+}
+
+function MobileMenuItem({
+  label,
+  active,
+  badge,
+  onClick,
+  children,
+}: {
+  label: string;
+  active: boolean;
+  badge?: number;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={cn(
+        "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-colors",
+        active
+          ? "bg-muted text-foreground"
+          : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+      )}
+    >
+      <span className="flex size-5 shrink-0 items-center justify-center">
+        {children}
+      </span>
+      <span className="min-w-0 flex-1 truncate">{label}</span>
+      {badge != null ? (
+        <span className="bg-primary text-primary-foreground flex size-5 items-center justify-center rounded-full text-[10px] font-semibold">
+          {badge}
+        </span>
+      ) : null}
     </button>
   );
 }

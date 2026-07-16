@@ -1,0 +1,31 @@
+- generic [ref=f3e1]:
+  - generic [ref=f3e2]:
+    - navigation [ref=f3e3]:
+      - img "manycat" [ref=f3e229]
+      - button "Projects" [pressed] [ref=f3e230]
+      - button "Workflows" [ref=f3e231]:
+        - generic [ref=f3e12]: "2"
+        - text: Workflows
+    - main [ref=f3e18]:
+      - generic [ref=f3e289]:
+        - generic [ref=f3e290]:
+          - button "Back to projects" [ref=f3e291]
+          - heading "Spoon-Knife" [level=2] [ref=f3e292]
+        - generic [ref=f3e293]: octocat/Spoon-Knife
+        - generic [ref=f3e294]:
+          - generic [ref=f3e295]: Workflows
+          - button "Spoon-Knife idle" [ref=f3e297]:
+            - generic [ref=f3e298]: Spoon-Knife
+            - generic [ref=f3e299]: idle
+        - generic [ref=f3e300]:
+          - generic [ref=f3e301]:
+            - generic [ref=f3e302]: Run
+            - generic [ref=f3e303]: custom
+          - button "Run" [ref=f3e304]
+          - generic [ref=f3e305]:
+            - generic [ref=f3e306]: success
+            - generic [ref=f3e308]:
+              - button "Hide log" [active] [ref=f3e310]
+              - generic [ref=f3e311]: total 16 drwxr-xr-x 6 root root 192 Jul 16 13:06 . drwxr-xr-x 1 root root 4096 Jul 16 13:28 .. drwxr-xr-x 13 root root 416 Jul 16 13:14 .git -rw-r--r-- 1 root root 780 Jul 16 13:06 README.md -rw-r--r-- 1 root root 355 Jul 16 13:06 index.html -rw-r--r-- 1 root root 256 Jul 16 13:06 styles.css
+  - button "Open Next.js Dev Tools" [ref=f3e45] [cursor=pointer]
+  - alert [ref=f3e49]

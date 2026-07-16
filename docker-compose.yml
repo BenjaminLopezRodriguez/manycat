@@ -6,7 +6,7 @@ services:
       POSTGRES_PASSWORD: password
       POSTGRES_DB: manycat
     ports:
-      - "5432:5432"
+      - "5434:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -47,22 +47,33 @@ services:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       WORKSPACE_ROOT: /workspace
     volumes:
-      - manycat_workspaces:/workspace
+      - ./.sandbox-workspaces:/workspace
+
+  sandbox-image:
+    build:
+      context: ./infra/sandbox
+      dockerfile: Dockerfile.sandbox
+    image: manycat-sandbox:latest
+    entrypoint: ["true"]
+    restart: "no"
 
   orchestrator:
     build:
       context: ./infra/sandbox-orchestrator
       dockerfile: Dockerfile
+    depends_on:
+      sandbox-image:
+        condition: service_completed_successfully
     ports:
       - "8080:8080"
     environment:
       PREVIEW_HOST: localhost
       SANDBOX_IMAGE: manycat-sandbox:latest
       WORKSPACE_ROOT: /workspace
+      HOST_WORKSPACE_ROOT: ${PWD}/.sandbox-workspaces
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - manycat_workspaces:/workspace
+      - ./.sandbox-workspaces:/workspace
 
 volumes:
   postgres_data:
-  manycat_workspaces:

@@ -1,0 +1,109 @@
+[    2241ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:14537
+[    2287ms] [LOG] %c >> query #1 %cworkflow.isEnabled%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_23716680._.js:2472
+[    2416ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[    2555ms] [LOG] [Fast Refresh] done in 240ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[    3440ms] [LOG] %c << query #1 %cworkflow.isEnabled%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 1152, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_23716680._.js:2472
+[   62266ms] [LOG] %c >> mutation #2 %cproject.run%c %O 
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+   
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: Object, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_23716680._.js:2472
+[   62979ms] [LOG] %c << mutation #2 %cproject.run%c %O 
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+   
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: Object, result: Object, elapsedMs: 712, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_23716680._.js:2472
+[   82029ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[   82037ms] [LOG] [Fast Refresh] done in 113ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[ 9968483ms] [LOG] %c >> query #3 %cworkflow.isEnabled%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_23716680._.js:2472
+[ 9968699ms] [LOG] %c << query #3 %cworkflow.isEnabled%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 199, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_23716680._.js:2472
+[25619001ms] [LOG] %c >> query #4 %cworkflow.isEnabled%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_23716680._.js:2472
+[25619230ms] [LOG] %c << query #4 %cworkflow.isEnabled%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 228, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_23716680._.js:2472

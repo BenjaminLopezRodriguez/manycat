@@ -1,0 +1,26 @@
+- generic [active] [ref=f1e1]:
+  - generic [ref=f1e2]:
+    - navigation [ref=f1e3]:
+      - img "manycat" [ref=f1e4]
+      - button "Projects" [pressed] [ref=f1e5]
+      - button "Workflows" [ref=f1e11]:
+        - generic [ref=f1e12]: "2"
+        - text: Workflows
+    - main [ref=f1e18]:
+      - generic [ref=f1e51]:
+        - generic [ref=f1e52]:
+          - button "Back to projects" [ref=f1e53]
+          - heading "web" [level=2] [ref=f1e54]
+        - generic [ref=f1e55]: shop/web
+        - generic [ref=f1e56]:
+          - generic [ref=f1e57]: Workflows
+          - button "Fix checkout bug needs-review" [ref=f1e59]:
+            - generic [ref=f1e60]: Fix checkout bug
+            - generic [ref=f1e61]: needs-review
+        - generic [ref=f1e62]:
+          - generic [ref=f1e63]:
+            - generic [ref=f1e64]: Run
+            - generic [ref=f1e65]: none
+          - paragraph [ref=f1e66]: No run action configured for this project.
+  - button "Open Next.js Dev Tools" [ref=f1e45] [cursor=pointer]
+  - alert [ref=f1e49]
