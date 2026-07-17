@@ -523,8 +523,9 @@ function EffortSlider({
         max={EFFORT_LEVELS.length - 1}
         step={1}
         value={[index]}
-        onValueChange={(next) => {
-          const i = Array.isArray(next) ? (next[0] ?? 0) : next;
+        onValueChange={(next: number | readonly number[]) => {
+          const raw = Array.isArray(next) ? next[0] : next;
+          const i = typeof raw === "number" ? raw : 0;
           const level = EFFORT_LEVELS[i];
           if (level) onChange(level.id);
         }}

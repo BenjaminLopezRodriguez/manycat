@@ -159,12 +159,13 @@ export default function DeploymentsPanel({
                 typeof p.githubRepo === "string" && p.githubRepo.includes("/")
                   ? p.githubRepo
                   : null;
-              const canRun = Boolean(
-                userRepo ||
-                  (typeof p.mirrorGithubRepo === "string" &&
-                    p.mirrorGithubRepo.includes("/")) ||
-                  p.contentBackend === "virtual",
-              );
+              const hasMirror =
+                typeof p.mirrorGithubRepo === "string" &&
+                p.mirrorGithubRepo.includes("/");
+              const canRun =
+                userRepo !== null ||
+                hasMirror ||
+                p.contentBackend === "virtual";
               const url = p.railwayDomain ?? p.lastRun?.url;
               const busy = runningId === p.id || p.lastRun?.status === "running";
               return (

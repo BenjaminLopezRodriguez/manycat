@@ -38,5 +38,13 @@
     "**/*.js",
     ".next/types/**/*.ts"
   ],
-  "exclude": ["node_modules", "generated", "infra/sandbox-orchestrator", "agent-harness"]
+  "exclude": [
+    "node_modules",
+    "generated",
+    "infra/sandbox-orchestrator",
+    "agent-harness",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "vitest.config.ts"
+  ]
 }
