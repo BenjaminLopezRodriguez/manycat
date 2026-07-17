@@ -164,7 +164,10 @@ function ImportBody({
   const repos = reposQuery.data ?? [];
 
   return (
-    <form onSubmit={importSelected} className="flex flex-col gap-3">
+    <form
+      onSubmit={importSelected}
+      className="flex min-w-0 flex-col gap-3 overflow-hidden"
+    >
       <p className="text-muted-foreground text-xs">
         Signed in{status.login ? ` as ${status.login}` : ""}.
       </p>
@@ -176,9 +179,9 @@ function ImportBody({
       ) : repos.length === 0 ? (
         <p className="text-muted-foreground text-sm">No repositories found.</p>
       ) : (
-        <ul className="flex max-h-56 flex-col gap-1 overflow-y-auto">
+        <ul className="flex max-h-56 min-w-0 flex-col gap-1 overflow-x-hidden overflow-y-auto overscroll-contain">
           {repos.map((repo) => (
-            <li key={repo.fullName}>
+            <li key={repo.fullName} className="min-w-0">
               <button
                 type="button"
                 onClick={() => {
@@ -187,11 +190,11 @@ function ImportBody({
                   setError(null);
                 }}
                 className={cn(
-                  "hover:bg-muted/60 flex w-full flex-col gap-0.5 rounded-xl px-3 py-2.5 text-left transition-colors",
+                  "hover:bg-muted/60 flex w-full min-w-0 flex-col gap-0.5 rounded-xl px-3 py-2.5 text-left transition-colors",
                   selected === repo.fullName && "bg-muted",
                 )}
               >
-                <span className="truncate text-sm font-medium">
+                <span className="block truncate text-sm font-medium">
                   {repo.fullName}
                   {repo.private ? (
                     <span className="text-muted-foreground ml-1 text-[10px]">
@@ -200,7 +203,7 @@ function ImportBody({
                   ) : null}
                 </span>
                 {repo.description ? (
-                  <span className="text-muted-foreground truncate text-xs">
+                  <span className="text-muted-foreground block truncate text-xs">
                     {repo.description}
                   </span>
                 ) : null}
@@ -210,7 +213,7 @@ function ImportBody({
         </ul>
       )}
 
-      <div className="flex flex-col gap-1.5">
+      <div className="flex min-w-0 flex-col gap-1.5">
         <label
           htmlFor="manual-repo"
           className="text-muted-foreground text-xs font-medium"
@@ -219,6 +222,7 @@ function ImportBody({
         </label>
         <Input
           id="manual-repo"
+          className="min-w-0"
           placeholder="owner/repo"
           value={manual}
           onChange={(e) => {
@@ -300,8 +304,11 @@ export default function ImportRepoDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md" showCloseButton>
-        <DialogHeader>
+      <DialogContent
+        className="max-h-[min(90vh,40rem)] overflow-hidden sm:max-w-md"
+        showCloseButton
+      >
+        <DialogHeader className="min-w-0">
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
