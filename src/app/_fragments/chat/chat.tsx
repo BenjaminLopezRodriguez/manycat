@@ -48,6 +48,7 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { wrapNextScaffoldBootstrapPrompt } from "@/lib/bootstrap-prompt";
 import { dedupeId, slugify } from "@/lib/slug";
 import { cn } from "@/lib/utils";
 import { api } from "@/trpc/react";
@@ -110,6 +111,19 @@ function nowTime() {
 
 function nextMsgId(messages: Workflow["messages"]) {
   return messages.reduce((max, m) => Math.max(max, m.id), 0) + 1;
+}
+
+function isMsg(value: unknown): value is Workflow["messages"][number] {
+  if (!value || typeof value !== "object") return false;
+  const m = value as { type?: string; id?: unknown };
+  if (typeof m.id !== "number") return false;
+  return (
+    m.type === "text" ||
+    m.type === "agent-status" ||
+    m.type === "diff" ||
+    m.type === "approval" ||
+    m.type === "milestone"
+  );
 }
 
 const STATUS_LABEL: Record<WorkflowStatus, string> = {
@@ -183,6 +197,67 @@ export default function Chat() {
   const [aiEffort, setAiEffort] = React.useState<EffortId>("high");
   const createFromPrompt = api.workflow.createFromPrompt.useMutation();
   const importRepo = api.workflow.importRepo.useMutation();
+  const { data: infra } = api.workflow.isEnabled.useQuery();
+  const activeIdRef = React.useRef(activeId);
+  activeIdRef.current = activeId;
+  const sessionsQuery = api.workflow.listSessions.useQuery(undefined, {
+    enabled: signedIn,
+    staleTime: 30_000,
+  });
+  const [sessionsHydrated, setSessionsHydrated] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!signedIn || !sessionsQuery.data || sessionsHydrated) return;
+    const restored: Workflow[] = sessionsQuery.data.map((s) => {
+      const name = s.name || s.id;
+      const repo =
+        s.contentBackend === "virtual"
+          ? "virtual"
+          : (s.githubRepo ?? "virtual");
+      return {
+        id: s.id,
+        name,
+        initials: name.slice(0, 2).toUpperCase() || "AP",
+        avatarClass:
+          repo === "virtual"
+            ? "bg-sky-200 text-sky-900"
+            : "bg-emerald-200 text-emerald-900",
+        repo,
+        status: s.status ?? "idle",
+        messages: (s.messages ?? []).filter(isMsg),
+        workspace: (s.files ?? []).map((f) => ({
+          path: f.path,
+          contents: f.contents,
+        })),
+      };
+    });
+    if (restored.length > 0) {
+      setWorkflows(restored);
+      setProjects((prev) => {
+        const fromDb = restored.map((w) => ({
+          id: w.id,
+          name: w.name,
+          repo: w.repo,
+          workflowIds: [w.id],
+          runConfig: { kind: "none" as const },
+        }));
+        const byId = new Map(prev.map((p) => [p.id, p]));
+        for (const p of fromDb) byId.set(p.id, { ...byId.get(p.id), ...p });
+        return [...byId.values()];
+      });
+      setActiveId((cur) => cur ?? restored[0]?.id ?? null);
+    }
+    setSessionsHydrated(true);
+  }, [signedIn, sessionsQuery.data, sessionsHydrated]);
+
+  React.useEffect(() => {
+    if (!signedIn) {
+      setSessionsHydrated(false);
+      setWorkflows(initialWorkflows);
+      setProjects(deriveProjectsFromWorkflows(initialWorkflows));
+      setActiveId(null);
+    }
+  }, [signedIn]);
 
   React.useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -224,47 +299,69 @@ export default function Chat() {
     }
   }, [active?.messages.length, activeId, view]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleAgentEvent = React.useCallback(
-    (event: AgentEvent) => {
-      setWorkflows((prev) =>
-        prev.map((w) => {
-          if (w.id !== activeId) return w;
-          switch (event.kind) {
-            case "status":
-              return { ...w, status: event.status };
-            case "append":
-              return { ...w, messages: [...w.messages, event.message] };
-            case "patch-workspace":
-              return {
-                ...w,
-                workspace: applyWorkspacePatch(
-                  w.workspace,
-                  event.path,
-                  event.contents,
-                  event.edited,
-                ),
-              };
-            case "resolve-approval":
-              return {
-                ...w,
-                messages: w.messages.map((m) =>
-                  m.id === event.messageId && m.type === "approval"
-                    ? { ...m, resolved: event.resolved }
-                    : m,
-                ),
-              };
-            case "done":
-              return w;
-          }
-        }),
-      );
+  const handleAgentEvent = React.useCallback((event: AgentEvent) => {
+    setWorkflows((prev) =>
+      prev.map((w) => {
+        if (w.id !== activeIdRef.current) return w;
+        switch (event.kind) {
+          case "status":
+            return { ...w, status: event.status };
+          case "append":
+            return { ...w, messages: [...w.messages, event.message] };
+          case "patch-workspace":
+            return {
+              ...w,
+              workspace: applyWorkspacePatch(
+                w.workspace,
+                event.path,
+                event.contents,
+                event.edited,
+              ),
+            };
+          case "resolve-approval":
+            return {
+              ...w,
+              messages: w.messages.map((m) =>
+                m.id === event.messageId && m.type === "approval"
+                  ? { ...m, resolved: event.resolved }
+                  : m,
+              ),
+            };
+          case "done":
+            return w;
+        }
+      }),
+    );
 
-      if (event.kind === "patch-workspace") {
-        setActivePath(event.path);
+    if (event.kind === "patch-workspace") {
+      setActivePath(event.path);
+    }
+  }, []);
+
+  const handleAgentEventRef = React.useRef(handleAgentEvent);
+  handleAgentEventRef.current = handleAgentEvent;
+
+  const runAgentMutation = api.workflow.runAgent.useMutation({
+    onSuccess: (data) => {
+      for (const event of data.events) {
+        handleAgentEventRef.current(event);
       }
+      if (data.previewUrl) setPreviewUrl(data.previewUrl);
     },
-    [activeId],
-  );
+    onError: (err) => {
+      handleAgentEventRef.current({
+        kind: "append",
+        message: {
+          id: Date.now(),
+          type: "text",
+          from: "agent",
+          text: `Generation failed — send a message to retry. (${err.message})`,
+          time: nowTime(),
+        },
+      });
+      handleAgentEventRef.current({ kind: "status", status: "idle" });
+    },
+  });
 
   const agent = useAgent({
     workflow: active ?? EMPTY_WORKFLOW,
@@ -498,7 +595,7 @@ export default function Chat() {
                 name: data.name,
                 initials: data.name.slice(0, 2).toUpperCase(),
                 repo: "virtual",
-                status: "idle",
+                status: "working",
                 workspace: data.files,
                 messages: [
                   {
@@ -513,8 +610,15 @@ export default function Chat() {
                     type: "text",
                     from: "agent",
                     text: data.previewUrl
-                      ? `Virtual git ready (${data.contentRootHash.slice(0, 8)}…). Sandbox up at ${data.previewUrl}`
-                      : `Virtual git ready (${data.contentRootHash.slice(0, 8)}…). Workspace written (${data.sandboxStatus}).`,
+                      ? `Scaffold ready (${data.contentRootHash.slice(0, 8)}…). Preview at ${data.previewUrl}`
+                      : `Scaffold ready (${data.contentRootHash.slice(0, 8)}…). Building your app on the Next scaffold…`,
+                    time: nowTime(),
+                  },
+                  {
+                    id: 3,
+                    type: "agent-status",
+                    text: "Building your app on the Next scaffold…",
+                    streaming: true,
                     time: nowTime(),
                   },
                 ],
@@ -522,6 +626,7 @@ export default function Chat() {
             : w,
         ),
       );
+      activeIdRef.current = data.workflowId;
       setActiveId(data.workflowId);
       if (data.previewUrl) setPreviewUrl(data.previewUrl);
 
@@ -535,6 +640,42 @@ export default function Chat() {
           runConfig: { kind: "none" },
         },
       ]);
+
+      const model = opts?.model ?? aiModel;
+      const effort = opts?.effort ?? aiEffort;
+
+      if (!infra?.enabled) {
+        setWorkflows((prev) =>
+          prev.map((w) =>
+            w.id === data.workflowId
+              ? {
+                  ...w,
+                  status: "idle",
+                  messages: [
+                    ...w.messages.filter((m) => m.type !== "agent-status"),
+                    {
+                      id: Date.now(),
+                      type: "text",
+                      from: "agent",
+                      text: "Generation failed — agent not configured. Send a message to retry once AGENT_HARNESS_URL and SANDBOX_ORCHESTRATOR_URL are set.",
+                      time: nowTime(),
+                    },
+                  ],
+                }
+              : w,
+          ),
+        );
+      } else {
+        void runAgentMutation.mutateAsync({
+          workflowId: data.workflowId,
+          prompt: wrapNextScaffoldBootstrapPrompt(promptText),
+          messageIdStart: 3,
+          model,
+          effort,
+          files: data.files.map((f) => ({ path: f.path, contents: f.contents })),
+          omitUserMessage: true,
+        });
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       setWorkflows((prev) =>
