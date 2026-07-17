@@ -37,7 +37,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
-import { Slider } from "@/components/ui/slider";
 
 import ImportRepoDialog from "./import-repo";
 
@@ -504,11 +503,6 @@ function EffortSlider({
   value: EffortId;
   onChange: (next: EffortId) => void;
 }) {
-  const index = Math.max(
-    0,
-    EFFORT_LEVELS.findIndex((level) => level.id === value),
-  );
-
   return (
     <div className="flex flex-col gap-2 px-3 py-2">
       <div className="flex items-center justify-between">
@@ -517,24 +511,30 @@ function EffortSlider({
         </span>
         <span className="text-xs font-medium capitalize">{value}</span>
       </div>
-      <Slider
+      <div
+        role="group"
         aria-label="Effort"
-        min={0}
-        max={EFFORT_LEVELS.length - 1}
-        step={1}
-        value={[index]}
-        onValueChange={(next: number | readonly number[]) => {
-          const raw = Array.isArray(next) ? next[0] : next;
-          const i = typeof raw === "number" ? raw : 0;
-          const level = EFFORT_LEVELS[i];
-          if (level) onChange(level.id);
-        }}
-        className="w-full"
-      />
-      <div className="text-muted-foreground flex justify-between px-0.5 text-[10px] font-medium capitalize">
-        {EFFORT_LEVELS.map((level) => (
-          <span key={level.id}>{level.id}</span>
-        ))}
+        className="grid grid-cols-4 gap-1"
+      >
+        {EFFORT_LEVELS.map((level) => {
+          const selected = level.id === value;
+          return (
+            <button
+              key={level.id}
+              type="button"
+              className={cn(
+                "rounded-full px-2 py-1.5 text-[11px] font-medium capitalize transition-colors",
+                selected
+                  ? "bg-foreground text-background"
+                  : "bg-muted/70 text-muted-foreground hover:text-foreground",
+              )}
+              aria-pressed={selected}
+              onClick={() => onChange(level.id)}
+            >
+              {level.id}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
