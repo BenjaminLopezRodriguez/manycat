@@ -325,7 +325,7 @@ export const workflowRouter = createTRPCRouter({
           githubRepo: null,
           contentBackend: "virtual",
           contentRootHash,
-          templateId: null,
+          templateId: "next-app",
         })
         .onConflictDoUpdate({
           target: [projects.accountId, projects.id],
@@ -334,6 +334,7 @@ export const workflowRouter = createTRPCRouter({
             contentBackend: "virtual",
             contentRootHash,
             githubRepo: null,
+            templateId: "next-app",
           },
         });
 
@@ -345,7 +346,7 @@ export const workflowRouter = createTRPCRouter({
         treeHash: contentRootHash,
         diff: null,
         prompt: input.prompt,
-        templateId: null,
+        templateId: "next-app",
       });
 
       return {
