@@ -40,6 +40,37 @@ export function railwayServiceName(accountId: string, workflowId: string) {
   return `mc-${acct}-${wf}`.slice(0, 63);
 }
 
+/**
+ * Refuse control-plane or admin Neon URLs as workload DATABASE_URL.
+ */
+export function assertWorkloadDatabaseUrl(url: string) {
+  if (!url) throw new Error("workload DATABASE_URL required");
+  if (url === env.DATABASE_URL) {
+    throw new Error("Refusing to inject control DATABASE_URL into Railway");
+  }
+  if (env.NEON_SHARED_DATABASE_URL && url === env.NEON_SHARED_DATABASE_URL) {
+    throw new Error("Refusing to inject admin shared Neon URL into Railway");
+  }
+}
+
+function buildWorkloadVariables(opts: {
+  accountId: string;
+  workflowId: string;
+  workloadEnv?: Record<string, string>;
+}): Record<string, string> {
+  if (opts.workloadEnv?.DATABASE_URL) {
+    assertWorkloadDatabaseUrl(opts.workloadEnv.DATABASE_URL);
+  }
+  return {
+    PORT: "3000",
+    NIXPACKS_NODE_VERSION: "22",
+    MANYCAT_ACCOUNT_ID: opts.accountId,
+    MANYCAT_WORKFLOW_ID: opts.workflowId,
+    MANYCAT_PLANE: "workload",
+    ...opts.workloadEnv,
+  };
+}
+
 type GraphQLResult<T> = {
   data?: T;
   errors?: Array<{ message: string }>;
@@ -71,8 +102,35 @@ async function railwayGraphql<T>(
 }
 
 /**
+ * Upsert service env vars without triggering an extra deploy
+ * (caller deploys via serviceInstanceDeployV2).
+ * Uses Railway `variableCollectionUpsert` (merge; not replace).
+ */
+export async function upsertServiceVariables(opts: {
+  config: RailwayConfig;
+  serviceId: string;
+  variables: Record<string, string>;
+}): Promise<void> {
+  await railwayGraphql(
+    opts.config.token,
+    `mutation variableCollectionUpsert($input: VariableCollectionUpsertInput!) {
+      variableCollectionUpsert(input: $input)
+    }`,
+    {
+      input: {
+        projectId: opts.config.projectId,
+        environmentId: opts.config.environmentId,
+        serviceId: opts.serviceId,
+        variables: opts.variables,
+        skipDeploys: true,
+      },
+    },
+  );
+}
+
+/**
  * Create a minimal-resource service from a GitHub repo in the WORKLOAD project.
- * Injects only non-secret Manycat scope tags + PORT — never control-plane secrets.
+ * Injects Manycat scope tags + PORT + optional workloadEnv (never control secrets).
  */
 export async function createWorkloadService(opts: {
   config: RailwayConfig;
@@ -80,8 +138,15 @@ export async function createWorkloadService(opts: {
   workflowId: string;
   githubRepo: string; // owner/repo
   branch?: string;
+  /** Must include DATABASE_URL when Neon has been provisioned */
+  workloadEnv?: Record<string, string>;
 }): Promise<{ serviceId: string; name: string }> {
   const name = railwayServiceName(opts.accountId, opts.workflowId);
+  const variables = buildWorkloadVariables({
+    accountId: opts.accountId,
+    workflowId: opts.workflowId,
+    workloadEnv: opts.workloadEnv,
+  });
   const data = await railwayGraphql<{
     serviceCreate: { id: string; name: string };
   }>(
@@ -95,12 +160,7 @@ export async function createWorkloadService(opts: {
         name,
         source: { repo: opts.githubRepo },
         ...(opts.branch ? { branch: opts.branch } : {}),
-        variables: {
-          PORT: "3000",
-          MANYCAT_ACCOUNT_ID: opts.accountId,
-          MANYCAT_WORKFLOW_ID: opts.workflowId,
-          MANYCAT_PLANE: "workload",
-        },
+        variables,
       },
     },
   );
@@ -213,6 +273,8 @@ export async function deployProjectToRailway(opts: {
   workflowId: string;
   githubRepo: string;
   existingServiceId?: string | null;
+  /** Must include DATABASE_URL when Neon has been provisioned */
+  workloadEnv?: Record<string, string>;
 }): Promise<{ serviceId: string; url?: string; deploymentId: string }> {
   let serviceId = opts.existingServiceId ?? undefined;
 
@@ -222,8 +284,20 @@ export async function deployProjectToRailway(opts: {
       accountId: opts.accountId,
       workflowId: opts.workflowId,
       githubRepo: opts.githubRepo,
+      workloadEnv: opts.workloadEnv,
     });
     serviceId = created.serviceId;
+  } else {
+    const variables = buildWorkloadVariables({
+      accountId: opts.accountId,
+      workflowId: opts.workflowId,
+      workloadEnv: opts.workloadEnv,
+    });
+    await upsertServiceVariables({
+      config: opts.config,
+      serviceId,
+      variables,
+    });
   }
 
   const deploymentId = await deployWorkloadService({
