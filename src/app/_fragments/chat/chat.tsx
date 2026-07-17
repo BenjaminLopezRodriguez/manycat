@@ -232,7 +232,22 @@ export default function Chat() {
       };
     });
     if (restored.length > 0) {
-      setWorkflows(restored);
+      setWorkflows((prev) => {
+        const byId = new Map(restored.map((w) => [w.id, w]));
+        for (const w of prev) {
+          if (w.id.startsWith("pending-") || w.status === "working") {
+            byId.set(w.id, w);
+          } else if (!byId.has(w.id)) {
+            byId.set(w.id, w);
+          }
+        }
+        const restoredIds = new Set(restored.map((w) => w.id));
+        const localOnly = prev.filter((w) => !restoredIds.has(w.id));
+        return [
+          ...restored.map((w) => byId.get(w.id)!),
+          ...localOnly.map((w) => byId.get(w.id)!),
+        ];
+      });
       setProjects((prev) => {
         const fromDb = restored.map((w) => ({
           id: w.id,
@@ -644,7 +659,8 @@ export default function Chat() {
       const model = opts?.model ?? aiModel;
       const effort = opts?.effort ?? aiEffort;
 
-      if (!infra?.enabled) {
+      const infraStatus = await utils.workflow.isEnabled.fetch();
+      if (!infraStatus.enabled) {
         setWorkflows((prev) =>
           prev.map((w) =>
             w.id === data.workflowId
