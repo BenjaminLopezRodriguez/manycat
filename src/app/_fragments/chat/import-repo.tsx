@@ -43,29 +43,35 @@ function parseRepoUrl(raw: string): { owner: string; repo: string } | null {
 export type ImportRepoDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  existingIds: string[];
-  onImportStart: (info: { workflowId: string; owner: string; repo: string }) => void;
-  onImportSuccess: (data: {
+  mode?: "import" | "attach";
+  existingIds?: string[];
+  onImportStart?: (info: { workflowId: string; owner: string; repo: string }) => void;
+  onImportSuccess?: (data: {
     workflowId: string;
     name: string;
     repo: string;
     status: "idle";
   }) => void;
-  onImportError: (workflowId: string, message: string) => void;
+  onImportError?: (workflowId: string, message: string) => void;
+  onAttach?: (info: { owner: string; repo: string }) => void;
 };
 
 function ImportBody({
-  existingIds,
+  mode = "import",
+  existingIds = [],
   onImportStart,
   onImportSuccess,
   onImportError,
+  onAttach,
   onOpenChange,
   Close,
 }: {
-  existingIds: string[];
-  onImportStart: ImportRepoDialogProps["onImportStart"];
-  onImportSuccess: ImportRepoDialogProps["onImportSuccess"];
-  onImportError: ImportRepoDialogProps["onImportError"];
+  mode?: "import" | "attach";
+  existingIds?: string[];
+  onImportStart?: ImportRepoDialogProps["onImportStart"];
+  onImportSuccess?: ImportRepoDialogProps["onImportSuccess"];
+  onImportError?: ImportRepoDialogProps["onImportError"];
+  onAttach?: ImportRepoDialogProps["onAttach"];
   onOpenChange: (open: boolean) => void;
   Close: React.ComponentType<{ children: React.ReactNode; className?: string }>;
 }) {
@@ -100,18 +106,24 @@ function ImportBody({
     }
     setError(null);
 
+    if (mode === "attach") {
+      onAttach?.(parsed);
+      onOpenChange(false);
+      return;
+    }
+
     const workflowId = dedupeId(
       slugify(`${parsed.owner}-${parsed.repo}`),
       existingIds,
     );
-    onImportStart({ workflowId, owner: parsed.owner, repo: parsed.repo });
+    onImportStart?.({ workflowId, owner: parsed.owner, repo: parsed.repo });
     onOpenChange(false);
 
     importMutation.mutate(
       { repoUrl: raw.trim(), existingIds },
       {
-        onSuccess: (data) => onImportSuccess(data),
-        onError: (err) => onImportError(workflowId, err.message),
+        onSuccess: (data) => onImportSuccess?.(data),
+        onError: (err) => onImportError?.(workflowId, err.message),
       },
     );
   }
@@ -120,7 +132,7 @@ function ImportBody({
     e.preventDefault();
     const raw = selected ?? manual.trim();
     if (!raw) {
-      setError("Select a project to import");
+      setError(mode === "attach" ? "Select a repo to attach" : "Select a project to import");
       return;
     }
     startImport(raw);
@@ -263,7 +275,7 @@ function ImportBody({
       <div className="flex justify-end gap-2">
         <Close>Cancel</Close>
         <Button type="submit" disabled={!selected && !manual.trim()}>
-          Import
+          {mode === "attach" ? "Attach" : "Import"}
         </Button>
       </div>
     </form>
@@ -273,10 +285,12 @@ function ImportBody({
 export default function ImportRepoDialog({
   open,
   onOpenChange,
+  mode = "import",
   existingIds,
   onImportStart,
   onImportSuccess,
   onImportError,
+  onAttach,
 }: ImportRepoDialogProps) {
   const isMobile = useIsMobile();
   const { data: status } = api.github.status.useQuery(undefined, {
@@ -285,21 +299,31 @@ export default function ImportRepoDialog({
 
   const title = status?.signedIn
     ? status.githubLinked
-      ? "Select a project"
-      : "Import a project"
+      ? mode === "attach"
+        ? "Attach a repo"
+        : "Select a project"
+      : mode === "attach"
+        ? "Attach a repo"
+        : "Import a project"
     : "Import from project";
   const description = status?.signedIn
     ? status.githubLinked
-      ? "Choose a GitHub repo to import into Manycat."
-      : "Paste a public repo, or connect GitHub to browse yours."
+      ? mode === "attach"
+        ? "Choose a GitHub repo to attach to this prompt."
+        : "Choose a GitHub repo to import into Manycat."
+      : mode === "attach"
+        ? "Paste a public repo, or connect GitHub to browse yours."
+        : "Paste a public repo, or connect GitHub to browse yours."
     : "Sign in to import a repository.";
 
   const body = (
     <ImportBody
+      mode={mode}
       existingIds={existingIds}
       onImportStart={onImportStart}
       onImportSuccess={onImportSuccess}
       onImportError={onImportError}
+      onAttach={onAttach}
       onOpenChange={onOpenChange}
       Close={({ children, className }) =>
         isMobile ? (
