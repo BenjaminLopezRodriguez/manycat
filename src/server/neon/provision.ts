@@ -123,6 +123,77 @@ async function ensureShared(opts: {
   };
 }
 
+/**
+ * Fail loud — no silent dedicated→shared fallback.
+ * Creates (or reuses) a dedicated Neon project and fetches connection_uri on demand.
+ * Never persist dedicated URIs — callers inject databaseUrl ephemerally only.
+ */
+async function ensureDedicated(opts: {
+  accountId: string;
+  workflowId: string;
+  existing?: ProjectNeonFields;
+}): Promise<NeonProvisionResult> {
+  const apiKey = env.NEON_API_KEY;
+  const orgId = env.NEON_ORG_ID;
+  if (!apiKey || !orgId) {
+    throw new Error(
+      "Dedicated Neon not configured — set NEON_API_KEY and NEON_ORG_ID. Fail loud: no shared fallback.",
+    );
+  }
+
+  let projectId = opts.existing?.neonProjectId ?? null;
+  if (!projectId) {
+    const res = await fetch("https://console.neon.tech/api/v2/projects", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        project: {
+          name: `mc-${opts.accountId.slice(0, 20)}-${opts.workflowId}`.slice(
+            0,
+            63,
+          ),
+          org_id: orgId,
+        },
+      }),
+    });
+    if (!res.ok) {
+      throw new Error(`Dedicated Neon create failed: ${await res.text()}`);
+    }
+    const body = (await res.json()) as { project: { id: string } };
+    projectId = body.project.id;
+  }
+
+  const uriRes = await fetch(
+    `https://console.neon.tech/api/v2/projects/${projectId}/connection_uri?database_name=neondb&role_name=neondb_owner`,
+    {
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        Accept: "application/json",
+      },
+    },
+  );
+  if (!uriRes.ok) {
+    throw new Error(
+      `Dedicated Neon connection_uri failed: ${await uriRes.text()}`,
+    );
+  }
+  const uriBody = (await uriRes.json()) as { uri: string };
+  assertNotControlUrl(uriBody.uri);
+
+  return {
+    neonMode: "dedicated",
+    neonSchema: null,
+    neonRole: null,
+    neonRolePasswordEnc: null,
+    neonProjectId: projectId,
+    databaseUrl: uriBody.uri,
+  };
+}
+
 export async function ensureAppDatabase(opts: {
   accountId: string;
   workflowId: string;
@@ -135,6 +206,11 @@ export async function ensureAppDatabase(opts: {
       existing: opts.existing,
     });
   }
-  // Dedicated Neon is Task 4 — fail loud; never fall back to shared.
-  throw new Error("dedicated neon not implemented");
+  // Fail loud — no silent dedicated→shared fallback.
+  // NEVER catch and call ensureShared
+  return ensureDedicated({
+    accountId: opts.accountId,
+    workflowId: opts.workflowId,
+    existing: opts.existing,
+  });
 }

@@ -78,19 +78,20 @@ describeLive("shared neon tenant isolation", () => {
 describe("ensureAppDatabase fail-loud dedicated", () => {
   it("throws for paying plans and does not fall back to shared", async () => {
     const { ensureAppDatabase } = await import("./provision");
+    // Without NEON_API_KEY / NEON_ORG_ID — fail loud, never shared
     await expect(
       ensureAppDatabase({
         accountId: "acct",
         workflowId: "wf_pay",
         plan: "sub",
       }),
-    ).rejects.toThrow("dedicated neon not implemented");
+    ).rejects.toThrow(/Dedicated Neon not configured|fail loud|no shared fallback/i);
     await expect(
       ensureAppDatabase({
         accountId: "acct",
         workflowId: "wf_pay2",
         plan: "metered",
       }),
-    ).rejects.toThrow("dedicated neon not implemented");
+    ).rejects.toThrow(/Dedicated Neon not configured|fail loud|no shared fallback/i);
   });
 });
