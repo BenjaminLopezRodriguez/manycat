@@ -27,7 +27,10 @@ class ProgrammingAgentHarness:
     def _init_model(self):
         from langchain.chat_models import init_chat_model
 
-        kwargs = {}
+        kwargs: dict = {
+            "temperature": self.config.temperature,
+            "max_tokens": self.config.max_tokens,
+        }
         if self.config.openai_base_url:
             # OpenAI-compatible providers (Modal vLLM, local gateways).
             kwargs["base_url"] = self.config.openai_base_url

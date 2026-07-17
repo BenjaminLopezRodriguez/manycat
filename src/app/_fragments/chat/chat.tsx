@@ -48,10 +48,12 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { dedupeId, slugify } from "@/lib/slug";
 import { cn } from "@/lib/utils";
 import { api } from "@/trpc/react";
 import { signIn, signOut, useSession } from "next-auth/react";
 import { applyWorkspacePatch, useAgent, type AgentEvent } from "./agent-sim";
+import type { EffortId, ModelId } from "@/lib/ai-models";
 import {
   deriveProjectsFromWorkflows,
   initialWorkflows,
@@ -177,7 +179,10 @@ export default function Chat() {
     session?.login ?? session?.user?.name ?? session?.user?.email ?? "Account";
   const accountInitials = accountLabel.slice(0, 2).toUpperCase();
   const [creatingFromPrompt, setCreatingFromPrompt] = React.useState(false);
+  const [aiModel, setAiModel] = React.useState<ModelId>("auto");
+  const [aiEffort, setAiEffort] = React.useState<EffortId>("high");
   const createFromPrompt = api.workflow.createFromPrompt.useMutation();
+  const importRepo = api.workflow.importRepo.useMutation();
 
   React.useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -265,6 +270,8 @@ export default function Chat() {
     workflow: active ?? EMPTY_WORKFLOW,
     onEvent: handleAgentEvent,
     onPreviewUrl: setPreviewUrl,
+    model: aiModel,
+    effort: aiEffort,
   });
 
   function openWorkflow(id: string, opts?: { openDiff?: boolean }) {
@@ -409,7 +416,36 @@ export default function Chat() {
     );
   }
 
-  async function handleCreateFromPrompt(promptText: string) {
+  function handleImportFromComposer(repoFullName?: string) {
+    if (!repoFullName) {
+      setImportOpen(true);
+      return;
+    }
+    const [owner, repo] = repoFullName.split("/");
+    if (!owner || !repo) {
+      setImportOpen(true);
+      return;
+    }
+    const existingIds = workflows.map((w) => w.id);
+    const workflowId = dedupeId(slugify(`${owner}-${repo}`), existingIds);
+    handleImportStart({ workflowId, owner, repo });
+    importRepo.mutate(
+      { repoUrl: repoFullName, existingIds },
+      {
+        onSuccess: (data) => {
+          void handleImportSuccess(data);
+        },
+        onError: (err) => handleImportError(workflowId, err.message),
+      },
+    );
+  }
+
+  async function handleCreateFromPrompt(
+    promptText: string,
+    opts?: { model: ModelId; effort: EffortId },
+  ) {
+    if (opts?.model) setAiModel(opts.model);
+    if (opts?.effort) setAiEffort(opts.effort);
     setCreatingFromPrompt(true);
     const optimisticId = `pending-${Date.now()}`;
     const shortName = promptText.slice(0, 32);
@@ -661,11 +697,15 @@ export default function Chat() {
       <main className="flex min-h-0 min-w-0 flex-1">
         {!signedIn || view === "feed" ? (
           <Projects
-            onImport={() => setImportOpen(true)}
-            onCreateFromPrompt={(p) => void handleCreateFromPrompt(p)}
+            onImport={handleImportFromComposer}
+            onCreateFromPrompt={(p, opts) => void handleCreateFromPrompt(p, opts)}
             creating={creatingFromPrompt}
             featureId={landingFeature}
             onFeatureChange={setLandingFeature}
+            model={aiModel}
+            effort={aiEffort}
+            onModelChange={setAiModel}
+            onEffortChange={setAiEffort}
           />
         ) : view === "deployments" ? (
           <DeploymentsPanel

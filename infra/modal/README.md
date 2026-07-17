@@ -20,7 +20,20 @@ modal secret create huggingface HF_TOKEN=hf_...
 
 Then add `secrets=[modal.Secret.from_name("huggingface")]` to `@app.function` in `serve_coder.py` and redeploy.
 
-## Wire agent-harness
+## Effort (agent → Modal)
+
+The Manycat UI Effort slider (`low` | `medium` | `high` | `max`) is sent on every `/run` call. The harness maps it to:
+
+| Effort | max_tokens | temperature | agent turns |
+|--------|------------|-------------|-------------|
+| low | 1024 | 0.5 | 12 |
+| medium | 2048 | 0.35 | 24 |
+| high | 4096 | 0.2 | 40 |
+| max | 8192 | 0.1 | 80 |
+
+Those sampling params are passed to the OpenAI-compatible Modal/vLLM endpoint on each completion. No Modal redeploy is required when changing effort — it is per-request.
+
+Wire agent-harness:
 
 In `.env` / Compose / Railway control-plane agent service:
 

@@ -384,6 +384,10 @@ export const workflowRouter = createTRPCRouter({
         workflowId: z.string().min(1),
         prompt: z.string().min(1),
         messageIdStart: z.number().default(1000),
+        model: z
+          .enum(["auto", "qwen-coder", "gpt-4o", "claude-sonnet"])
+          .default("auto"),
+        effort: z.enum(["low", "medium", "high", "max"]).default("high"),
       }),
     )
     .mutation(async ({ input }) => {
@@ -434,6 +438,8 @@ export const workflowRouter = createTRPCRouter({
           prompt: input.prompt,
           workflow_id: input.workflowId,
           mode: "default",
+          model: input.model,
+          effort: input.effort,
         }),
       });
 

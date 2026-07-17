@@ -4,6 +4,7 @@ import * as React from "react";
 
 import { api } from "@/trpc/react";
 import type { AgentEventPayload } from "@/server/api/routers/workflow";
+import type { EffortId, ModelId } from "@/lib/ai-models";
 import {
   agentScripts,
   type Msg,
@@ -28,6 +29,8 @@ type UseAgentOptions = {
   workflow: Workflow;
   onEvent: (event: AgentEvent) => void;
   onPreviewUrl?: (url: string) => void;
+  model?: ModelId;
+  effort?: EffortId;
 };
 
 function useMockAgent({ workflow, onEvent }: UseAgentOptions) {
@@ -198,6 +201,8 @@ function useRemoteAgent({
   workflow,
   onEvent,
   onPreviewUrl,
+  model = "auto",
+  effort = "high",
 }: UseAgentOptions) {
   const onEventRef = React.useRef(onEvent);
   onEventRef.current = onEvent;
@@ -232,9 +237,11 @@ function useRemoteAgent({
         workflowId: workflow.id,
         prompt: userText,
         messageIdStart: nextId(workflow.messages),
+        model,
+        effort,
       });
     },
-    [runMutation, workflow.id, workflow.messages],
+    [runMutation, workflow.id, workflow.messages, model, effort],
   );
 
   const approve = React.useCallback((messageId: number) => {

@@ -20,12 +20,19 @@ class RunRequest(BaseModel):
     prompt: str
     workflow_id: str = Field(description="Workflow / sandbox identifier")
     mode: Literal["default", "plan", "explore"] = "default"
+    model: Optional[str] = Field(
+        default=None,
+        description="UI model id or LangChain id (auto, qwen-coder, gpt-4o, …)",
+    )
+    effort: Optional[Literal["low", "medium", "high", "max"]] = "high"
 
 
 class RunResponse(BaseModel):
     workflow_id: str
     output: str
     workspace_path: str
+    model: str
+    effort: str
 
 
 def workspace_for(workflow_id: str) -> Path:
@@ -42,11 +49,53 @@ def health() -> dict[str, str]:
     return {"status": "ok", "workspace_root": str(WORKSPACE_ROOT)}
 
 
+@app.get("/models")
+def list_models() -> dict:
+    """Models the harness can route to given current env."""
+    has_modal = bool(os.getenv("OPENAI_BASE_URL") or os.getenv("OPENAI_API_BASE"))
+    has_openai = bool(os.getenv("OPENAI_API_KEY"))
+    has_anthropic = bool(os.getenv("ANTHROPIC_API_KEY"))
+    models = [
+        {
+            "id": "auto",
+            "label": "Auto",
+            "available": True,
+            "note": "Modal coder if OPENAI_BASE_URL set, else GPT-4o",
+        },
+        {
+            "id": "qwen-coder",
+            "label": "Qwen2.5 Coder",
+            "available": has_modal,
+            "note": "Modal vLLM open-weight",
+        },
+        {
+            "id": "gpt-4o",
+            "label": "GPT-4o",
+            "available": has_openai,
+            "note": "OpenAI",
+        },
+        {
+            "id": "claude-sonnet",
+            "label": "Claude Sonnet",
+            "available": has_anthropic,
+            "note": "Anthropic",
+        },
+    ]
+    return {
+        "models": models,
+        "effort": ["low", "medium", "high", "max"],
+        "default_model": "auto",
+        "default_effort": "high",
+    }
+
+
 @app.post("/run", response_model=RunResponse)
 def run_agent(body: RunRequest) -> RunResponse:
     workspace = workspace_for(body.workflow_id)
-    config = AgentConfig(
-        model=os.getenv("MODEL", "gpt-4o"),
+    effort = body.effort or "high"
+    config = AgentConfig.from_request(
+        model=body.model,
+        effort=effort,
         workspace_root=workspace,
     )
     harness = ProgrammingAgentHarness(config)
@@ -61,4 +110,6 @@ def run_agent(body: RunRequest) -> RunResponse:
         workflow_id=body.workflow_id,
         output=output,
         workspace_path=str(workspace),
+        model=config.model,
+        effort=effort,
     )
