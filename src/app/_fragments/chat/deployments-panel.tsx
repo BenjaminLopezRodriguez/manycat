@@ -51,7 +51,11 @@ export default function DeploymentsPanel({
       return fromDb.map((p) => ({
         id: p.id,
         name: p.name,
-        repo: p.githubRepo ?? p.name,
+        githubRepo: p.githubRepo,
+        mirrorGithubRepo: p.mirrorGithubRepo,
+        contentBackend: p.contentBackend,
+        neonMode: p.neonMode,
+        repo: p.githubRepo ?? p.mirrorGithubRepo ?? p.name,
         railwayDomain: p.railwayDomain,
         lastRun: projects.find((c) => c.id === p.id || c.repo === p.githubRepo)
           ?.lastRun,
@@ -60,13 +64,17 @@ export default function DeploymentsPanel({
     return projects.map((p) => ({
       id: p.id,
       name: p.name,
+      githubRepo: null as string | null,
+      mirrorGithubRepo: null as string | null,
+      contentBackend: null as "github" | "virtual" | null,
+      neonMode: null as "shared" | "dedicated" | null,
       repo: p.repo,
       railwayDomain: p.lastRun?.url,
       lastRun: p.lastRun,
     }));
   }, [dbProjects.data, projects]);
 
-  async function runRailway(projectId: string, githubRepo: string) {
+  async function runRailway(projectId: string, githubRepo: string | null) {
     setError(null);
     setRunningId(projectId);
     const startedAt = new Date().toISOString();
@@ -77,7 +85,7 @@ export default function DeploymentsPanel({
         workflowId: projectId,
         runConfig: {
           kind: "railway",
-          railway: { githubRepo },
+          railway: githubRepo ? { githubRepo } : undefined,
         },
       });
       onProjectRunResult(projectId, {
@@ -141,16 +149,22 @@ export default function DeploymentsPanel({
         {deployable.length === 0 ? (
           <div className="border-border flex flex-1 flex-col items-center justify-center rounded-2xl border border-dashed px-8 py-16 text-center">
             <p className="text-muted-foreground text-sm">
-              No deployments yet. Import a project, then Run on Railway.
+              Import or create from prompt, then Run on Railway.
             </p>
           </div>
         ) : (
           <ul className="flex flex-col gap-2">
             {deployable.map((p) => {
-              const repo =
-                typeof p.repo === "string" && p.repo.includes("/")
-                  ? p.repo
+              const userRepo =
+                typeof p.githubRepo === "string" && p.githubRepo.includes("/")
+                  ? p.githubRepo
                   : null;
+              const canRun = Boolean(
+                userRepo ||
+                  (typeof p.mirrorGithubRepo === "string" &&
+                    p.mirrorGithubRepo.includes("/")) ||
+                  p.contentBackend === "virtual",
+              );
               const url = p.railwayDomain ?? p.lastRun?.url;
               const busy = runningId === p.id || p.lastRun?.status === "running";
               return (
@@ -164,6 +178,15 @@ export default function DeploymentsPanel({
                       {p.repo}
                       {p.lastRun?.status ? ` · ${p.lastRun.status}` : null}
                     </span>
+                    {p.neonMode === "shared" ? (
+                      <span className="text-muted-foreground text-xs">
+                        Shared schema · upgrade for dedicated DB
+                      </span>
+                    ) : p.neonMode === "dedicated" ? (
+                      <span className="text-muted-foreground text-xs">
+                        Dedicated Neon
+                      </span>
+                    ) : null}
                     {url ? (
                       <a
                         href={url}
@@ -180,10 +203,10 @@ export default function DeploymentsPanel({
                     type="button"
                     size="sm"
                     className="shrink-0 gap-1.5"
-                    disabled={busy || !repo || runMutation.isPending}
+                    disabled={busy || !canRun || runMutation.isPending}
                     onClick={() => {
-                      if (!repo) return;
-                      void runRailway(p.id, repo);
+                      if (!canRun) return;
+                      void runRailway(p.id, userRepo);
                     }}
                   >
                     <HugeiconsIcon icon={CloudUploadIcon} size={14} />

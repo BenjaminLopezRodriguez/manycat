@@ -165,11 +165,18 @@ async function loadVirtualWorkspaceFiles(
 
 export const projectRouter = createTRPCRouter({
   list: protectedProcedure.query(async ({ ctx }) => {
-    const rows = await db
-      .select()
+    return db
+      .select({
+        id: projects.id,
+        name: projects.name,
+        githubRepo: projects.githubRepo,
+        railwayDomain: projects.railwayDomain,
+        mirrorGithubRepo: projects.mirrorGithubRepo,
+        neonMode: projects.neonMode,
+        contentBackend: projects.contentBackend,
+      })
       .from(projects)
       .where(eq(projects.accountId, ctx.accountId));
-    return rows;
   }),
 
   budget: protectedProcedure.query(async ({ ctx }) => {
