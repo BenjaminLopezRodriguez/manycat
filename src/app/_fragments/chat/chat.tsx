@@ -28,13 +28,13 @@ import {
   SidebarRight01Icon,
 } from "@hugeicons/core-free-icons";
 
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -51,6 +51,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { slugify } from "@/lib/slug";
 import { cn } from "@/lib/utils";
 import { api } from "@/trpc/react";
+import { signIn, signOut, useSession } from "next-auth/react";
 import { applyWorkspacePatch, useAgent, type AgentEvent } from "./agent-sim";
 import {
   deriveProjectsFromWorkflows,
@@ -65,16 +66,14 @@ import {
 } from "./data";
 import ImportRepoDialog from "./import-repo";
 import MessageList, { InlineDiffEditor } from "./message-list";
-import Projects from "./projects";
+import Projects, {
+  LANDING_FEATURES,
+  type LandingFeatureId,
+} from "./projects";
+import SectionScaffold from "./section-scaffold";
 import Workspace from "./workspace";
 
-type View = "feed" | "chats";
-
-const TEAMS = [
-  { id: "personal", name: "Personal", initials: "P" },
-  { id: "acme", name: "Acme Labs", initials: "AL" },
-  { id: "northstar", name: "Northstar", initials: "NS" },
-] as const;
+type View = "feed" | "chats" | "deployments" | "agents" | "integrations";
 
 /** Icon badges that can pin to the mobile status bubble */
 type BubbleBadge = "deploy" | "working" | "review";
@@ -85,17 +84,17 @@ const BUBBLE_BADGE: Record<
 > = {
   deploy: {
     icon: ArrowUp01Icon,
-    className: "bg-emerald-500 text-white",
+    className: "bg-foreground text-background",
     label: "Deploying",
   },
   working: {
     icon: BotIcon,
-    className: "bg-primary text-primary-foreground",
+    className: "bg-foreground text-background",
     label: "Agent working",
   },
   review: {
     icon: ArrowUpRight01Icon,
-    className: "bg-amber-500 text-white",
+    className: "bg-muted-foreground text-background",
     label: "Needs review",
   },
 };
@@ -167,11 +166,16 @@ export default function Chat() {
   const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
   const [importOpen, setImportOpen] = React.useState(false);
   const [navMenuOpen, setNavMenuOpen] = React.useState(false);
-  const [teamDrawerOpen, setTeamDrawerOpen] = React.useState(false);
-  const [teamId, setTeamId] = React.useState<string>(TEAMS[0].id);
+  const [accountDrawerOpen, setAccountDrawerOpen] = React.useState(false);
+  const [landingFeature, setLandingFeature] =
+    React.useState<LandingFeatureId>("chat");
   const bottomRef = React.useRef<HTMLDivElement>(null);
   const utils = api.useUtils();
-  const activeTeam = TEAMS.find((t) => t.id === teamId) ?? TEAMS[0];
+  const { data: session, status: sessionStatus } = useSession();
+  const signedIn = sessionStatus === "authenticated";
+  const accountLabel =
+    session?.login ?? session?.user?.name ?? session?.user?.email ?? "Account";
+  const accountInitials = accountLabel.slice(0, 2).toUpperCase();
 
   React.useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -433,81 +437,118 @@ export default function Chat() {
       <nav className="bg-sidebar-primary text-sidebar-primary-foreground hidden w-56 shrink-0 flex-col gap-1 px-3 py-4 md:flex">
         <div className="mb-3 flex items-center gap-2 px-1">
           <StatusBubble badges={bubbleBadges} />
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              className={cn(
-                "hover:bg-sidebar-primary-foreground/10 flex min-w-0 flex-1 items-center gap-1.5 rounded-xl px-2 py-1.5 text-left transition-colors",
-                "outline-none focus-visible:ring-2 focus-visible:ring-sidebar-primary-foreground/30",
-              )}
-            >
-              <span className="min-w-0 flex-1 truncate text-sm font-semibold">
-                {activeTeam.name}
-              </span>
-              <HugeiconsIcon
-                icon={ArrowDown01Icon}
-                size={14}
-                className="text-sidebar-primary-foreground/60 shrink-0"
-              />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="min-w-48">
-              <DropdownMenuRadioGroup value={teamId} onValueChange={setTeamId}>
-                {TEAMS.map((team) => (
-                  <DropdownMenuRadioItem key={team.id} value={team.id}>
-                    <Avatar className="size-6">
-                      <AvatarFallback className="bg-muted text-[10px] font-semibold">
-                        {team.initials}
-                      </AvatarFallback>
-                    </Avatar>
-                    {team.name}
-                  </DropdownMenuRadioItem>
-                ))}
-              </DropdownMenuRadioGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <AccountMenu
+            signedIn={signedIn}
+            label={accountLabel}
+            image={session?.user?.image}
+            initials={accountInitials}
+          />
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto">
-          <RailButton
-            label="Projects"
-            active={view === "feed"}
-            onClick={() => switchView("feed")}
-          >
-            <HugeiconsIcon icon={News01Icon} size={20} />
-          </RailButton>
-          <RailButton
-            label="Workflows"
-            active={view === "chats"}
-            badge={totalUnread > 0 ? totalUnread : undefined}
-            onClick={() => switchView("chats")}
-          >
-            <HugeiconsIcon icon={BubbleChatIcon} size={20} />
-          </RailButton>
-          <RailButton label="Deployments">
-            <HugeiconsIcon icon={CloudUploadIcon} size={20} />
-          </RailButton>
-          <RailButton label="Agents">
-            <HugeiconsIcon icon={BotIcon} size={20} />
-          </RailButton>
-          <RailButton label="Integrations">
-            <HugeiconsIcon icon={Link01Icon} size={20} />
-          </RailButton>
+          {signedIn ? (
+            <>
+              <RailButton
+                label="Projects"
+                active={view === "feed"}
+                onClick={() => switchView("feed")}
+              >
+                <HugeiconsIcon icon={News01Icon} size={20} />
+              </RailButton>
+              <RailButton
+                label="Workflows"
+                active={view === "chats"}
+                badge={totalUnread > 0 ? totalUnread : undefined}
+                onClick={() => switchView("chats")}
+              >
+                <HugeiconsIcon icon={BubbleChatIcon} size={20} />
+              </RailButton>
+              <RailButton
+                label="Deployments"
+                active={view === "deployments"}
+                onClick={() => switchView("deployments")}
+              >
+                <HugeiconsIcon icon={CloudUploadIcon} size={20} />
+              </RailButton>
+              <RailButton
+                label="Agents"
+                active={view === "agents"}
+                onClick={() => switchView("agents")}
+              >
+                <HugeiconsIcon icon={BotIcon} size={20} />
+              </RailButton>
+              <RailButton
+                label="Integrations"
+                active={view === "integrations"}
+                onClick={() => switchView("integrations")}
+              >
+                <HugeiconsIcon icon={Link01Icon} size={20} />
+              </RailButton>
 
-          <div className="bg-sidebar-primary-foreground/10 mx-2 my-2 h-px" />
-          <RailButton label="Usage">
-            <HugeiconsIcon icon={CreditCardIcon} size={20} />
-          </RailButton>
-          <RailButton label="Settings">
-            <HugeiconsIcon icon={Settings01Icon} size={20} />
-          </RailButton>
-          <RailButton label="Docs">
-            <HugeiconsIcon icon={HelpCircleIcon} size={20} />
-          </RailButton>
+              <div className="bg-sidebar-primary-foreground/10 mx-2 my-2 h-px" />
+              <RailButton label="Usage">
+                <HugeiconsIcon icon={CreditCardIcon} size={20} />
+              </RailButton>
+              <RailButton label="Settings">
+                <HugeiconsIcon icon={Settings01Icon} size={20} />
+              </RailButton>
+              <RailButton label="Docs">
+                <HugeiconsIcon icon={HelpCircleIcon} size={20} />
+              </RailButton>
+            </>
+          ) : (
+            <>
+              {LANDING_FEATURES.map((feature) => (
+                <FeatureRailButton
+                  key={feature.id}
+                  label={feature.label}
+                  blurb={feature.blurb}
+                  active={landingFeature === feature.id}
+                  onClick={() => {
+                    setLandingFeature(feature.id);
+                    switchView("feed");
+                  }}
+                >
+                  <HugeiconsIcon icon={feature.icon} size={18} />
+                </FeatureRailButton>
+              ))}
+              <div className="bg-sidebar-primary-foreground/10 mx-2 my-2 h-px" />
+              <p className="text-sidebar-primary-foreground/50 px-3 py-2 text-xs leading-relaxed">
+                Sign in with GitHub to unlock workflows on your repos.
+              </p>
+            </>
+          )}
         </div>
       </nav>
 
       <main className="flex min-h-0 min-w-0 flex-1">
-        {view === "feed" ? (
-          <Projects onImport={() => setImportOpen(true)} />
+        {!signedIn || view === "feed" ? (
+          <Projects
+            onImport={() => setImportOpen(true)}
+            featureId={landingFeature}
+            onFeatureChange={setLandingFeature}
+          />
+        ) : view === "deployments" ? (
+          <SectionScaffold
+            title="Deployments"
+            description="Preview URLs and production releases from your workflows — status, logs, and promote actions will live here."
+            icon={CloudUploadIcon}
+            emptyLabel="No deployments yet. Run a workflow to publish a preview."
+          />
+        ) : view === "agents" ? (
+          <SectionScaffold
+            title="Agents"
+            description="Specialist agents assigned to your repos — who is working, idle, or waiting on review."
+            icon={BotIcon}
+            emptyLabel="No agents yet. Import a project to spin up your first one."
+          />
+        ) : view === "integrations" ? (
+          <SectionScaffold
+            title="Integrations"
+            description="Connect GitHub, Vercel, and other tools so Manycat can ship from chat."
+            icon={Link01Icon}
+            emptyLabel="No integrations connected. GitHub sign-in is the first step."
+          />
         ) : (
           <>
             <aside
@@ -857,8 +898,13 @@ export default function Chat() {
                       size="icon"
                       aria-label="Send"
                       disabled={active.status === "working"}
+                      className="bg-slate-300 text-black hover:bg-slate-300/80"
                     >
-                      <HugeiconsIcon icon={SentIcon} size={18} />
+                      <HugeiconsIcon
+                        icon={SentIcon}
+                        size={18}
+                        className="text-black"
+                      />
                     </Button>
                   </form>
 
@@ -875,11 +921,11 @@ export default function Chat() {
           <StatusBubble badges={bubbleBadges} />
           <button
             type="button"
-            onClick={() => setTeamDrawerOpen(true)}
+            onClick={() => setAccountDrawerOpen(true)}
             className="hover:bg-sidebar-primary-foreground/10 flex min-w-0 flex-1 items-center gap-1 rounded-xl px-2 py-1.5 text-left transition-colors"
           >
             <span className="min-w-0 flex-1 truncate text-sm font-semibold">
-              {activeTeam.name}
+              {signedIn ? accountLabel : "Continue with GitHub"}
             </span>
             <HugeiconsIcon
               icon={ArrowDown01Icon}
@@ -900,49 +946,57 @@ export default function Chat() {
       )}
 
       <Drawer
-        open={teamDrawerOpen}
-        onOpenChange={setTeamDrawerOpen}
+        open={accountDrawerOpen}
+        onOpenChange={setAccountDrawerOpen}
         swipeDirection="down"
         showSwipeHandle
       >
         <DrawerContent className="max-h-[85dvh] md:hidden">
           <DrawerHeader className="text-left">
-            <DrawerTitle>Switch team</DrawerTitle>
+            <DrawerTitle>Account</DrawerTitle>
             <DrawerDescription className="sr-only">
-              Choose which team to work in
+              GitHub account
             </DrawerDescription>
           </DrawerHeader>
-          <div className="flex max-h-[min(70dvh,28rem)] flex-col gap-1 overflow-y-auto px-3 pb-6">
-            {TEAMS.map((team) => (
+          <div className="flex flex-col gap-1 px-3 pb-6">
+            {signedIn ? (
+              <>
+                <div className="flex items-center gap-3 rounded-xl px-3 py-2.5">
+                  <Avatar className="size-8">
+                    {session?.user?.image ? (
+                      <AvatarImage src={session.user.image} alt="" />
+                    ) : null}
+                    <AvatarFallback className="text-[10px] font-semibold">
+                      {accountInitials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                    {accountLabel}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  className="text-muted-foreground hover:bg-muted/60 hover:text-foreground rounded-xl px-3 py-2.5 text-left text-sm font-medium"
+                  onClick={() => {
+                    setAccountDrawerOpen(false);
+                    void signOut({ callbackUrl: "/signin" });
+                  }}
+                >
+                  Sign out
+                </button>
+              </>
+            ) : (
               <button
-                key={team.id}
                 type="button"
+                className="bg-primary text-primary-foreground rounded-xl px-3 py-2.5 text-left text-sm font-medium"
                 onClick={() => {
-                  setTeamId(team.id);
-                  setTeamDrawerOpen(false);
+                  setAccountDrawerOpen(false);
+                  void signIn("github", { callbackUrl: "/" });
                 }}
-                className={cn(
-                  "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-colors",
-                  team.id === teamId
-                    ? "bg-muted text-foreground"
-                    : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
-                )}
               >
-                <Avatar className="size-7">
-                  <AvatarFallback className="text-[10px] font-semibold">
-                    {team.initials}
-                  </AvatarFallback>
-                </Avatar>
-                <span className="min-w-0 flex-1 truncate">{team.name}</span>
-                {team.id === teamId ? (
-                  <HugeiconsIcon
-                    icon={CheckmarkCircle02Icon}
-                    size={16}
-                    className="text-primary shrink-0"
-                  />
-                ) : null}
+                Continue with GitHub
               </button>
-            ))}
+            )}
           </div>
         </DrawerContent>
       </Drawer>
@@ -961,65 +1015,99 @@ export default function Chat() {
             </DrawerDescription>
           </DrawerHeader>
           <div className="flex max-h-[min(70dvh,28rem)] flex-col gap-1 overflow-y-auto px-3 pb-6">
-            <MobileMenuItem
-              label="Projects"
-              active={view === "feed"}
-              onClick={() => {
-                switchView("feed");
-                setNavMenuOpen(false);
-              }}
-            >
-              <HugeiconsIcon icon={News01Icon} size={20} />
-            </MobileMenuItem>
-            <MobileMenuItem
-              label="Workflows"
-              active={view === "chats"}
-              badge={totalUnread > 0 ? totalUnread : undefined}
-              onClick={() => {
-                switchView("chats");
-                setNavMenuOpen(false);
-              }}
-            >
-              <HugeiconsIcon icon={BubbleChatIcon} size={20} />
-            </MobileMenuItem>
-            <MobileMenuItem
-              label="Deployments"
-              onClick={() => setNavMenuOpen(false)}
-            >
-              <HugeiconsIcon icon={CloudUploadIcon} size={20} />
-            </MobileMenuItem>
-            <MobileMenuItem
-              label="Agents"
-              onClick={() => setNavMenuOpen(false)}
-            >
-              <HugeiconsIcon icon={BotIcon} size={20} />
-            </MobileMenuItem>
-            <MobileMenuItem
-              label="Integrations"
-              onClick={() => setNavMenuOpen(false)}
-            >
-              <HugeiconsIcon icon={Link01Icon} size={20} />
-            </MobileMenuItem>
+            {signedIn ? (
+              <>
+                <MobileMenuItem
+                  label="Projects"
+                  active={view === "feed"}
+                  onClick={() => {
+                    switchView("feed");
+                    setNavMenuOpen(false);
+                  }}
+                >
+                  <HugeiconsIcon icon={News01Icon} size={20} />
+                </MobileMenuItem>
+                <MobileMenuItem
+                  label="Workflows"
+                  active={view === "chats"}
+                  badge={totalUnread > 0 ? totalUnread : undefined}
+                  onClick={() => {
+                    switchView("chats");
+                    setNavMenuOpen(false);
+                  }}
+                >
+                  <HugeiconsIcon icon={BubbleChatIcon} size={20} />
+                </MobileMenuItem>
+                <MobileMenuItem
+                  label="Deployments"
+                  active={view === "deployments"}
+                  onClick={() => {
+                    switchView("deployments");
+                    setNavMenuOpen(false);
+                  }}
+                >
+                  <HugeiconsIcon icon={CloudUploadIcon} size={20} />
+                </MobileMenuItem>
+                <MobileMenuItem
+                  label="Agents"
+                  active={view === "agents"}
+                  onClick={() => {
+                    switchView("agents");
+                    setNavMenuOpen(false);
+                  }}
+                >
+                  <HugeiconsIcon icon={BotIcon} size={20} />
+                </MobileMenuItem>
+                <MobileMenuItem
+                  label="Integrations"
+                  active={view === "integrations"}
+                  onClick={() => {
+                    switchView("integrations");
+                    setNavMenuOpen(false);
+                  }}
+                >
+                  <HugeiconsIcon icon={Link01Icon} size={20} />
+                </MobileMenuItem>
 
-            <div className="bg-border my-2 h-px" />
-            <MobileMenuItem
-              label="Usage"
-              onClick={() => setNavMenuOpen(false)}
-            >
-              <HugeiconsIcon icon={CreditCardIcon} size={20} />
-            </MobileMenuItem>
-            <MobileMenuItem
-              label="Settings"
-              onClick={() => setNavMenuOpen(false)}
-            >
-              <HugeiconsIcon icon={Settings01Icon} size={20} />
-            </MobileMenuItem>
-            <MobileMenuItem
-              label="Docs"
-              onClick={() => setNavMenuOpen(false)}
-            >
-              <HugeiconsIcon icon={HelpCircleIcon} size={20} />
-            </MobileMenuItem>
+                <div className="bg-border my-2 h-px" />
+                <MobileMenuItem
+                  label="Usage"
+                  onClick={() => setNavMenuOpen(false)}
+                >
+                  <HugeiconsIcon icon={CreditCardIcon} size={20} />
+                </MobileMenuItem>
+                <MobileMenuItem
+                  label="Settings"
+                  onClick={() => setNavMenuOpen(false)}
+                >
+                  <HugeiconsIcon icon={Settings01Icon} size={20} />
+                </MobileMenuItem>
+                <MobileMenuItem
+                  label="Docs"
+                  onClick={() => setNavMenuOpen(false)}
+                >
+                  <HugeiconsIcon icon={HelpCircleIcon} size={20} />
+                </MobileMenuItem>
+              </>
+            ) : (
+              <>
+                {LANDING_FEATURES.map((feature) => (
+                  <MobileFeatureItem
+                    key={feature.id}
+                    label={feature.label}
+                    blurb={feature.blurb}
+                    active={landingFeature === feature.id}
+                    onClick={() => {
+                      setLandingFeature(feature.id);
+                      switchView("feed");
+                      setNavMenuOpen(false);
+                    }}
+                  >
+                    <HugeiconsIcon icon={feature.icon} size={18} />
+                  </MobileFeatureItem>
+                ))}
+              </>
+            )}
           </div>
         </DrawerContent>
       </Drawer>
@@ -1033,6 +1121,69 @@ export default function Chat() {
         onImportError={handleImportError}
       />
     </div>
+  );
+}
+
+function AccountMenu({
+  signedIn,
+  label,
+  image,
+  initials,
+}: {
+  signedIn: boolean;
+  label: string;
+  image?: string | null;
+  initials: string;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        className={cn(
+          "hover:bg-sidebar-primary-foreground/10 flex min-w-0 flex-1 items-center gap-1.5 rounded-xl px-2 py-1.5 text-left transition-colors",
+          "outline-none focus-visible:ring-2 focus-visible:ring-sidebar-primary-foreground/30",
+        )}
+      >
+        <Avatar className="size-6">
+          {image ? <AvatarImage src={image} alt="" /> : null}
+          <AvatarFallback className="bg-sidebar-primary-foreground/15 text-[10px] font-semibold">
+            {signedIn ? initials : "MC"}
+          </AvatarFallback>
+        </Avatar>
+        <span className="min-w-0 flex-1 truncate text-sm font-semibold">
+          {signedIn ? label : "Continue with GitHub"}
+        </span>
+        <HugeiconsIcon
+          icon={ArrowDown01Icon}
+          size={14}
+          className="text-sidebar-primary-foreground/60 shrink-0"
+        />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="min-w-48">
+        {signedIn ? (
+          <>
+            <div className="text-muted-foreground px-3 py-2 text-xs">
+              Signed in with GitHub
+            </div>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => {
+                void signOut({ callbackUrl: "/signin" });
+              }}
+            >
+              Sign out
+            </DropdownMenuItem>
+          </>
+        ) : (
+          <DropdownMenuItem
+            onClick={() => {
+              void signIn("github", { callbackUrl: "/" });
+            }}
+          >
+            Continue with GitHub
+          </DropdownMenuItem>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -1083,6 +1234,52 @@ function StatusBubble({ badges }: { badges: BubbleBadge[] }) {
   );
 }
 
+function FeatureRailButton({
+  label,
+  blurb,
+  active,
+  onClick,
+  children,
+}: {
+  label: string;
+  blurb: string;
+  active?: boolean;
+  onClick?: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      aria-pressed={active}
+      className={cn(
+        "flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left transition-colors",
+        active
+          ? "bg-sidebar-primary-foreground/15 text-sidebar-primary-foreground"
+          : "text-sidebar-primary-foreground/50 hover:bg-sidebar-primary-foreground/10 hover:text-sidebar-primary-foreground/80",
+      )}
+    >
+      <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center">
+        {children}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-medium">{label}</span>
+        <span
+          className={cn(
+            "mt-0.5 block text-[11px] leading-snug",
+            active
+              ? "text-sidebar-primary-foreground/70"
+              : "text-sidebar-primary-foreground/40",
+          )}
+        >
+          {blurb}
+        </span>
+      </span>
+    </button>
+  );
+}
+
 function RailButton({
   label,
   active,
@@ -1118,6 +1315,44 @@ function RailButton({
           {badge}
         </span>
       ) : null}
+    </button>
+  );
+}
+
+function MobileFeatureItem({
+  label,
+  blurb,
+  active,
+  onClick,
+  children,
+}: {
+  label: string;
+  blurb: string;
+  active?: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={cn(
+        "flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left transition-colors",
+        active
+          ? "bg-muted text-foreground"
+          : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+      )}
+    >
+      <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center">
+        {children}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-medium">{label}</span>
+        <span className="text-muted-foreground mt-0.5 block text-xs leading-snug">
+          {blurb}
+        </span>
+      </span>
     </button>
   );
 }

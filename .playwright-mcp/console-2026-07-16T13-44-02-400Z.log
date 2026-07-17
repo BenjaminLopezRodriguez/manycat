@@ -677,3 +677,400 @@ Import trace:
 [47513506ms] [LOG] [Fast Refresh] done in 217ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
 [47516797ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
 [47517036ms] [LOG] [Fast Refresh] done in 130ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47525312ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47526735ms] [LOG] [Fast Refresh] done in 540ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47526778ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/?_rsc=_mjR7ylJSLpkZcZ3:0
+[47526837ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47526969ms] [LOG] [Fast Refresh] done in 234ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47528406ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:14537
+[47528903ms] [LOG] %c >> query #1 %cworkflow.isEnabled%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_e01bab6e._.js:3226
+[47529771ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47530173ms] [LOG] [Fast Refresh] done in 500ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47530508ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47530607ms] [LOG] [Fast Refresh] done in 199ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47530614ms] [LOG] %c << query #1 %cworkflow.isEnabled%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 1711, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_e01bab6e._.js:3226
+[47538593ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47539312ms] ReferenceError: TEAMS is not defined
+    at Chat (http://localhost:3000/_next/static/chunks/src_a1cf7648._.js?id=%255Bproject%255D%252Fsrc%252Fapp%252F_fragments%252Fchat%252Fchat.tsx+%255Bapp-client%255D+%2528ecmascript%2529:150:365)
+    at Object.react_stack_bottom_frame (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:13072:24)
+    at renderWithHooks (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:4091:24)
+    at updateFunctionComponent (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:5523:21)
+    at beginWork (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:6111:24)
+    at runWithFiberInDEV (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:886:74)
+    at performUnitOfWork (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8298:97)
+    at workLoopSync (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8190:40)
+    at renderRootSync (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8173:13)
+    at performWorkOnRoot (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:7932:56)
+    at performSyncWorkOnRoot (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8890:9)
+    at flushSyncWorkAcrossRoots_impl (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8809:316)
+    at flushSyncWork$1 (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8048:86)
+    at Object.scheduleRefresh (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:294:13)
+    at http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_6a66a683._.js:391:33
+    at Set.forEach (<anonymous>)
+    at Object.performReactRefresh (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_6a66a683._.js:384:38)
+    at applyUpdate (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_6a66a683._.js:878:31)
+    at http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_6a66a683._.js:886:13
+[47539250ms] [LOG] [Fast Refresh] done in 694ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47539413ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47539647ms] [LOG] [Fast Refresh] done in 337ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47539773ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47540566ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:6289
+[47540641ms] ReferenceError: TEAMS is not defined
+    at Chat (http://localhost:3000/_next/static/chunks/src_a1cf7648._.js?id=%255Bproject%255D%252Fsrc%252Fapp%252F_fragments%252Fchat%252Fchat.tsx+%255Bapp-client%255D+%2528ecmascript%2529:150:365)
+    at Object.react_stack_bottom_frame (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:13072:24)
+    at renderWithHooks (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:4091:24)
+    at updateFunctionComponent (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:5523:21)
+    at beginWork (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:6090:639)
+    at runWithFiberInDEV (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:886:74)
+    at performUnitOfWork (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8298:97)
+    at workLoopSync (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8190:40)
+    at renderRootSync (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8173:13)
+    at performWorkOnRoot (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:7932:56)
+    at performSyncWorkOnRoot (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8890:9)
+    at flushSyncWorkAcrossRoots_impl (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8809:316)
+    at flushSyncWork$1 (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8048:86)
+    at Object.scheduleRefresh (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:294:13)
+    at http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_6a66a683._.js:391:33
+    at Set.forEach (<anonymous>)
+    at Object.performReactRefresh (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_6a66a683._.js:384:38)
+    at applyUpdate (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_6a66a683._.js:878:31)
+    at http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_6a66a683._.js:886:13
+[47540603ms] [LOG] [Fast Refresh] done in 887ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47541752ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/:0
+[47542097ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:14537
+[47542452ms] ReferenceError: TEAMS is not defined
+    at Chat (http://localhost:3000/_next/static/chunks/src_a1cf7648._.js:3678:365)
+    at Object.react_stack_bottom_frame (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:13072:24)
+    at renderWithHooks (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:4091:24)
+    at updateFunctionComponent (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:5523:21)
+    at beginWork (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:6090:639)
+    at runWithFiberInDEV (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:886:74)
+    at performUnitOfWork (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8298:97)
+    at workLoopSync (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8190:40)
+    at renderRootSync (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8173:13)
+    at performWorkOnRoot (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:7932:56)
+    at performWorkOnRootViaSchedulerTask (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8882:9)
+    at MessagePort.performWorkUntilDeadline (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_6a66a683._.js:2601:64)
+[47545297ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47545680ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:6289
+[47545702ms] [LOG] [Fast Refresh] done in 475ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47546508ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/:0
+[47546841ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:14537
+[47547311ms] ReferenceError: activeTeam is not defined
+    at Chat (http://localhost:3000/_next/static/chunks/src_a1cf7648._.js:3960:59)
+    at Object.react_stack_bottom_frame (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:13072:24)
+    at renderWithHooks (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:4091:24)
+    at updateFunctionComponent (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:5523:21)
+    at beginWork (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:6090:639)
+    at runWithFiberInDEV (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:886:74)
+    at performUnitOfWork (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8298:97)
+    at workLoopSync (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8190:40)
+    at renderRootSync (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8173:13)
+    at performWorkOnRoot (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:7932:56)
+    at performWorkOnRootViaSchedulerTask (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8882:9)
+    at MessagePort.performWorkUntilDeadline (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_6a66a683._.js:2601:64)
+[47547696ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47547711ms] [LOG] [Fast Refresh] done in 116ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47556458ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47556755ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:6289
+[47556779ms] [LOG] [Fast Refresh] done in 389ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47556979ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47556994ms] [LOG] [Fast Refresh] done in 118ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47654177ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:14537
+[47654297ms] [LOG] %c >> query #1 %cworkflow.isEnabled%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_e01bab6e._.js:3226
+[47655552ms] [LOG] %c << query #1 %cworkflow.isEnabled%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 1254, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_e01bab6e._.js:3226
+[47712235ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47712815ms] [LOG] [Fast Refresh] done in 642ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47716496ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47716658ms] [LOG] %c >> query #2 %cworkflow.isEnabled%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_e01bab6e._.js:3226
+[47716692ms] [LOG] [Fast Refresh] done in 238ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47717165ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47717198ms] [LOG] [Fast Refresh] done in 119ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47717470ms] [LOG] %c << query #2 %cworkflow.isEnabled%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 799, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_e01bab6e._.js:3226
+[47721136ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47721251ms] [LOG] [Fast Refresh] done in 187ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47852482ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47852579ms] [LOG] [Fast Refresh] done in 197ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47859817ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47860062ms] [LOG] %c >> query #3 %cworkflow.isEnabled%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_e01bab6e._.js:3226
+[47860154ms] [LOG] [Fast Refresh] done in 398ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47860906ms] [LOG] %c << query #3 %cworkflow.isEnabled%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 841, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_e01bab6e._.js:3226
+[47864995ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47865181ms] [LOG] [Fast Refresh] done in 254ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47871146ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47871352ms] [LOG] [Fast Refresh] done in 225ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47871745ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47872035ms] ReferenceError: FeatureRailButton is not defined
+    at eval (http://localhost:3000/_next/static/chunks/src_a1cf7648._.js?id=%255Bproject%255D%252Fsrc%252Fapp%252F_fragments%252Fchat%252Fchat.tsx+%255Bapp-client%255D+%2528ecmascript%2529:590:578)
+    at Array.map (<anonymous>)
+    at Chat (http://localhost:3000/_next/static/chunks/src_a1cf7648._.js?id=%255Bproject%255D%252Fsrc%252Fapp%252F_fragments%252Fchat%252Fchat.tsx+%255Bapp-client%255D+%2528ecmascript%2529:590:198)
+    at Object.react_stack_bottom_frame (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:13072:24)
+    at renderWithHooks (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:4091:24)
+    at updateFunctionComponent (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:5523:21)
+    at beginWork (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:6111:24)
+    at runWithFiberInDEV (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:886:74)
+    at performUnitOfWork (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8298:97)
+    at workLoopSync (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8190:40)
+    at renderRootSync (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8173:13)
+    at performWorkOnRoot (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:7932:56)
+    at performSyncWorkOnRoot (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8890:9)
+    at flushSyncWorkAcrossRoots_impl (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8809:316)
+    at flushSyncWork$1 (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8048:86)
+    at Object.scheduleRefresh (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:294:13)
+    at http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_6a66a683._.js:391:33
+    at Set.forEach (<anonymous>)
+    at Object.performReactRefresh (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_6a66a683._.js:384:38)
+    at applyUpdate (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_6a66a683._.js:878:31)
+    at http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_6a66a683._.js:886:13
+[47871964ms] [LOG] [Fast Refresh] done in 275ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47872162ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47872237ms] [LOG] [Fast Refresh] done in 175ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47878903ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47879068ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:6289
+[47879159ms] ReferenceError: FeatureRailButton is not defined
+    at eval (http://localhost:3000/_next/static/chunks/src_a1cf7648._.js?id=%255Bproject%255D%252Fsrc%252Fapp%252F_fragments%252Fchat%252Fchat.tsx+%255Bapp-client%255D+%2528ecmascript%2529:590:578)
+    at Array.map (<anonymous>)
+    at Chat (http://localhost:3000/_next/static/chunks/src_a1cf7648._.js?id=%255Bproject%255D%252Fsrc%252Fapp%252F_fragments%252Fchat%252Fchat.tsx+%255Bapp-client%255D+%2528ecmascript%2529:590:198)
+    at Object.react_stack_bottom_frame (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:13072:24)
+    at renderWithHooks (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:4091:24)
+    at updateFunctionComponent (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:5523:21)
+    at beginWork (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:6090:639)
+    at runWithFiberInDEV (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:886:74)
+    at performUnitOfWork (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8298:97)
+    at workLoopSync (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8190:40)
+    at renderRootSync (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8173:13)
+    at performWorkOnRoot (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:7932:56)
+    at performSyncWorkOnRoot (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8890:9)
+    at flushSyncWorkAcrossRoots_impl (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8809:316)
+    at flushSyncWork$1 (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8048:86)
+    at Object.scheduleRefresh (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:294:13)
+    at http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_6a66a683._.js:391:33
+    at Set.forEach (<anonymous>)
+    at Object.performReactRefresh (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_6a66a683._.js:384:38)
+    at applyUpdate (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_6a66a683._.js:878:31)
+    at http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_6a66a683._.js:886:13
+[47879111ms] [LOG] [Fast Refresh] done in 258ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47879520ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47879657ms] [LOG] [Fast Refresh] done in 238ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47880142ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/:0
+[47880434ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:14537
+[47880714ms] ReferenceError: FeatureRailButton is not defined
+    at http://localhost:3000/_next/static/chunks/src_a1cf7648._.js:4441:578
+    at Array.map (<anonymous>)
+    at Chat (http://localhost:3000/_next/static/chunks/src_a1cf7648._.js:4441:198)
+    at Object.react_stack_bottom_frame (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:13072:24)
+    at renderWithHooks (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:4091:24)
+    at updateFunctionComponent (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:5523:21)
+    at beginWork (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:6090:639)
+    at runWithFiberInDEV (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:886:74)
+    at performUnitOfWork (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8298:97)
+    at workLoopSync (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8190:40)
+    at renderRootSync (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8173:13)
+    at performWorkOnRoot (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:7932:56)
+    at performWorkOnRootViaSchedulerTask (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8882:9)
+    at MessagePort.performWorkUntilDeadline (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_6a66a683._.js:2601:64)
+[47884582ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47884654ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:6289
+[47884666ms] [LOG] [Fast Refresh] done in 167ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47884790ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47884862ms] [LOG] [Fast Refresh] done in 172ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47885111ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/:0
+[47885289ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:14537
+[47885497ms] ReferenceError: FeatureRailButton is not defined
+    at http://localhost:3000/_next/static/chunks/src_a1cf7648._.js:4441:578
+    at Array.map (<anonymous>)
+    at Chat (http://localhost:3000/_next/static/chunks/src_a1cf7648._.js:4441:198)
+    at Object.react_stack_bottom_frame (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:13072:24)
+    at renderWithHooks (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:4091:24)
+    at updateFunctionComponent (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:5523:21)
+    at beginWork (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:6090:639)
+    at runWithFiberInDEV (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:886:74)
+    at performUnitOfWork (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8298:97)
+    at workLoopSync (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8190:40)
+    at renderRootSync (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8173:13)
+    at performWorkOnRoot (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:7932:56)
+    at performWorkOnRootViaSchedulerTask (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8882:9)
+    at MessagePort.performWorkUntilDeadline (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_6a66a683._.js:2601:64)
+[47886915ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47887237ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:6289
+[47887253ms] [LOG] [Fast Refresh] done in 414ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47887409ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47887535ms] [LOG] [Fast Refresh] done in 227ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47887776ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/:0
+[47888023ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:14537
+[47888369ms] ReferenceError: FeatureRailButton is not defined
+    at http://localhost:3000/_next/static/chunks/src_a1cf7648._.js:4441:578
+    at Array.map (<anonymous>)
+    at Chat (http://localhost:3000/_next/static/chunks/src_a1cf7648._.js:4441:198)
+    at Object.react_stack_bottom_frame (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:13072:24)
+    at renderWithHooks (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:4091:24)
+    at updateFunctionComponent (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:5523:21)
+    at beginWork (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:6090:639)
+    at runWithFiberInDEV (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:886:74)
+    at performUnitOfWork (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8298:97)
+    at workLoopSync (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8190:40)
+    at renderRootSync (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8173:13)
+    at performWorkOnRoot (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:7932:56)
+    at performWorkOnRootViaSchedulerTask (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8882:9)
+    at MessagePort.performWorkUntilDeadline (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_6a66a683._.js:2601:64)
+[47889357ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47889484ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:6289
+[47889553ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:6289
+[47889562ms] [LOG] [Fast Refresh] done in 291ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47890108ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47890196ms] [LOG] [Fast Refresh] done in 188ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47890273ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47890292ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:6289
+[47890292ms] [LOG] [Fast Refresh] done in 89ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47890371ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/:0
+[47890619ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:14537
+[47890909ms] [LOG] %c >> query #1 %cworkflow.isEnabled%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_e01bab6e._.js:3226
+[47891138ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47891310ms] [LOG] [Fast Refresh] done in 273ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47891879ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47891887ms] [LOG] [Fast Refresh] done in 108ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47892765ms] [LOG] %c << query #1 %cworkflow.isEnabled%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 1855, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_e01bab6e._.js:3226
+[47893378ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47893438ms] [LOG] [Fast Refresh] done in 162ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47916446ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47917396ms] [LOG] [Fast Refresh] done in 969ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47917895ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47918027ms] [LOG] [Fast Refresh] done in 194ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47944711ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47944832ms] [LOG] [Fast Refresh] done in 223ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[48221190ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[48221386ms] [LOG] [Fast Refresh] done in 99ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[48221575ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[48221660ms] [LOG] [Fast Refresh] done in 186ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[48233720ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[48233781ms] [LOG] [Fast Refresh] done in 18ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[48234124ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[48234215ms] [LOG] [Fast Refresh] done in 193ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[48284407ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[48284464ms] [LOG] [Fast Refresh] done in 28ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[48288834ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[48289046ms] [LOG] [Fast Refresh] done in 274ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[48289156ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[48289239ms] [LOG] [Fast Refresh] done in 184ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[48289459ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[48289486ms] [LOG] [Fast Refresh] done in 74ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816

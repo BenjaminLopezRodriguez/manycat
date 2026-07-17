@@ -2,31 +2,149 @@
 
 import * as React from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Add01Icon, SentIcon } from "@hugeicons/core-free-icons";
+import {
+  Add01Icon,
+  ArrowUpRight01Icon,
+  BotIcon,
+  BubbleChatIcon,
+  CloudUploadIcon,
+  GitBranchIcon,
+  SentIcon,
+} from "@hugeicons/core-free-icons";
+import { signIn, useSession } from "next-auth/react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
+export const LANDING_FEATURES = [
+  {
+    id: "chat",
+    label: "Chat",
+    blurb: "Ask for changes in plain English",
+    hero: "Talk to your repo",
+    detail:
+      "Describe the fix. Agents read the codebase and propose concrete edits.",
+    icon: BubbleChatIcon,
+  },
+  {
+    id: "diffs",
+    label: "Diffs",
+    blurb: "Review every change before it lands",
+    hero: "See the patch",
+    detail: "Side-by-side diffs you approve — or send back with notes.",
+    icon: GitBranchIcon,
+  },
+  {
+    id: "deploy",
+    label: "Deploy",
+    blurb: "Preview from the same thread",
+    hero: "Ship from chat",
+    detail: "Kick off runs and open previews without leaving the conversation.",
+    icon: CloudUploadIcon,
+  },
+  {
+    id: "agents",
+    label: "Agents",
+    blurb: "Many specialists, one workspace",
+    hero: "Many cats, one job",
+    detail: "Spin up agents per workflow. Live status stays pinned in the shell.",
+    icon: BotIcon,
+  },
+] as const;
+
+export type LandingFeatureId = (typeof LANDING_FEATURES)[number]["id"];
+
 type ProjectsProps = {
   onImport: () => void;
+  featureId?: LandingFeatureId;
+  onFeatureChange?: (id: LandingFeatureId) => void;
 };
 
-export default function Projects({ onImport }: ProjectsProps) {
+export default function Projects({
+  onImport,
+  featureId = "chat",
+  onFeatureChange,
+}: ProjectsProps) {
+  const { status } = useSession();
+  const signedIn = status === "authenticated";
   const [draft, setDraft] = React.useState("");
+  const active =
+    LANDING_FEATURES.find((f) => f.id === featureId) ?? LANDING_FEATURES[0];
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    // Need a repo before chatting — funnel through import.
     onImport();
     setDraft("");
   }
 
+  if (!signedIn) {
+    return (
+      <div className="bg-background flex flex-1 flex-col overflow-y-auto">
+        <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center gap-8 px-8 py-10 md:px-10">
+          <header className="flex max-w-xl flex-col gap-2">
+            <h1 className="font-heading text-3xl font-semibold tracking-tight md:text-4xl">
+              manycat
+            </h1>
+            <p className="text-lg font-medium tracking-tight md:text-xl">
+              {active.hero}
+            </p>
+            <p className="text-muted-foreground text-sm leading-relaxed md:text-base">
+              {active.detail}
+            </p>
+          </header>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            {LANDING_FEATURES.map((feature) => {
+              const selected = feature.id === active.id;
+              return (
+                <button
+                  key={feature.id}
+                  type="button"
+                  onClick={() => onFeatureChange?.(feature.id)}
+                  className={cn(
+                    "hover:bg-muted/50 flex flex-col gap-2 rounded-2xl border px-4 py-3.5 text-left transition-colors",
+                    selected && "bg-muted/60 border-foreground/15",
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    <HugeiconsIcon icon={feature.icon} size={16} />
+                    <span className="text-sm font-medium">{feature.label}</span>
+                  </div>
+                  <p className="text-muted-foreground text-xs leading-relaxed">
+                    {feature.blurb}
+                  </p>
+                  <ImpressionSketch featureId={feature.id} />
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="flex flex-col items-start gap-2">
+            <Button
+              size="lg"
+              className="gap-2"
+              onClick={() => void signIn("github", { callbackUrl: "/" })}
+            >
+              Continue with GitHub
+              <HugeiconsIcon icon={ArrowUpRight01Icon} size={16} />
+            </Button>
+            <p className="text-muted-foreground text-xs">
+              Import a repo after sign-in — no setup beyond GitHub.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-background flex flex-1 flex-col overflow-y-auto">
-      <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col items-center justify-center gap-6 px-4 py-8">
-        <h1 className="text-center text-2xl font-semibold tracking-tight md:text-3xl">
-          Ready when you are.
-        </h1>
+      <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col items-center justify-center gap-6 px-8 py-8 md:px-10">
+        <header className="flex max-w-xl flex-col items-center gap-2 text-center">
+          <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
+            Ready when you are.
+          </h1>
+        </header>
 
         <form
           onSubmit={submit}
@@ -55,17 +173,66 @@ export default function Projects({ onImport }: ProjectsProps) {
           <Button
             type="submit"
             size="icon"
-            className="size-9 shrink-0 rounded-full"
+            className="size-9 shrink-0 rounded-full bg-slate-300 text-black hover:bg-slate-300/80"
             aria-label="Send"
           >
-            <HugeiconsIcon icon={SentIcon} size={16} />
+            <HugeiconsIcon icon={SentIcon} size={16} className="text-black" />
           </Button>
         </form>
 
-        <p className="text-muted-foreground text-center text-sm">
+        <p className="text-muted-foreground max-w-md text-center text-sm">
           Import a GitHub project to get started.
         </p>
       </div>
+    </div>
+  );
+}
+
+/** Tiny static sketches — light product impression, not real UI. */
+function ImpressionSketch({ featureId }: { featureId: LandingFeatureId }) {
+  if (featureId === "chat") {
+    return (
+      <div className="bg-background/80 mt-1 flex flex-col gap-1.5 rounded-xl p-2.5 font-mono text-[10px] leading-snug">
+        <div className="text-muted-foreground">you · fix tax on checkout</div>
+        <div className="bg-muted/80 w-[92%] rounded-lg px-2 py-1.5">
+          Reading CartTotal.tsx…
+        </div>
+      </div>
+    );
+  }
+  if (featureId === "diffs") {
+    return (
+      <div className="bg-background/80 mt-1 rounded-xl p-2.5 font-mono text-[10px] leading-snug">
+        <div className="text-foreground">+ include taxRate in total</div>
+        <div className="text-muted-foreground">− return sum(items)</div>
+      </div>
+    );
+  }
+  if (featureId === "deploy") {
+    return (
+      <div className="bg-background/80 mt-1 flex items-center gap-2 rounded-xl p-2.5 text-[10px]">
+        <span className="bg-foreground/10 text-foreground rounded-full px-1.5 py-0.5 font-medium">
+          preview
+        </span>
+        <span className="text-muted-foreground truncate font-mono">
+          shop-web.vercel.app
+        </span>
+      </div>
+    );
+  }
+  return (
+    <div className="bg-background/80 mt-1 flex gap-1.5 rounded-xl p-2.5">
+      {["CK", "LP", "AU"].map((id) => (
+        <span
+          key={id}
+          className="bg-muted text-muted-foreground flex size-6 items-center justify-center rounded-full text-[9px] font-semibold"
+        >
+          {id}
+        </span>
+      ))}
+      <span className="text-muted-foreground self-center text-[10px]">
+        3 working
+      </span>
     </div>
   );
 }

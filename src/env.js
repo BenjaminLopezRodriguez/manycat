@@ -17,6 +17,7 @@ export const env = createEnv({
     // Per-project tokens are required before multi-user.
     VERCEL_TOKEN: z.string().optional(),
     AUTH_SECRET: z.string().min(1).optional(),
+    AUTH_URL: z.string().url().optional(),
     AUTH_GITHUB_ID: z.string().min(1).optional(),
     AUTH_GITHUB_SECRET: z.string().min(1).optional(),
   },
@@ -41,6 +42,7 @@ export const env = createEnv({
     SANDBOX_ORCHESTRATOR_URL: process.env.SANDBOX_ORCHESTRATOR_URL,
     VERCEL_TOKEN: process.env.VERCEL_TOKEN,
     AUTH_SECRET: process.env.AUTH_SECRET,
+    AUTH_URL: process.env.AUTH_URL,
     AUTH_GITHUB_ID: process.env.AUTH_GITHUB_ID,
     AUTH_GITHUB_SECRET: process.env.AUTH_GITHUB_SECRET,
     NEXT_PUBLIC_SANDBOX_ENABLED: process.env.NEXT_PUBLIC_SANDBOX_ENABLED,

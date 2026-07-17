@@ -16,7 +16,12 @@ export const githubRouter = createTRPCRouter({
   status: publicProcedure.query(({ ctx }) => ({
     configured: githubAuthConfigured,
     signedIn: Boolean(ctx.session?.accessToken),
-    login: ctx.session?.user?.name ?? ctx.session?.user?.email ?? null,
+    login:
+      ctx.session?.login ??
+      ctx.session?.user?.name ??
+      ctx.session?.user?.email ??
+      null,
+    image: ctx.session?.user?.image ?? null,
   })),
 
   listRepos: publicProcedure
