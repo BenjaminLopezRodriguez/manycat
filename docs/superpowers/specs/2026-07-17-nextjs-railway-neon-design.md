@@ -1,7 +1,7 @@
 # Next.js Railway auto-deploy + Neon app data
 
 **Date:** 2026-07-17  
-**Status:** Approved; plan at `docs/superpowers/plans/2026-07-17-nextjs-railway-neon.md`  
+**Status:** Implemented (see `docs/superpowers/plans/2026-07-17-nextjs-railway-neon.md`)  
 **Scope:** Full loop — Next template, GitHub mirror, Railway Next build/start, plan-gated Neon
 
 ## Problem

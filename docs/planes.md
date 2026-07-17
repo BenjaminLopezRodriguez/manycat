@@ -15,6 +15,12 @@ Manycat never mixes product infrastructure with user-generated compute or code.
 4. Orchestrator and agent deploy only to the **control** project.
 5. Manycat on Vercel talks to control services over HTTPS (`SANDBOX_ORCHESTRATOR_URL`, `AGENT_HARNESS_URL`).
 
+## Neon database URLs
+
+`NEON_SHARED_DATABASE_URL` is **control-only**: the admin/owner URL for the shared free-tier Neon project. Control uses it to `CREATE ROLE`, `CREATE SCHEMA`, and `GRANT` per app. It must never appear in Railway workload service variables.
+
+Workload services receive a scoped **`DATABASE_URL`** only — never `NEON_SHARED_DATABASE_URL` or the control metadata `DATABASE_URL`. Free accounts get a per-app role URL (grants limited to that schema; `search_path` is convenience, not the isolation boundary). Paying accounts (`sub` / `metered`) get a dedicated Neon project URI fetched on demand at deploy time and injected into Railway only (not stored at rest). If dedicated provision fails for a paying account, the deploy aborts with no fallback to the shared pool.
+
 ## Account + budget
 
 - Every project row is owned by `accountId`.
