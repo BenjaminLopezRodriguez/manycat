@@ -1,0 +1,10 @@
+# manycat-control — Railway service hints
+# Link with: railway link (select manycat-control project)
+# Deploy orchestrator: railway up --service sandbox-orchestrator
+
+[build]
+builder = "NIXPACKS"
+
+[deploy]
+healthcheckPath = "/health"
+restartPolicyType = "ON_FAILURE"

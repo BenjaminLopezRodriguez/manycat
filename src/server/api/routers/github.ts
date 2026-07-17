@@ -15,7 +15,11 @@ type GithubRepo = {
 export const githubRouter = createTRPCRouter({
   status: publicProcedure.query(({ ctx }) => ({
     configured: githubAuthConfigured,
-    signedIn: Boolean(ctx.session?.accessToken),
+    /** App session (Google or GitHub). */
+    signedIn: Boolean(ctx.session?.user),
+    /** Can call GitHub APIs / list private repos. */
+    githubLinked: Boolean(ctx.session?.hasGitHub ?? ctx.session?.accessToken),
+    provider: ctx.session?.provider ?? null,
     login:
       ctx.session?.login ??
       ctx.session?.user?.name ??

@@ -18,7 +18,7 @@ const PORT_MIN = Number(process.env.SANDBOX_PORT_MIN ?? 4000);
 const PORT_MAX = Number(process.env.SANDBOX_PORT_MAX ?? 4999);
 const PREVIEW_HOST = process.env.PREVIEW_HOST ?? "localhost";
 
-/** @type {Map<string, { containerId: string, hostPort: number }>} */
+/** @type {Map<string, { containerId: string, hostPort: number, accountId?: string }>} */
 const sandboxes = new Map();
 
 /** @type {Set<number>} */
@@ -68,6 +68,42 @@ async function cloneRepo(repoUrl, dir) {
   await execFileAsync("git", ["clone", "--depth", "1", repoUrl, dir], {
     timeout: 120_000,
   });
+}
+
+async function writeSeedFiles(root, files) {
+  for (const file of files) {
+    const full = path.join(root, file.path);
+    if (!full.startsWith(root + path.sep) && full !== root) {
+      throw new Error("path escape blocked");
+    }
+    await fs.promises.mkdir(path.dirname(full), { recursive: true });
+    await fs.promises.writeFile(full, file.contents, "utf8");
+  }
+}
+
+async function initVirtualGit(root, prompt) {
+  const gitDir = path.join(root, ".git");
+  if (!fs.existsSync(gitDir)) {
+    await execFileAsync("git", ["init"], { cwd: root, timeout: 15_000 });
+    await execFileAsync("git", ["config", "user.email", "agent@manycat.local"], {
+      cwd: root,
+      timeout: 5_000,
+    });
+    await execFileAsync("git", ["config", "user.name", "Manycat"], {
+      cwd: root,
+      timeout: 5_000,
+    });
+  }
+  await execFileAsync("git", ["add", "-A"], { cwd: root, timeout: 15_000 });
+  const message = `manycat: ${String(prompt).slice(0, 72)}`;
+  try {
+    await execFileAsync("git", ["commit", "-m", message], {
+      cwd: root,
+      timeout: 15_000,
+    });
+  } catch {
+    // nothing to commit is fine
+  }
 }
 
 const SKIP_DIRS = new Set([".git", "node_modules"]);
@@ -157,10 +193,40 @@ app.get("/health", (_req, res) => {
 
 app.post("/sandboxes", async (req, res) => {
   try {
-    const { workflowId, repoUrl: rawRepoUrl } = req.body;
+    const { workflowId, repoUrl: rawRepoUrl, accountId: rawAccountId, files: rawFiles, prompt } =
+      req.body;
     if (!workflowId || typeof workflowId !== "string") {
       res.status(400).json({ error: "workflowId required" });
       return;
+    }
+
+    // Optional Manycat account scope — never use for control-plane paths.
+    const accountId =
+      typeof rawAccountId === "string" && rawAccountId.length > 0
+        ? safeId(rawAccountId)
+        : undefined;
+
+    /** @type {{ path: string, contents: string }[] | undefined} */
+    let seedFiles;
+    if (Array.isArray(rawFiles)) {
+      seedFiles = [];
+      for (const f of rawFiles) {
+        if (
+          !f ||
+          typeof f.path !== "string" ||
+          typeof f.contents !== "string" ||
+          f.path.includes("..") ||
+          path.isAbsolute(f.path)
+        ) {
+          res.status(400).json({ error: "invalid files payload" });
+          return;
+        }
+        seedFiles.push({ path: f.path, contents: f.contents });
+      }
+      if (seedFiles.length > 200) {
+        res.status(400).json({ error: "too many files" });
+        return;
+      }
     }
 
     let repoUrl;
@@ -173,25 +239,43 @@ app.post("/sandboxes", async (req, res) => {
       }
     }
 
+    if (repoUrl && seedFiles) {
+      res.status(400).json({ error: "pass repoUrl or files, not both" });
+      return;
+    }
+
     const id = safeId(workflowId);
     const containerName = `manycat-sandbox-${id}`;
 
     const reused = await reconcileExisting(containerName);
     if (reused) {
-      sandboxes.set(id, { containerId: reused.containerId, hostPort: reused.hostPort });
+      sandboxes.set(id, {
+        containerId: reused.containerId,
+        hostPort: reused.hostPort,
+        accountId,
+      });
       usedPorts.add(reused.hostPort);
       res.json({
         workflowId: id,
         status: "running",
         hostPort: reused.hostPort,
         previewUrl: `http://${PREVIEW_HOST}:${reused.hostPort}`,
+        accountId,
       });
       return;
     }
 
     const wsPath = workspacePath(id);
 
-    if (repoUrl && fs.readdirSync(wsPath).length === 0) {
+    if (seedFiles && seedFiles.length > 0) {
+      try {
+        await writeSeedFiles(wsPath, seedFiles);
+        await initVirtualGit(wsPath, typeof prompt === "string" ? prompt : "manycat scaffold");
+      } catch (err) {
+        res.status(500).json({ error: err.message, stage: "seed" });
+        return;
+      }
+    } else if (repoUrl && fs.readdirSync(wsPath).length === 0) {
       try {
         await cloneRepo(repoUrl, wsPath);
       } catch (err) {
@@ -215,20 +299,25 @@ app.post("/sandboxes", async (req, res) => {
       const raced = await reconcileExisting(containerName);
       if (raced) {
         releasePort(hostPort);
-        sandboxes.set(id, { containerId: raced.containerId, hostPort: raced.hostPort });
+        sandboxes.set(id, {
+          containerId: raced.containerId,
+          hostPort: raced.hostPort,
+          accountId,
+        });
         usedPorts.add(raced.hostPort);
         res.json({
           workflowId: id,
           status: "running",
           hostPort: raced.hostPort,
           previewUrl: `http://${PREVIEW_HOST}:${raced.hostPort}`,
+          accountId,
         });
         return;
       }
       container = await createAndStart(spec);
     }
 
-    sandboxes.set(id, { containerId: container.id, hostPort });
+    sandboxes.set(id, { containerId: container.id, hostPort, accountId });
 
     res.status(201).json({
       workflowId: id,
@@ -236,6 +325,7 @@ app.post("/sandboxes", async (req, res) => {
       hostPort,
       previewUrl: `http://${PREVIEW_HOST}:${hostPort}`,
       workspacePath: wsPath,
+      accountId,
     });
   } catch (err) {
     console.error(err);

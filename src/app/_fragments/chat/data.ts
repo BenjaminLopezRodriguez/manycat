@@ -64,13 +64,12 @@ export type Workflow = {
 };
 
 export type RunConfig = {
-  kind: "vercel" | "custom" | "none";
+  kind: "vercel" | "railway" | "custom" | "none";
   // TODO(blacksmith): add kind "blacksmith" — fires a GitHub Actions
   // workflow_dispatch on Blacksmith runners: blacksmith?: { workflow: string; ref?: string }.
-  // Preview-domain mapping attaches here too: lastRun.url would resolve to a stable
-  // per-project subdomain (e.g. https://<project-slug>.preview.manycat.dev) instead
-  // of a one-off deploy URL like Vercel's.
   vercel?: { projectName?: string };
+  /** Railway workload-plane deploy (public *.up.railway.app). */
+  railway?: { githubRepo?: string };
   custom?: { command: string };
 };
 

@@ -48,7 +48,6 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { slugify } from "@/lib/slug";
 import { cn } from "@/lib/utils";
 import { api } from "@/trpc/react";
 import { signIn, signOut, useSession } from "next-auth/react";
@@ -70,6 +69,7 @@ import Projects, {
   LANDING_FEATURES,
   type LandingFeatureId,
 } from "./projects";
+import DeploymentsPanel from "./deployments-panel";
 import SectionScaffold from "./section-scaffold";
 import Workspace from "./workspace";
 
@@ -176,6 +176,8 @@ export default function Chat() {
   const accountLabel =
     session?.login ?? session?.user?.name ?? session?.user?.email ?? "Account";
   const accountInitials = accountLabel.slice(0, 2).toUpperCase();
+  const [creatingFromPrompt, setCreatingFromPrompt] = React.useState(false);
+  const createFromPrompt = api.workflow.createFromPrompt.useMutation();
 
   React.useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -319,22 +321,32 @@ export default function Chat() {
 
     const repoFullName = `${owner}/${repo}`;
     setProjects((prev) => {
-      const existing = prev.find((p) => p.repo === repoFullName);
+      const existing = prev.find(
+        (p) => p.id === workflowId || p.repo === repoFullName,
+      );
       if (existing) {
         return prev.map((p) =>
           p.id === existing.id
-            ? { ...p, workflowIds: [...p.workflowIds, workflowId] }
+            ? {
+                ...p,
+                id: workflowId,
+                workflowIds: [...new Set([...p.workflowIds, workflowId])],
+                runConfig: {
+                  kind: "railway",
+                  railway: { githubRepo: repoFullName },
+                },
+              }
             : p,
         );
       }
       return [
         ...prev,
         {
-          id: slugify(repoFullName),
+          id: workflowId,
           name: repo,
           repo: repoFullName,
           workflowIds: [workflowId],
-          runConfig: { kind: "none" },
+          runConfig: { kind: "railway", railway: { githubRepo: repoFullName } },
         },
       ];
     });
@@ -397,6 +409,129 @@ export default function Chat() {
     );
   }
 
+  async function handleCreateFromPrompt(promptText: string) {
+    setCreatingFromPrompt(true);
+    const optimisticId = `pending-${Date.now()}`;
+    const shortName = promptText.slice(0, 32);
+
+    setWorkflows((prev) => [
+      ...prev,
+      {
+        id: optimisticId,
+        name: shortName,
+        initials: shortName.slice(0, 2).toUpperCase() || "AP",
+        avatarClass: "bg-sky-200 text-sky-900",
+        repo: "virtual",
+        status: "working",
+        messages: [
+          {
+            id: 1,
+            type: "text",
+            from: "me",
+            text: promptText,
+            time: nowTime(),
+          },
+          {
+            id: 2,
+            type: "agent-status",
+            text: "Creating virtual workspace and spawning sandbox…",
+            streaming: true,
+            time: nowTime(),
+          },
+        ],
+        workspace: [],
+      },
+    ]);
+    openWorkflow(optimisticId);
+    switchView("chats");
+
+    try {
+      const data = await createFromPrompt.mutateAsync({
+        prompt: promptText,
+        existingIds: workflows
+          .map((w) => w.id)
+          .filter((id) => !id.startsWith("pending-")),
+      });
+
+      setWorkflows((prev) =>
+        prev.map((w) =>
+          w.id === optimisticId
+            ? {
+                ...w,
+                id: data.workflowId,
+                name: data.name,
+                initials: data.name.slice(0, 2).toUpperCase(),
+                repo: "virtual",
+                status: "idle",
+                workspace: data.files,
+                messages: [
+                  {
+                    id: 1,
+                    type: "text",
+                    from: "me",
+                    text: promptText,
+                    time: nowTime(),
+                  },
+                  {
+                    id: 2,
+                    type: "text",
+                    from: "agent",
+                    text: data.previewUrl
+                      ? `Virtual git ready (${data.contentRootHash.slice(0, 8)}…). Sandbox up at ${data.previewUrl}`
+                      : `Virtual git ready (${data.contentRootHash.slice(0, 8)}…). Workspace written (${data.sandboxStatus}).`,
+                    time: nowTime(),
+                  },
+                ],
+              }
+            : w,
+        ),
+      );
+      setActiveId(data.workflowId);
+      if (data.previewUrl) setPreviewUrl(data.previewUrl);
+
+      setProjects((prev) => [
+        ...prev.filter((p) => p.id !== data.workflowId),
+        {
+          id: data.workflowId,
+          name: data.name,
+          repo: "virtual",
+          workflowIds: [data.workflowId],
+          runConfig: { kind: "none" },
+        },
+      ]);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setWorkflows((prev) =>
+        prev.map((w) =>
+          w.id === optimisticId
+            ? {
+                ...w,
+                status: "idle",
+                messages: [
+                  {
+                    id: 1,
+                    type: "text",
+                    from: "me",
+                    text: promptText,
+                    time: nowTime(),
+                  },
+                  {
+                    id: 2,
+                    type: "text",
+                    from: "agent",
+                    text: `Couldn't create workspace: ${message}`,
+                    time: nowTime(),
+                  },
+                ],
+              }
+            : w,
+        ),
+      );
+    } finally {
+      setCreatingFromPrompt(false);
+    }
+  }
+
   function switchView(v: View) {
     setView(v);
     setChatOpen(false);
@@ -437,12 +572,14 @@ export default function Chat() {
       <nav className="bg-sidebar-primary text-sidebar-primary-foreground hidden w-56 shrink-0 flex-col gap-1 px-3 py-4 md:flex">
         <div className="mb-3 flex items-center gap-2 px-1">
           <StatusBubble badges={bubbleBadges} />
-          <AccountMenu
-            signedIn={signedIn}
-            label={accountLabel}
-            image={session?.user?.image}
-            initials={accountInitials}
-          />
+            <AccountMenu
+              signedIn={signedIn}
+              label={accountLabel}
+              image={session?.user?.image}
+              initials={accountInitials}
+              provider={session?.provider}
+              hasGitHub={Boolean(session?.hasGitHub)}
+            />
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto">
@@ -514,7 +651,7 @@ export default function Chat() {
               ))}
               <div className="bg-sidebar-primary-foreground/10 mx-2 my-2 h-px" />
               <p className="text-sidebar-primary-foreground/50 px-3 py-2 text-xs leading-relaxed">
-                Sign in with GitHub to unlock workflows on your repos.
+                Sign in to unlock workflows on your projects.
               </p>
             </>
           )}
@@ -525,15 +662,38 @@ export default function Chat() {
         {!signedIn || view === "feed" ? (
           <Projects
             onImport={() => setImportOpen(true)}
+            onCreateFromPrompt={(p) => void handleCreateFromPrompt(p)}
+            creating={creatingFromPrompt}
             featureId={landingFeature}
             onFeatureChange={setLandingFeature}
           />
         ) : view === "deployments" ? (
-          <SectionScaffold
-            title="Deployments"
-            description="Preview URLs and production releases from your workflows — status, logs, and promote actions will live here."
-            icon={CloudUploadIcon}
-            emptyLabel="No deployments yet. Run a workflow to publish a preview."
+          <DeploymentsPanel
+            projects={projects}
+            onProjectRunResult={(projectId, result) => {
+              setProjects((prev) => {
+                const idx = prev.findIndex(
+                  (p) =>
+                    p.id === projectId || p.workflowIds.includes(projectId),
+                );
+                if (idx === -1) {
+                  return [
+                    ...prev,
+                    {
+                      id: projectId,
+                      name: projectId,
+                      repo: projectId,
+                      workflowIds: [projectId],
+                      runConfig: { kind: "railway" as const },
+                      lastRun: result,
+                    },
+                  ];
+                }
+                return prev.map((p, i) =>
+                  i === idx ? { ...p, lastRun: result } : p,
+                );
+              });
+            }}
           />
         ) : view === "agents" ? (
           <SectionScaffold
@@ -925,7 +1085,7 @@ export default function Chat() {
             className="hover:bg-sidebar-primary-foreground/10 flex min-w-0 flex-1 items-center gap-1 rounded-xl px-2 py-1.5 text-left transition-colors"
           >
             <span className="min-w-0 flex-1 truncate text-sm font-semibold">
-              {signedIn ? accountLabel : "Continue with GitHub"}
+              {signedIn ? accountLabel : "Sign in"}
             </span>
             <HugeiconsIcon
               icon={ArrowDown01Icon}
@@ -984,18 +1144,42 @@ export default function Chat() {
                 >
                   Sign out
                 </button>
+                {!session?.hasGitHub ? (
+                  <button
+                    type="button"
+                    className="hover:bg-muted/60 rounded-xl px-3 py-2.5 text-left text-sm font-medium"
+                    onClick={() => {
+                      setAccountDrawerOpen(false);
+                      void signIn("github", { callbackUrl: "/" });
+                    }}
+                  >
+                    Connect GitHub
+                  </button>
+                ) : null}
               </>
             ) : (
-              <button
-                type="button"
-                className="bg-primary text-primary-foreground rounded-xl px-3 py-2.5 text-left text-sm font-medium"
-                onClick={() => {
-                  setAccountDrawerOpen(false);
-                  void signIn("github", { callbackUrl: "/" });
-                }}
-              >
-                Continue with GitHub
-              </button>
+              <>
+                <button
+                  type="button"
+                  className="bg-primary text-primary-foreground rounded-xl px-3 py-2.5 text-left text-sm font-medium"
+                  onClick={() => {
+                    setAccountDrawerOpen(false);
+                    void signIn("google", { callbackUrl: "/" });
+                  }}
+                >
+                  Continue with Google
+                </button>
+                <button
+                  type="button"
+                  className="hover:bg-muted/60 rounded-xl px-3 py-2.5 text-left text-sm font-medium"
+                  onClick={() => {
+                    setAccountDrawerOpen(false);
+                    void signIn("github", { callbackUrl: "/" });
+                  }}
+                >
+                  Continue with GitHub
+                </button>
+              </>
             )}
           </div>
         </DrawerContent>
@@ -1129,12 +1313,25 @@ function AccountMenu({
   label,
   image,
   initials,
+  provider,
+  hasGitHub,
 }: {
   signedIn: boolean;
   label: string;
   image?: string | null;
   initials: string;
+  provider?: "github" | "google" | "dev" | null;
+  hasGitHub?: boolean;
 }) {
+  const providerLabel =
+    provider === "google"
+      ? "Google"
+      : provider === "github"
+        ? "GitHub"
+        : provider === "dev"
+          ? "local"
+          : "account";
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -1150,7 +1347,7 @@ function AccountMenu({
           </AvatarFallback>
         </Avatar>
         <span className="min-w-0 flex-1 truncate text-sm font-semibold">
-          {signedIn ? label : "Continue with GitHub"}
+          {signedIn ? label : "Sign in"}
         </span>
         <HugeiconsIcon
           icon={ArrowDown01Icon}
@@ -1162,8 +1359,20 @@ function AccountMenu({
         {signedIn ? (
           <>
             <div className="text-muted-foreground px-3 py-2 text-xs">
-              Signed in with GitHub
+              Signed in with {providerLabel}
             </div>
+            {!hasGitHub ? (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => {
+                    void signIn("github", { callbackUrl: "/" });
+                  }}
+                >
+                  Connect GitHub
+                </DropdownMenuItem>
+              </>
+            ) : null}
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={() => {
@@ -1174,13 +1383,22 @@ function AccountMenu({
             </DropdownMenuItem>
           </>
         ) : (
-          <DropdownMenuItem
-            onClick={() => {
-              void signIn("github", { callbackUrl: "/" });
-            }}
-          >
-            Continue with GitHub
-          </DropdownMenuItem>
+          <>
+            <DropdownMenuItem
+              onClick={() => {
+                void signIn("google", { callbackUrl: "/" });
+              }}
+            >
+              Continue with Google
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => {
+                void signIn("github", { callbackUrl: "/" });
+              }}
+            >
+              Continue with GitHub
+            </DropdownMenuItem>
+          </>
         )}
       </DropdownMenuContent>
     </DropdownMenu>

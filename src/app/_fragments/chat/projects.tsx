@@ -56,12 +56,16 @@ export type LandingFeatureId = (typeof LANDING_FEATURES)[number]["id"];
 
 type ProjectsProps = {
   onImport: () => void;
+  onCreateFromPrompt?: (prompt: string) => void;
+  creating?: boolean;
   featureId?: LandingFeatureId;
   onFeatureChange?: (id: LandingFeatureId) => void;
 };
 
 export default function Projects({
   onImport,
+  onCreateFromPrompt,
+  creating = false,
   featureId = "chat",
   onFeatureChange,
 }: ProjectsProps) {
@@ -73,6 +77,16 @@ export default function Projects({
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
+    const prompt = draft.trim();
+    if (!prompt) {
+      onImport();
+      return;
+    }
+    if (onCreateFromPrompt) {
+      onCreateFromPrompt(prompt);
+      setDraft("");
+      return;
+    }
     onImport();
     setDraft("");
   }
@@ -123,13 +137,22 @@ export default function Projects({
             <Button
               size="lg"
               className="gap-2"
+              onClick={() => void signIn("google", { callbackUrl: "/" })}
+            >
+              Continue with Google
+              <HugeiconsIcon icon={ArrowUpRight01Icon} size={16} />
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              className="gap-2"
               onClick={() => void signIn("github", { callbackUrl: "/" })}
             >
               Continue with GitHub
-              <HugeiconsIcon icon={ArrowUpRight01Icon} size={16} />
             </Button>
             <p className="text-muted-foreground text-xs">
-              Import a repo after sign-in — no setup beyond GitHub.
+              Google gets you in fast. Connect GitHub later to import private
+              repos.
             </p>
           </div>
         </div>
@@ -174,14 +197,17 @@ export default function Projects({
             type="submit"
             size="icon"
             className="size-9 shrink-0 rounded-full bg-slate-300 text-black hover:bg-slate-300/80"
-            aria-label="Send"
+            aria-label="Create project"
+            disabled={creating}
           >
             <HugeiconsIcon icon={SentIcon} size={16} className="text-black" />
           </Button>
         </form>
 
         <p className="text-muted-foreground max-w-md text-center text-sm">
-          Import a GitHub project to get started.
+          {creating
+            ? "Spawning workspace…"
+            : "Describe what to build — or tap + to import from GitHub."}
         </p>
       </div>
     </div>

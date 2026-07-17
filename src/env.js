@@ -16,10 +16,21 @@ export const env = createEnv({
     // TODO: single-user v1 — this token deploys under one Vercel account for everyone.
     // Per-project tokens are required before multi-user.
     VERCEL_TOKEN: z.string().optional(),
+    /**
+     * Railway — server-only. Used to create user preview services in the
+     * WORKLOAD project (never the control-plane project).
+     */
+    RAILWAY_API_TOKEN: z.string().min(1).optional(),
+    RAILWAY_WORKLOAD_PROJECT_ID: z.string().min(1).optional(),
+    RAILWAY_WORKLOAD_ENVIRONMENT_ID: z.string().min(1).optional(),
+    /** Optional docs/ops id for control-plane project (orchestrator/agent). */
+    RAILWAY_CONTROL_PROJECT_ID: z.string().min(1).optional(),
     AUTH_SECRET: z.string().min(1).optional(),
     AUTH_URL: z.string().url().optional(),
     AUTH_GITHUB_ID: z.string().min(1).optional(),
     AUTH_GITHUB_SECRET: z.string().min(1).optional(),
+    AUTH_GOOGLE_ID: z.string().min(1).optional(),
+    AUTH_GOOGLE_SECRET: z.string().min(1).optional(),
   },
 
   /**
@@ -41,10 +52,17 @@ export const env = createEnv({
     AGENT_HARNESS_URL: process.env.AGENT_HARNESS_URL,
     SANDBOX_ORCHESTRATOR_URL: process.env.SANDBOX_ORCHESTRATOR_URL,
     VERCEL_TOKEN: process.env.VERCEL_TOKEN,
+    RAILWAY_API_TOKEN: process.env.RAILWAY_API_TOKEN,
+    RAILWAY_WORKLOAD_PROJECT_ID: process.env.RAILWAY_WORKLOAD_PROJECT_ID,
+    RAILWAY_WORKLOAD_ENVIRONMENT_ID:
+      process.env.RAILWAY_WORKLOAD_ENVIRONMENT_ID,
+    RAILWAY_CONTROL_PROJECT_ID: process.env.RAILWAY_CONTROL_PROJECT_ID,
     AUTH_SECRET: process.env.AUTH_SECRET,
     AUTH_URL: process.env.AUTH_URL,
     AUTH_GITHUB_ID: process.env.AUTH_GITHUB_ID,
     AUTH_GITHUB_SECRET: process.env.AUTH_GITHUB_SECRET,
+    AUTH_GOOGLE_ID: process.env.AUTH_GOOGLE_ID,
+    AUTH_GOOGLE_SECRET: process.env.AUTH_GOOGLE_SECRET,
     NEXT_PUBLIC_SANDBOX_ENABLED: process.env.NEXT_PUBLIC_SANDBOX_ENABLED,
   },
   /**

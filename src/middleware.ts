@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 
-import { auth, githubAuthConfigured } from "@/auth";
+import { auth, authConfigured } from "@/auth";
 
 export default auth((req) => {
-  // Until GitHub OAuth env is set, don't lock the app behind auth.
-  if (!githubAuthConfigured) return;
+  // Until at least one OAuth provider is set, don't lock the app behind auth.
+  if (!authConfigured) return;
 
   const { pathname } = req.nextUrl;
   const isAuthRoute =

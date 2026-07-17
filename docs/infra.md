@@ -64,7 +64,9 @@ The orchestrator mounts the host Docker socket (dev only) to create sandbox cont
 
 ## Production notes
 
+- See [planes.md](./planes.md) for control vs workload isolation and [railway-control.md](./railway-control.md) for deploying orchestrator/agent to Railway.
 - Replace in-cluster Postgres with managed database (Neon, RDS).
 - Push images to a container registry; update `image:` fields in `k8s/base/`.
-- Do not mount `docker.sock` in production — extend orchestrator to create `Job` resources from `k8s/base/sandbox-job-template.yaml`.
+- Do not mount `docker.sock` in production — extend orchestrator to create `Job` resources from `k8s/base/sandbox-job-template.yaml`, or use Railway Sandboxes in the workload plane.
 - Add an Ingress controller (nginx) for HTTPS and preview path routing.
+- Set `RAILWAY_API_TOKEN` + `RAILWAY_WORKLOAD_*` on the Manycat app (Vercel) for account-scoped live deploys.

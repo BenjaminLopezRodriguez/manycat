@@ -77,10 +77,10 @@ function ImportBody({
   const { data: status, isLoading: statusLoading } =
     api.github.status.useQuery();
   const reposQuery = api.github.listRepos.useQuery(undefined, {
-    enabled: Boolean(status?.signedIn),
+    enabled: Boolean(status?.githubLinked),
   });
 
-  async function handleSignIn() {
+  async function handleConnectGitHub() {
     if (!status?.configured) {
       setError(
         "Add AUTH_GITHUB_ID and AUTH_GITHUB_SECRET to .env (see .env.example).",
@@ -128,40 +128,34 @@ function ImportBody({
 
   if (statusLoading) {
     return (
-      <p className="text-muted-foreground px-1 pb-2 text-sm">Checking GitHub…</p>
+      <p className="text-muted-foreground px-1 pb-2 text-sm">Checking session…</p>
     );
   }
 
+  // Not signed into Manycat at all — send them to sign-in (Google or GitHub).
   if (!status?.signedIn) {
     return (
       <div className="flex flex-col gap-3">
         <Button
           type="button"
-          className="w-full gap-2"
-          disabled={signingIn}
-          onClick={() => void handleSignIn()}
+          className="w-full"
+          onClick={() => {
+            void signIn(undefined, { callbackUrl: "/?import=1" });
+          }}
         >
-          <HugeiconsIcon icon={GitBranchIcon} size={16} />
-          {signingIn ? "Redirecting…" : "Sign in with GitHub"}
+          Sign in to import
         </Button>
-        {error ? <p className="text-destructive text-sm">{error}</p> : null}
-        {!status?.configured ? (
-          <p className="text-muted-foreground text-xs">
-            Create a GitHub OAuth App with callback{" "}
-            <code className="font-mono">
-              /api/auth/callback/github
-            </code>{" "}
-            and set{" "}
-            <code className="font-mono">AUTH_GITHUB_ID</code> /{" "}
-            <code className="font-mono">AUTH_GITHUB_SECRET</code>.
-          </p>
-        ) : null}
+        <p className="text-muted-foreground text-xs">
+          Use Google to get started, or GitHub if you want to browse your repos
+          right away.
+        </p>
         <Close className="w-full">Cancel</Close>
       </div>
     );
   }
 
   const repos = reposQuery.data ?? [];
+  const githubLinked = Boolean(status.githubLinked);
 
   return (
     <form
@@ -169,56 +163,87 @@ function ImportBody({
       className="flex min-w-0 flex-col gap-3 overflow-hidden"
     >
       <p className="text-muted-foreground text-xs">
-        Signed in{status.login ? ` as ${status.login}` : ""}.
+        Signed in{status.login ? ` as ${status.login}` : ""}
+        {status.provider ? ` via ${status.provider}` : ""}.
       </p>
 
-      {reposQuery.isLoading ? (
-        <p className="text-muted-foreground text-sm">Loading repos…</p>
-      ) : reposQuery.isError ? (
-        <p className="text-destructive text-sm">{reposQuery.error.message}</p>
-      ) : repos.length === 0 ? (
-        <p className="text-muted-foreground text-sm">No repositories found.</p>
-      ) : (
-        <ul className="flex max-h-56 min-w-0 flex-col gap-1 overflow-x-hidden overflow-y-auto overscroll-contain">
-          {repos.map((repo) => (
-            <li key={repo.fullName} className="min-w-0">
-              <button
-                type="button"
-                onClick={() => {
-                  setSelected(repo.fullName);
-                  setManual("");
-                  setError(null);
-                }}
-                className={cn(
-                  "hover:bg-muted/60 flex w-full min-w-0 flex-col gap-0.5 rounded-xl px-3 py-2.5 text-left transition-colors",
-                  selected === repo.fullName && "bg-muted",
-                )}
-              >
-                <span className="block truncate text-sm font-medium">
-                  {repo.fullName}
-                  {repo.private ? (
-                    <span className="text-muted-foreground ml-1 text-[10px]">
-                      private
+      {!githubLinked ? (
+        <div className="bg-muted/40 flex flex-col gap-2 rounded-xl border px-3 py-3">
+          <p className="text-sm font-medium">Connect GitHub (optional)</p>
+          <p className="text-muted-foreground text-xs leading-relaxed">
+            Browse your private repos from Manycat. Or skip and paste a public{" "}
+            <span className="font-mono">owner/repo</span> below.
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="w-full gap-2"
+            disabled={signingIn || !status.configured}
+            onClick={() => void handleConnectGitHub()}
+          >
+            <HugeiconsIcon icon={GitBranchIcon} size={16} />
+            {signingIn ? "Redirecting…" : "Connect GitHub"}
+          </Button>
+          {!status.configured ? (
+            <p className="text-muted-foreground text-[11px]">
+              Set{" "}
+              <code className="font-mono">AUTH_GITHUB_ID</code> /{" "}
+              <code className="font-mono">AUTH_GITHUB_SECRET</code> to enable.
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
+      {githubLinked ? (
+        reposQuery.isLoading ? (
+          <p className="text-muted-foreground text-sm">Loading repos…</p>
+        ) : reposQuery.isError ? (
+          <p className="text-destructive text-sm">{reposQuery.error.message}</p>
+        ) : repos.length === 0 ? (
+          <p className="text-muted-foreground text-sm">No repositories found.</p>
+        ) : (
+          <ul className="flex max-h-56 min-w-0 flex-col gap-1 overflow-x-hidden overflow-y-auto overscroll-contain">
+            {repos.map((repo) => (
+              <li key={repo.fullName} className="min-w-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelected(repo.fullName);
+                    setManual("");
+                    setError(null);
+                  }}
+                  className={cn(
+                    "hover:bg-muted/60 flex w-full min-w-0 flex-col gap-0.5 rounded-xl px-3 py-2.5 text-left transition-colors",
+                    selected === repo.fullName && "bg-muted",
+                  )}
+                >
+                  <span className="block truncate text-sm font-medium">
+                    {repo.fullName}
+                    {repo.private ? (
+                      <span className="text-muted-foreground ml-1 text-[10px]">
+                        private
+                      </span>
+                    ) : null}
+                  </span>
+                  {repo.description ? (
+                    <span className="text-muted-foreground block truncate text-xs">
+                      {repo.description}
                     </span>
                   ) : null}
-                </span>
-                {repo.description ? (
-                  <span className="text-muted-foreground block truncate text-xs">
-                    {repo.description}
-                  </span>
-                ) : null}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )
+      ) : null}
 
       <div className="flex min-w-0 flex-col gap-1.5">
         <label
           htmlFor="manual-repo"
           className="text-muted-foreground text-xs font-medium"
         >
-          Or paste a public repo
+          {githubLinked ? "Or paste a public repo" : "Paste a public repo"}
         </label>
         <Input
           id="manual-repo"
@@ -258,10 +283,16 @@ export default function ImportRepoDialog({
     enabled: open,
   });
 
-  const title = status?.signedIn ? "Select a project" : "Import from project";
+  const title = status?.signedIn
+    ? status.githubLinked
+      ? "Select a project"
+      : "Import a project"
+    : "Import from project";
   const description = status?.signedIn
-    ? "Choose a GitHub repo to import into Manycat."
-    : "Sign in with GitHub to choose a repository.";
+    ? status.githubLinked
+      ? "Choose a GitHub repo to import into Manycat."
+      : "Paste a public repo, or connect GitHub to browse yours."
+    : "Sign in to import a repository.";
 
   const body = (
     <ImportBody

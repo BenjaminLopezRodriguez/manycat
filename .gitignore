@@ -53,3 +53,4 @@ agent-harness/.venv/
 agent-harness/**/__pycache__/
 agent-harness/**/*.egg-info/
 agent-harness/.pytest_cache/
+.env*

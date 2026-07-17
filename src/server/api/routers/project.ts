@@ -2,10 +2,25 @@ import { execFile } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { promisify } from "node:util";
+import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { env } from "@/env";
-import { createTRPCRouter, publicProcedure } from "@/server/api/trpc";
+import {
+  addUsage,
+  assertCanSpend,
+  budgetSummary,
+  BudgetExceededError,
+  ensureAccount,
+  ESTIMATED_DEPLOY_CENTS,
+} from "@/server/billing/budget";
+import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
+import { db } from "@/server/db";
+import { projects } from "@/server/db/schema";
+import {
+  deployProjectToRailway,
+  getWorkloadRailwayConfig,
+} from "@/server/railway/client";
 
 const execFileAsync = promisify(execFile);
 
@@ -33,33 +48,33 @@ function scrub(text: string, secret: string | undefined) {
 
 const DEPLOY_URL_RE = /https:\/\/[a-zA-Z0-9.-]+\.vercel\.app[^\s"'<>]*/g;
 
-/** Vercel CLI prints several URLs (inspect, per-deployment, aliased). The
- * per-deployment one can sit behind Vercel's login/SSO deployment protection
- * and won't actually open publicly — the "▲ Aliased" line is the reliably
- * public one when present, so prefer it before falling back to the last
- * vercel.app URL seen in the log. */
 function extractDeployUrl(log: string): string | undefined {
   const aliased = /Aliased\s+(https:\/\/\S+)/.exec(log)?.[1];
   if (aliased) return aliased;
   return [...log.matchAll(DEPLOY_URL_RE)].at(-1)?.[0];
 }
 
-// Matches the slug shape actually produced by slugify() (@/lib/slug) — also closes
-// off path traversal (cwd = WORKSPACE_ROOT/workflowId) and argv-adjacent characters.
 const workflowIdInput = z
   .string()
   .regex(/^[a-z0-9][a-z0-9-]{0,63}$/, "invalid workflowId");
 
-// Vercel project names: lowercase alphanumeric + dashes. Rejecting anything else
-// (in particular a leading "-") also blocks argv flag-smuggling via --name.
 const vercelProjectNameInput = z
   .string()
   .regex(/^[a-z0-9][a-z0-9-]{0,99}$/, "invalid Vercel project name")
   .optional();
 
 const runConfigInput = z.object({
-  kind: z.enum(["vercel", "custom", "none"]),
+  kind: z.enum(["vercel", "railway", "custom", "none"]),
   vercel: z.object({ projectName: vercelProjectNameInput }).optional(),
+  railway: z
+    .object({
+      /** owner/repo — defaults to project.githubRepo when omitted */
+      githubRepo: z
+        .string()
+        .regex(/^[\w.-]+\/[\w.-]+$/, "invalid githubRepo")
+        .optional(),
+    })
+    .optional(),
   custom: z.object({ command: z.string() }).optional(),
 });
 
@@ -71,19 +86,174 @@ type RunResult = {
   finishedAt: string;
 };
 
+async function getOwnedProject(accountId: string, workflowId: string) {
+  const rows = await db
+    .select()
+    .from(projects)
+    .where(and(eq(projects.accountId, accountId), eq(projects.id, workflowId)))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
 export const projectRouter = createTRPCRouter({
-  run: publicProcedure
+  list: protectedProcedure.query(async ({ ctx }) => {
+    const rows = await db
+      .select()
+      .from(projects)
+      .where(eq(projects.accountId, ctx.accountId));
+    return rows;
+  }),
+
+  budget: protectedProcedure.query(async ({ ctx }) => {
+    const account = await ensureAccount(ctx.accountId);
+    return budgetSummary(account);
+  }),
+
+  upsertFromImport: protectedProcedure
+    .input(
+      z.object({
+        workflowId: workflowIdInput,
+        name: z.string().min(1).max(256),
+        githubRepo: z.string().regex(/^[\w.-]+\/[\w.-]+$/),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      await ensureAccount(ctx.accountId);
+      const existing = await getOwnedProject(ctx.accountId, input.workflowId);
+      if (existing) {
+        await db
+          .update(projects)
+          .set({
+            name: input.name,
+            githubRepo: input.githubRepo,
+            contentBackend: "github",
+          })
+          .where(
+            and(
+              eq(projects.accountId, ctx.accountId),
+              eq(projects.id, input.workflowId),
+            ),
+          );
+        return { ...existing, name: input.name, githubRepo: input.githubRepo };
+      }
+
+      const [row] = await db
+        .insert(projects)
+        .values({
+          id: input.workflowId,
+          accountId: ctx.accountId,
+          name: input.name,
+          githubRepo: input.githubRepo,
+          contentBackend: "github",
+          contentRootHash: null,
+          templateId: null,
+        })
+        .returning();
+      return row;
+    }),
+
+  run: protectedProcedure
     .input(
       z.object({
         workflowId: workflowIdInput,
         runConfig: runConfigInput,
       }),
     )
-    .mutation(async ({ input }): Promise<RunResult> => {
+    .mutation(async ({ ctx, input }): Promise<RunResult> => {
       const startedAt = new Date().toISOString();
 
       if (input.runConfig.kind === "none") {
         throw new Error("This project has no run action configured.");
+      }
+
+      if (input.runConfig.kind === "railway") {
+        const config = getWorkloadRailwayConfig();
+        if (!config) {
+          return {
+            status: "failed",
+            log: "Railway not configured — set RAILWAY_API_TOKEN, RAILWAY_WORKLOAD_PROJECT_ID, and RAILWAY_WORKLOAD_ENVIRONMENT_ID.",
+            startedAt,
+            finishedAt: new Date().toISOString(),
+          };
+        }
+
+        try {
+          await assertCanSpend(ctx.accountId, ESTIMATED_DEPLOY_CENTS);
+        } catch (err) {
+          if (err instanceof BudgetExceededError) {
+            return {
+              status: "failed",
+              log: err.message,
+              startedAt,
+              finishedAt: new Date().toISOString(),
+            };
+          }
+          throw err;
+        }
+
+        const project = await getOwnedProject(ctx.accountId, input.workflowId);
+        const githubRepo =
+          input.runConfig.railway?.githubRepo ?? project?.githubRepo ?? null;
+        if (!githubRepo) {
+          return {
+            status: "failed",
+            log: "No GitHub repo linked to this project for Railway deploy.",
+            startedAt,
+            finishedAt: new Date().toISOString(),
+          };
+        }
+
+        try {
+          const result = await deployProjectToRailway({
+            config,
+            accountId: ctx.accountId,
+            workflowId: input.workflowId,
+            githubRepo,
+            existingServiceId: project?.railwayServiceId,
+          });
+
+          await addUsage(ctx.accountId, ESTIMATED_DEPLOY_CENTS);
+
+          if (project) {
+            await db
+              .update(projects)
+              .set({
+                railwayServiceId: result.serviceId,
+                railwayDomain: result.url ?? project.railwayDomain,
+              })
+              .where(
+                and(
+                  eq(projects.accountId, ctx.accountId),
+                  eq(projects.id, input.workflowId),
+                ),
+              );
+          } else {
+            await db.insert(projects).values({
+              id: input.workflowId,
+              accountId: ctx.accountId,
+              name: githubRepo.split("/")[1] ?? input.workflowId,
+              githubRepo,
+              contentBackend: "github",
+              railwayServiceId: result.serviceId,
+              railwayDomain: result.url ?? null,
+            });
+          }
+
+          return {
+            status: "success",
+            url: result.url,
+            log: `Deployed to Railway workload plane (deployment ${result.deploymentId}). Service ${result.serviceId}.`,
+            startedAt,
+            finishedAt: new Date().toISOString(),
+          };
+        } catch (err) {
+          return {
+            status: "failed",
+            log: err instanceof Error ? err.message : String(err),
+            startedAt,
+            finishedAt: new Date().toISOString(),
+          };
+        }
       }
 
       if (input.runConfig.kind === "vercel") {
@@ -96,8 +266,21 @@ export const projectRouter = createTRPCRouter({
           };
         }
 
+        try {
+          await assertCanSpend(ctx.accountId, ESTIMATED_DEPLOY_CENTS);
+        } catch (err) {
+          if (err instanceof BudgetExceededError) {
+            return {
+              status: "failed",
+              log: err.message,
+              startedAt,
+              finishedAt: new Date().toISOString(),
+            };
+          }
+          throw err;
+        }
+
         const cwd = path.join(WORKSPACE_ROOT, input.workflowId);
-        // Defense in depth beyond the workflowId regex — guards against symlink tricks.
         const [realCwd, realRoot] = await Promise.all([
           fs.promises.realpath(cwd).catch(() => null),
           fs.promises.realpath(WORKSPACE_ROOT),
@@ -116,10 +299,10 @@ export const projectRouter = createTRPCRouter({
             cwd,
             timeout: 300_000,
             maxBuffer: 10 * 1024 * 1024,
-            // token via env, not argv — argv is visible to other local users via `ps`
             env: { ...process.env, VERCEL_TOKEN: env.VERCEL_TOKEN },
           });
           const log = scrub(`${stdout}\n${stderr}`, env.VERCEL_TOKEN);
+          await addUsage(ctx.accountId, ESTIMATED_DEPLOY_CENTS);
           return {
             status: "success",
             url: extractDeployUrl(log),
@@ -147,17 +330,38 @@ export const projectRouter = createTRPCRouter({
       if (!isInfraEnabled()) {
         throw new Error("Sandbox orchestrator is not configured");
       }
-      // ponytail: naive whitespace split, no quoted-arg parsing. Fine for v1's
-      // single-word/simple-flag commands (e.g. "ls -la"); upgrade if quoting is needed.
-      const command = input.runConfig.custom?.command.trim().split(/\s+/).filter(Boolean) ?? [];
+      const command =
+        input.runConfig.custom?.command.trim().split(/\s+/).filter(Boolean) ??
+        [];
       if (command.length === 0) {
         throw new Error("No command configured for this project.");
       }
 
       try {
+        await assertCanSpend(ctx.accountId, ESTIMATED_DEPLOY_CENTS);
+      } catch (err) {
+        if (err instanceof BudgetExceededError) {
+          return {
+            status: "failed",
+            log: err.message,
+            startedAt,
+            finishedAt: new Date().toISOString(),
+          };
+        }
+        throw err;
+      }
+
+      try {
         const res = await orchestratorFetch(
           `/sandboxes/${encodeURIComponent(input.workflowId)}/exec`,
-          { method: "POST", body: JSON.stringify({ command, timeoutMs: 60_000 }) },
+          {
+            method: "POST",
+            body: JSON.stringify({
+              command,
+              timeoutMs: 60_000,
+              accountId: ctx.accountId,
+            }),
+          },
         );
         const body = (await res.json()) as {
           exitCode?: number;
@@ -165,6 +369,7 @@ export const projectRouter = createTRPCRouter({
           error?: string;
         };
         if (!res.ok) throw new Error(body.error ?? "Command failed");
+        await addUsage(ctx.accountId, ESTIMATED_DEPLOY_CENTS);
         return {
           status: body.exitCode === 0 ? "success" : "failed",
           log: body.output ?? "",

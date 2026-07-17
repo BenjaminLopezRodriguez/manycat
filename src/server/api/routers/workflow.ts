@@ -1,9 +1,27 @@
 import { z } from "zod";
+import { and, eq } from "drizzle-orm";
+import fs from "node:fs/promises";
+import path from "node:path";
 
 import { env } from "@/env";
 import type { Msg, WorkflowStatus } from "@/app/_fragments/chat/data";
 import { dedupeId, slugify } from "@/lib/slug";
-import { createTRPCRouter, publicProcedure } from "@/server/api/trpc";
+import {
+  addUsage,
+  assertCanSpend,
+  BudgetExceededError,
+  ensureAccount,
+  ESTIMATED_SANDBOX_CENTS,
+} from "@/server/billing/budget";
+import {
+  changeId,
+  hashTree,
+  projectNameFromPrompt,
+  scaffoldFromPrompt,
+} from "@/server/content/scaffold";
+import { createTRPCRouter, protectedProcedure, publicProcedure } from "@/server/api/trpc";
+import { db } from "@/server/db";
+import { projectChanges, projects } from "@/server/db/schema";
 
 export type AgentEventPayload =
   | { kind: "status"; status: WorkflowStatus }
@@ -113,25 +131,40 @@ export const workflowRouter = createTRPCRouter({
       return res.json() as Promise<{ workflowId: string; status: string }>;
     }),
 
-  importRepo: publicProcedure
+  importRepo: protectedProcedure
     .input(
       z.object({
         repoUrl: z.string().min(1),
         existingIds: z.array(z.string()).default([]),
       }),
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       if (!isInfraEnabled()) {
         throw new Error("Sandbox orchestrator is not configured");
       }
 
+      await ensureAccount(ctx.accountId);
+      try {
+        await assertCanSpend(ctx.accountId, ESTIMATED_SANDBOX_CENTS);
+      } catch (err) {
+        if (err instanceof BudgetExceededError) throw err;
+        throw err;
+      }
+
       const repoUrl = normalizeRepoUrl(input.repoUrl);
       const { owner, repo } = repoNameFromUrl(repoUrl);
-      const workflowId = dedupeId(slugify(`${owner}-${repo}`), input.existingIds);
+      // Scope workflow id with account prefix to avoid cross-account collisions.
+      const baseId = slugify(`${owner}-${repo}`);
+      const scopedBase = slugify(`${ctx.accountId}-${baseId}`).slice(0, 64);
+      const workflowId = dedupeId(scopedBase, input.existingIds);
 
       const res = await orchestratorFetch("/sandboxes", {
         method: "POST",
-        body: JSON.stringify({ workflowId, repoUrl }),
+        body: JSON.stringify({
+          workflowId,
+          repoUrl,
+          accountId: ctx.accountId,
+        }),
       });
 
       if (!res.ok) {
@@ -147,11 +180,186 @@ export const workflowRouter = createTRPCRouter({
         );
       }
 
+      await addUsage(ctx.accountId, ESTIMATED_SANDBOX_CENTS);
+
+      const existing = await db
+        .select()
+        .from(projects)
+        .where(
+          and(
+            eq(projects.accountId, ctx.accountId),
+            eq(projects.id, workflowId),
+          ),
+        )
+        .limit(1);
+
+      if (existing[0]) {
+        await db
+          .update(projects)
+          .set({
+            name: repo,
+            githubRepo: `${owner}/${repo}`,
+            contentBackend: "github",
+          })
+          .where(
+            and(
+              eq(projects.accountId, ctx.accountId),
+              eq(projects.id, workflowId),
+            ),
+          );
+      } else {
+        await db.insert(projects).values({
+          id: workflowId,
+          accountId: ctx.accountId,
+          name: repo,
+          githubRepo: `${owner}/${repo}`,
+          contentBackend: "github",
+          contentRootHash: null,
+          templateId: null,
+        });
+      }
+
       return {
         workflowId,
         name: repo,
         repo: `${owner}/${repo}`,
         status: "idle" as const,
+      };
+    }),
+
+  /**
+   * Prompt-box create: virtual git tree + sandbox VM (no GitHub required).
+   */
+  createFromPrompt: protectedProcedure
+    .input(
+      z.object({
+        prompt: z.string().trim().min(2).max(500),
+        existingIds: z.array(z.string()).default([]),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      await ensureAccount(ctx.accountId);
+      try {
+        await assertCanSpend(ctx.accountId, ESTIMATED_SANDBOX_CENTS);
+      } catch (err) {
+        if (err instanceof BudgetExceededError) throw err;
+        throw err;
+      }
+
+      const nameSlug = projectNameFromPrompt(input.prompt);
+      const scopedBase = slugify(`${ctx.accountId}-${nameSlug}`).slice(0, 64);
+      const workflowId = dedupeId(scopedBase || "app", input.existingIds);
+      const files = scaffoldFromPrompt(input.prompt);
+      const contentRootHash = hashTree(files);
+      const displayName = nameSlug.replace(/-/g, " ") || "app";
+
+      let previewUrl: string | undefined;
+      let sandboxStatus = "pending";
+
+      if (isInfraEnabled()) {
+        try {
+          const res = await orchestratorFetch("/sandboxes", {
+            method: "POST",
+            body: JSON.stringify({
+              workflowId,
+              accountId: ctx.accountId,
+              prompt: input.prompt,
+              files,
+            }),
+          });
+          if (!res.ok) {
+            const body = (await res.json().catch(() => null)) as {
+              error?: string;
+              stage?: string;
+            } | null;
+            throw new Error(
+              body?.error ??
+                (await res.text().catch(() => "Failed to spawn sandbox")),
+            );
+          }
+          const body = (await res.json()) as {
+            previewUrl?: string;
+            status?: string;
+          };
+          previewUrl = body.previewUrl;
+          sandboxStatus = body.status ?? "running";
+        } catch (err) {
+          // Orchestrator down / unreachable — still create virtual git on disk.
+          const root = path.join(
+            process.cwd(),
+            ".sandbox-workspaces",
+            workflowId,
+          );
+          await fs.mkdir(root, { recursive: true });
+          for (const file of files) {
+            const full = path.join(root, file.path);
+            await fs.mkdir(path.dirname(full), { recursive: true });
+            await fs.writeFile(full, file.contents, "utf8");
+          }
+          sandboxStatus = "local-workspace-orchestrator-unreachable";
+          console.warn(
+            "[createFromPrompt] orchestrator unreachable, wrote local workspace:",
+            err instanceof Error ? err.message : err,
+          );
+        }
+      } else {
+        // Local fallback without orchestrator: write virtual workspace on host.
+        const root = path.join(process.cwd(), ".sandbox-workspaces", workflowId);
+        await fs.mkdir(root, { recursive: true });
+        for (const file of files) {
+          const full = path.join(root, file.path);
+          await fs.mkdir(path.dirname(full), { recursive: true });
+          await fs.writeFile(full, file.contents, "utf8");
+        }
+        sandboxStatus = "local-workspace";
+      }
+
+      await addUsage(ctx.accountId, ESTIMATED_SANDBOX_CENTS);
+
+      await db
+        .insert(projects)
+        .values({
+          id: workflowId,
+          accountId: ctx.accountId,
+          name: displayName,
+          githubRepo: null,
+          contentBackend: "virtual",
+          contentRootHash,
+          templateId: null,
+        })
+        .onConflictDoUpdate({
+          target: [projects.accountId, projects.id],
+          set: {
+            name: displayName,
+            contentBackend: "virtual",
+            contentRootHash,
+            githubRepo: null,
+          },
+        });
+
+      await db.insert(projectChanges).values({
+        id: changeId(),
+        accountId: ctx.accountId,
+        workflowId,
+        parentId: null,
+        treeHash: contentRootHash,
+        diff: null,
+        prompt: input.prompt,
+        templateId: null,
+      });
+
+      return {
+        workflowId,
+        name: displayName,
+        prompt: input.prompt,
+        contentRootHash,
+        previewUrl,
+        status: "idle" as const,
+        sandboxStatus,
+        files: files.map((f) => ({
+          path: f.path,
+          contents: f.contents,
+        })),
       };
     }),
 
