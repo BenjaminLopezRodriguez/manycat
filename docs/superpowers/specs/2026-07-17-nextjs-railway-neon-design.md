@@ -108,14 +108,21 @@ Sandbox local preview continues via orchestrator (`pnpm dev`); Railway uses prod
 
 ## Shared Neon provisioning (security-critical)
 
-In `src/server/neon/provision.ts`, for `neonMode: "shared"`:
+### One-time shared-DB setup (idempotent, not per-app)
+
+Run once against the free shared database (migration/bootstrap, or `ensureSharedDbHardened()` gated by a control flag / advisory lock):
+
+- `REVOKE ALL ON SCHEMA public FROM PUBLIC` — database-wide; affects every tenant and existing objects. **Do not** run this on every per-app provision (Nth vs N+1 race / redundant work). Idempotent re-run of setup is fine.
+- Any other shared-DB hardening that is global (not tenant-scoped) lives here.
+
+### Per-app provision (`neon/provision.ts`, `neonMode: "shared"`)
 
 1. Connect with **admin** `NEON_SHARED_DATABASE_URL` (control only).
 2. `CREATE SCHEMA IF NOT EXISTS app_{id}`.
 3. `CREATE ROLE app_{id}_role LOGIN PASSWORD '<random>'` (or rotate idempotently if role exists and password is known).
 4. `GRANT USAGE, CREATE ON SCHEMA app_{id} TO app_{id}_role`.
-5. `GRANT ALL ON ALL TABLES IN SCHEMA app_{id} TO app_{id}_role` (+ default privileges for future tables).
-6. `REVOKE ALL ON SCHEMA public FROM PUBLIC` / ensure role has **no** `CREATE` on `public` and **no** access to other `app_*` schemas.
+5. Ensure the app role can use objects it will create. **Do not** rely on `ALTER DEFAULT PRIVILEGES` run as admin for the app’s future tables — default privileges only apply to objects created by the role that ran that statement. The app role creates (and therefore owns) its own tables in its schema; that ownership is the grant that matters. Admin provisioning must **not** create tables/objects in `app_{id}` that the app role cannot touch. If admin must seed objects, `GRANT` them explicitly to `app_{id}_role` (and prefer letting the app migrate itself instead).
+6. Ensure role has **no** `CREATE` on `public` and **no** access to other `app_*` schemas (role has no grants there; do not re-run global `REVOKE … FROM PUBLIC` here).
 7. Build workload `DATABASE_URL` with **that role’s** credentials (host/db from shared, user=`app_{id}_role`). Optionally set `search_path=app_{id},public` as convenience — **grants are the wall**.
 8. Persist `neonSchema`, `neonRole` (+ encrypted password if needed). Never return or inject the admin URL.
 
@@ -160,7 +167,8 @@ Implementation tickets must keep these exact fail-loud rules. Do not add “grac
 - Unit: schema/role name sanitize; plan → mode; scaffold has build/start/`railway.toml`.
 - Integration (mocked APIs): injected vars never equal control `DATABASE_URL` or `NEON_SHARED_DATABASE_URL`.
 - **Tenant isolation (required):** connect as app A’s role, attempt `SELECT` from app B’s schema, expect **permission denied**. This test is the free-tier security story.
-- Manual: free Run → schema+role exist; paying Run → new Neon project; re-run idempotent; dedicated failure does not create shared resources.
+- **App-owned objects (required):** after provision, connect as the app role, `CREATE TABLE` in its schema, read/write that table successfully. Do **not** only test tables created by the admin during setup.
+- Manual: free Run → schema+role exist; paying Run → new Neon project; re-run idempotent; dedicated failure does not create shared resources; shared-DB `REVOKE … PUBLIC` is one-time setup, not per provision.
 
 ## Open seams (later)
 
