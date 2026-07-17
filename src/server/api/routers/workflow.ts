@@ -22,6 +22,13 @@ import {
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "@/server/api/trpc";
 import { db } from "@/server/db";
 import { projectChanges, projects } from "@/server/db/schema";
+import {
+  appendWorkflowMessages,
+  listPersistedSessions,
+  replaceWorkspaceFiles,
+  setProjectStatus,
+  setWorkflowMessages,
+} from "@/server/workflow/persist";
 
 export type AgentEventPayload =
   | { kind: "status"; status: WorkflowStatus }
@@ -44,6 +51,28 @@ function nowTime() {
 
 function isInfraEnabled() {
   return Boolean(env.AGENT_HARNESS_URL && env.SANDBOX_ORCHESTRATOR_URL);
+}
+
+/** Local disk workspace — never under Vercel's read-only `/var/task`. */
+function localWorkspaceRoot(): string | null {
+  if (process.env.VERCEL) return null;
+  return path.join(process.cwd(), ".sandbox-workspaces");
+}
+
+async function writeLocalWorkspace(
+  workflowId: string,
+  files: { path: string; contents: string }[],
+): Promise<boolean> {
+  const base = localWorkspaceRoot();
+  if (!base) return false;
+  const root = path.join(base, workflowId);
+  await fs.mkdir(root, { recursive: true });
+  for (const file of files) {
+    const full = path.join(root, file.path);
+    await fs.mkdir(path.dirname(full), { recursive: true });
+    await fs.writeFile(full, file.contents, "utf8");
+  }
+  return true;
 }
 
 const GITHUB_REPO_RE = /^https:\/\/github\.com\/[\w.-]+\/[\w.-]+(\.git)?$/;
@@ -284,34 +313,20 @@ export const workflowRouter = createTRPCRouter({
           previewUrl = body.previewUrl;
           sandboxStatus = body.status ?? "running";
         } catch (err) {
-          // Orchestrator down / unreachable — still create virtual git on disk.
-          const root = path.join(
-            process.cwd(),
-            ".sandbox-workspaces",
-            workflowId,
-          );
-          await fs.mkdir(root, { recursive: true });
-          for (const file of files) {
-            const full = path.join(root, file.path);
-            await fs.mkdir(path.dirname(full), { recursive: true });
-            await fs.writeFile(full, file.contents, "utf8");
-          }
-          sandboxStatus = "local-workspace-orchestrator-unreachable";
+          // Orchestrator down — local disk only when writable (not Vercel).
+          const wrote = await writeLocalWorkspace(workflowId, files);
+          sandboxStatus = wrote
+            ? "local-workspace-orchestrator-unreachable"
+            : "virtual-no-sandbox";
           console.warn(
-            "[createFromPrompt] orchestrator unreachable, wrote local workspace:",
+            "[createFromPrompt] orchestrator unreachable:",
             err instanceof Error ? err.message : err,
+            wrote ? "(wrote local workspace)" : "(skipped local disk)",
           );
         }
       } else {
-        // Local fallback without orchestrator: write virtual workspace on host.
-        const root = path.join(process.cwd(), ".sandbox-workspaces", workflowId);
-        await fs.mkdir(root, { recursive: true });
-        for (const file of files) {
-          const full = path.join(root, file.path);
-          await fs.mkdir(path.dirname(full), { recursive: true });
-          await fs.writeFile(full, file.contents, "utf8");
-        }
-        sandboxStatus = "local-workspace";
+        const wrote = await writeLocalWorkspace(workflowId, files);
+        sandboxStatus = wrote ? "local-workspace" : "virtual-no-sandbox";
       }
 
       await addUsage(ctx.accountId, ESTIMATED_SANDBOX_CENTS);
@@ -326,6 +341,7 @@ export const workflowRouter = createTRPCRouter({
           contentBackend: "virtual",
           contentRootHash,
           templateId: "next-app",
+          status: "idle",
         })
         .onConflictDoUpdate({
           target: [projects.accountId, projects.id],
@@ -335,6 +351,7 @@ export const workflowRouter = createTRPCRouter({
             contentRootHash,
             githubRepo: null,
             templateId: "next-app",
+            status: "idle",
           },
         });
 
@@ -349,6 +366,40 @@ export const workflowRouter = createTRPCRouter({
         templateId: "next-app",
       });
 
+      const time = nowTime();
+      const readyText =
+        sandboxStatus === "workspace-only" || sandboxStatus.startsWith("local")
+          ? `Virtual git ready (${contentRootHash.slice(0, 8)}…). Workspace written (${sandboxStatus}).`
+          : `Virtual git ready (${contentRootHash.slice(0, 8)}…). Sandbox ${sandboxStatus}.`;
+
+      const initialMessages = [
+        {
+          id: 1,
+          type: "text" as const,
+          from: "me" as const,
+          text: input.prompt,
+          time,
+        },
+        {
+          id: 2,
+          type: "text" as const,
+          from: "agent" as const,
+          text: readyText,
+          time,
+        },
+      ];
+
+      await setWorkflowMessages({
+        accountId: ctx.accountId,
+        workflowId,
+        messages: initialMessages,
+      });
+      await replaceWorkspaceFiles({
+        accountId: ctx.accountId,
+        workflowId,
+        files,
+      });
+
       return {
         workflowId,
         name: displayName,
@@ -361,8 +412,14 @@ export const workflowRouter = createTRPCRouter({
           path: f.path,
           contents: f.contents,
         })),
+        messages: initialMessages,
       };
     }),
+
+  /** Hydrate chats + workspace files after refresh. */
+  listSessions: protectedProcedure.query(async ({ ctx }) => {
+    return listPersistedSessions(ctx.accountId);
+  }),
 
   getSandboxFiles: publicProcedure
     .input(z.object({ workflowId: z.string().min(1) }))
@@ -378,7 +435,7 @@ export const workflowRouter = createTRPCRouter({
       }>;
     }),
 
-  runAgent: publicProcedure
+  runAgent: protectedProcedure
     .input(
       z.object({
         workflowId: z.string().min(1),
@@ -388,12 +445,30 @@ export const workflowRouter = createTRPCRouter({
           .enum(["auto", "qwen-coder", "gpt-4o", "claude-sonnet"])
           .default("auto"),
         effort: z.enum(["low", "medium", "high", "max"]).default("high"),
+        /** Optional client workspace snapshot if orchestrator lost ephemeral disk. */
+        files: z
+          .array(
+            z.object({
+              path: z.string().min(1),
+              contents: z.string(),
+            }),
+          )
+          .max(400)
+          .optional(),
+        /** When true, skip appending the user message (already persisted on create). */
+        omitUserMessage: z.boolean().optional(),
       }),
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       if (!isInfraEnabled()) {
         throw new Error("Agent infrastructure is not configured");
       }
+
+      await setProjectStatus({
+        accountId: ctx.accountId,
+        workflowId: input.workflowId,
+        status: "working",
+      });
 
       const sandboxRes = await orchestratorFetch("/sandboxes", {
         method: "POST",
@@ -403,33 +478,48 @@ export const workflowRouter = createTRPCRouter({
         throw new Error(await sandboxRes.text());
       }
       const sandbox = (await sandboxRes.json()) as {
-        previewUrl: string;
+        previewUrl?: string;
       };
+
+      let workspaceFiles: { path: string; contents: string }[] =
+        input.files ?? [];
+      if (workspaceFiles.length === 0) {
+        const filesRes = await orchestratorFetch(
+          `/sandboxes/${encodeURIComponent(input.workflowId)}/files`,
+        );
+        if (filesRes.ok) {
+          const body = (await filesRes.json()) as {
+            files?: { path: string; contents: string }[];
+          };
+          workspaceFiles = body.files ?? [];
+        }
+      }
 
       const events: AgentEventPayload[] = [];
       let id = input.messageIdStart;
 
-      events.push({
-        kind: "append",
-        message: {
-          id: ++id,
-          type: "text",
-          from: "me",
-          text: input.prompt,
-          time: nowTime(),
-        },
-      });
+      const userMsg = {
+        id: ++id,
+        type: "text" as const,
+        from: "me" as const,
+        text: input.prompt,
+        time: nowTime(),
+      };
+      if (!input.omitUserMessage) {
+        events.push({ kind: "append", message: userMsg });
+      }
       events.push({ kind: "status", status: "working" });
-      events.push({
-        kind: "append",
-        message: {
-          id: ++id,
-          type: "agent-status",
-          text: "Agent is working in sandbox…",
-          streaming: true,
-          time: nowTime(),
-        },
-      });
+      const statusMsg = {
+        id: ++id,
+        type: "agent-status" as const,
+        text:
+          workspaceFiles.length > 0
+            ? `Agent is working in sandbox… (${workspaceFiles.length} files synced)`
+            : "Agent is working in sandbox… (warning: empty workspace)",
+        streaming: true,
+        time: nowTime(),
+      };
+      events.push({ kind: "append", message: statusMsg });
 
       const agentRes = await fetch(`${env.AGENT_HARNESS_URL}/run`, {
         method: "POST",
@@ -440,49 +530,98 @@ export const workflowRouter = createTRPCRouter({
           mode: "default",
           model: input.model,
           effort: input.effort,
+          files: workspaceFiles,
         }),
       });
 
       if (!agentRes.ok) {
         const err = await agentRes.text();
-        events.push({
-          kind: "append",
-          message: {
-            id: ++id,
-            type: "text",
-            from: "agent",
-            text: `Agent failed: ${err}`,
-            time: nowTime(),
-          },
-        });
+        const failMsg = {
+          id: ++id,
+          type: "text" as const,
+          from: "agent" as const,
+          text: `Agent failed: ${err}`,
+          time: nowTime(),
+        };
+        events.push({ kind: "append", message: failMsg });
         events.push({ kind: "status", status: "idle" });
         events.push({ kind: "done" });
+        await appendWorkflowMessages({
+          accountId: ctx.accountId,
+          workflowId: input.workflowId,
+          messages: input.omitUserMessage
+            ? [statusMsg, failMsg]
+            : [userMsg, statusMsg, failMsg],
+        });
+        await setProjectStatus({
+          accountId: ctx.accountId,
+          workflowId: input.workflowId,
+          status: "idle",
+        });
         return { events, previewUrl: sandbox.previewUrl };
       }
 
-      const agentBody = (await agentRes.json()) as { output: string };
-      events.push({
-        kind: "append",
-        message: {
-          id: ++id,
-          type: "text",
-          from: "agent",
-          text: agentBody.output,
-          time: nowTime(),
-        },
-      });
-      events.push({
-        kind: "append",
-        message: {
-          id: ++id,
-          type: "approval",
-          text: "Review agent changes in the workspace — approve when ready.",
-          resolved: null,
-          time: nowTime(),
-        },
-      });
+      const agentBody = (await agentRes.json()) as {
+        output: string;
+        files?: { path: string; contents: string }[];
+      };
+
+      if (agentBody.files && agentBody.files.length > 0) {
+        await orchestratorFetch(
+          `/sandboxes/${encodeURIComponent(input.workflowId)}/files`,
+          {
+            method: "PUT",
+            body: JSON.stringify({ files: agentBody.files }),
+          },
+        ).catch(() => null);
+
+        await replaceWorkspaceFiles({
+          accountId: ctx.accountId,
+          workflowId: input.workflowId,
+          files: agentBody.files,
+        });
+
+        for (const file of agentBody.files) {
+          events.push({
+            kind: "patch-workspace",
+            path: file.path,
+            contents: file.contents,
+            edited: true,
+          });
+        }
+      }
+
+      const agentText = {
+        id: ++id,
+        type: "text" as const,
+        from: "agent" as const,
+        text: agentBody.output,
+        time: nowTime(),
+      };
+      const approvalMsg = {
+        id: ++id,
+        type: "approval" as const,
+        text: "Review agent changes in the workspace — approve when ready.",
+        resolved: null as boolean | null,
+        time: nowTime(),
+      };
+      events.push({ kind: "append", message: agentText });
+      events.push({ kind: "append", message: approvalMsg });
       events.push({ kind: "status", status: "needs-review" });
       events.push({ kind: "done" });
+
+      await appendWorkflowMessages({
+        accountId: ctx.accountId,
+        workflowId: input.workflowId,
+        messages: input.omitUserMessage
+          ? [statusMsg, agentText, approvalMsg]
+          : [userMsg, statusMsg, agentText, approvalMsg],
+      });
+      await setProjectStatus({
+        accountId: ctx.accountId,
+        workflowId: input.workflowId,
+        status: "needs-review",
+      });
 
       return { events, previewUrl: sandbox.previewUrl };
     }),
