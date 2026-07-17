@@ -31,6 +31,13 @@ export const env = createEnv({
     AUTH_GITHUB_SECRET: z.string().min(1).optional(),
     AUTH_GOOGLE_ID: z.string().min(1).optional(),
     AUTH_GOOGLE_SECRET: z.string().min(1).optional(),
+    GITHUB_MIRROR_TOKEN: z.string().min(1).optional(),
+    GITHUB_MIRROR_ORG: z.string().min(1).optional(),
+    NEON_API_KEY: z.string().min(1).optional(),
+    NEON_ORG_ID: z.string().min(1).optional(),
+    NEON_SHARED_PROJECT_ID: z.string().min(1).optional(),
+    NEON_SHARED_DATABASE_URL: z.string().url().optional(),
+    APP_DB_ENCRYPTION_KEY: z.string().min(32).optional(),
   },
 
   /**
@@ -63,6 +70,13 @@ export const env = createEnv({
     AUTH_GITHUB_SECRET: process.env.AUTH_GITHUB_SECRET,
     AUTH_GOOGLE_ID: process.env.AUTH_GOOGLE_ID,
     AUTH_GOOGLE_SECRET: process.env.AUTH_GOOGLE_SECRET,
+    GITHUB_MIRROR_TOKEN: process.env.GITHUB_MIRROR_TOKEN,
+    GITHUB_MIRROR_ORG: process.env.GITHUB_MIRROR_ORG,
+    NEON_API_KEY: process.env.NEON_API_KEY,
+    NEON_ORG_ID: process.env.NEON_ORG_ID,
+    NEON_SHARED_PROJECT_ID: process.env.NEON_SHARED_PROJECT_ID,
+    NEON_SHARED_DATABASE_URL: process.env.NEON_SHARED_DATABASE_URL,
+    APP_DB_ENCRYPTION_KEY: process.env.APP_DB_ENCRYPTION_KEY,
     NEXT_PUBLIC_SANDBOX_ENABLED: process.env.NEXT_PUBLIC_SANDBOX_ENABLED,
   },
   /**

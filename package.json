@@ -25,7 +25,9 @@
     "k8s:cluster": "./scripts/kind-up.sh",
     "k8s:apply": "kubectl apply -k k8s/overlays/local",
     "k8s:delete": "kubectl delete -k k8s/overlays/local --ignore-not-found",
-    "k8s:down": "./scripts/kind-down.sh"
+    "k8s:down": "./scripts/kind-down.sh",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
@@ -68,7 +70,8 @@
     "prettier-plugin-tailwindcss": "^0.6.11",
     "tailwindcss": "^4.0.15",
     "typescript": "^5.8.2",
-    "typescript-eslint": "^8.27.0"
+    "typescript-eslint": "^8.27.0",
+    "vitest": "^4.1.10"
   },
   "ct3aMetadata": {
     "initVersion": "7.40.0"

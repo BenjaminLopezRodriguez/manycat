@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 
 import type { ContentFile } from "@/server/content/store";
+import { scaffoldNextFromPrompt } from "@/server/content/scaffold-next";
 import { slugify } from "@/lib/slug";
 
 /** Deterministic content-addressed root for a file tree (virtual git seam). */
@@ -27,11 +28,17 @@ export function projectNameFromPrompt(prompt: string): string {
 }
 
 /**
- * Low-compute scaffold from a natural-language prompt.
- * Calculator-like prompts get a working calculator; everything else gets a
- * branded static app shell seeded with the prompt (agent can specialize later).
+ * Prompt create defaults to a Next.js Railway-ready scaffold.
+ * Static calculator / generic shells remain available via scaffoldStaticFromPrompt.
  */
 export function scaffoldFromPrompt(prompt: string): ContentFile[] {
+  return scaffoldNextFromPrompt(prompt);
+}
+
+/**
+ * Legacy static scaffolds (calculator / branded shell). Unused by create path.
+ */
+export function scaffoldStaticFromPrompt(prompt: string): ContentFile[] {
   const title = deriveTitle(prompt);
   const isCalc = /calculat|math|arithmetic|counter/i.test(prompt);
 

@@ -17,6 +17,9 @@ import {
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import { db } from "@/server/db";
 import { projects } from "@/server/db/schema";
+import type { ContentFile } from "@/server/content/store";
+import { ensureMirroredRepo } from "@/server/github/mirror";
+import { ensureAppDatabase } from "@/server/neon/provision";
 import {
   deployProjectToRailway,
   getWorkloadRailwayConfig,
@@ -95,13 +98,85 @@ async function getOwnedProject(accountId: string, workflowId: string) {
   return rows[0] ?? null;
 }
 
+const SKIP_WORKSPACE_DIRS = new Set([
+  ".git",
+  "node_modules",
+  ".next",
+  "dist",
+  ".turbo",
+]);
+
+async function walkWorkspaceFiles(
+  dir: string,
+  base: string,
+): Promise<ContentFile[]> {
+  const entries = await fs.promises.readdir(dir, { withFileTypes: true });
+  const out: ContentFile[] = [];
+  for (const entry of entries) {
+    if (SKIP_WORKSPACE_DIRS.has(entry.name)) continue;
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      out.push(...(await walkWorkspaceFiles(full, base)));
+    } else if (entry.isFile()) {
+      out.push({
+        path: path.relative(base, full).split(path.sep).join("/"),
+        contents: await fs.promises.readFile(full, "utf8"),
+      });
+    }
+  }
+  return out;
+}
+
+/** Load virtual project files from sandbox orchestrator or local workspace fallback. */
+async function loadVirtualWorkspaceFiles(
+  workflowId: string,
+): Promise<ContentFile[]> {
+  if (isInfraEnabled()) {
+    try {
+      const res = await orchestratorFetch(
+        `/sandboxes/${encodeURIComponent(workflowId)}/files`,
+      );
+      if (res.ok) {
+        const body = (await res.json()) as {
+          files?: { path: string; contents: string }[];
+        };
+        if (body.files && body.files.length > 0) {
+          return body.files.map((f) => ({
+            path: f.path,
+            contents: f.contents,
+          }));
+        }
+      }
+    } catch {
+      // Fall through to local workspace — same path as createFromPrompt fallback.
+    }
+  }
+
+  const cwd = path.join(WORKSPACE_ROOT, workflowId);
+  const [realCwd, realRoot] = await Promise.all([
+    fs.promises.realpath(cwd).catch(() => null),
+    fs.promises.realpath(WORKSPACE_ROOT).catch(() => null),
+  ]);
+  if (!realRoot || !realCwd?.startsWith(realRoot + path.sep)) {
+    return [];
+  }
+  return walkWorkspaceFiles(realCwd, realCwd);
+}
+
 export const projectRouter = createTRPCRouter({
   list: protectedProcedure.query(async ({ ctx }) => {
-    const rows = await db
-      .select()
+    return db
+      .select({
+        id: projects.id,
+        name: projects.name,
+        githubRepo: projects.githubRepo,
+        railwayDomain: projects.railwayDomain,
+        mirrorGithubRepo: projects.mirrorGithubRepo,
+        neonMode: projects.neonMode,
+        contentBackend: projects.contentBackend,
+      })
       .from(projects)
       .where(eq(projects.accountId, ctx.accountId));
-    return rows;
   }),
 
   budget: protectedProcedure.query(async ({ ctx }) => {
@@ -192,9 +267,43 @@ export const projectRouter = createTRPCRouter({
         }
 
         const project = await getOwnedProject(ctx.accountId, input.workflowId);
-        const githubRepo =
+        const userRepo =
           input.runConfig.railway?.githubRepo ?? project?.githubRepo ?? null;
-        if (!githubRepo) {
+
+        let githubRepo: string;
+        let mirrorRepo: string | null = null;
+
+        if (userRepo) {
+          githubRepo = userRepo;
+        } else if (project?.contentBackend === "virtual") {
+          // Mirror before Neon/Railway — fail here if push cannot proceed.
+          try {
+            const files = await loadVirtualWorkspaceFiles(input.workflowId);
+            if (files.length === 0) {
+              return {
+                status: "failed",
+                log: "No workspace files found for this virtual project (sandbox or .sandbox-workspaces).",
+                startedAt,
+                finishedAt: new Date().toISOString(),
+              };
+            }
+            const mirrored = await ensureMirroredRepo({
+              accountId: ctx.accountId,
+              workflowId: input.workflowId,
+              files,
+              existingMirrorRepo: project.mirrorGithubRepo,
+            });
+            mirrorRepo = mirrored.mirrorGithubRepo;
+            githubRepo = mirrored.mirrorGithubRepo;
+          } catch (err) {
+            return {
+              status: "failed",
+              log: err instanceof Error ? err.message : String(err),
+              startedAt,
+              finishedAt: new Date().toISOString(),
+            };
+          }
+        } else {
           return {
             status: "failed",
             log: "No GitHub repo linked to this project for Railway deploy.",
@@ -204,23 +313,32 @@ export const projectRouter = createTRPCRouter({
         }
 
         try {
-          const result = await deployProjectToRailway({
-            config,
+          const account = await ensureAccount(ctx.accountId);
+          // Fail loud — no silent dedicated→shared fallback. If dedicated Neon provision fails for a paying account, abort the deploy. Do not “gracefully” fall back to the shared pool.
+          const neon = await ensureAppDatabase({
             accountId: ctx.accountId,
             workflowId: input.workflowId,
-            githubRepo,
-            existingServiceId: project?.railwayServiceId,
+            plan: account.billingPlan,
+            existing: project ?? undefined,
           });
+          // if this throws for dedicated — do not catch and switch to shared
 
-          await addUsage(ctx.accountId, ESTIMATED_DEPLOY_CENTS);
+          // Persist neon + mirror before Railway so a later Railway failure still reuses provisioned DB.
+          // Never persist neon.databaseUrl (dedicated URI is on-demand only; shared stores neonRolePasswordEnc only).
+          const neonPersist = {
+            mirrorGithubRepo: mirrorRepo ?? project?.mirrorGithubRepo ?? null,
+            neonMode: neon.neonMode,
+            neonSchema: neon.neonSchema,
+            neonRole: neon.neonRole,
+            neonRolePasswordEnc: neon.neonRolePasswordEnc,
+            neonProjectId: neon.neonProjectId,
+            githubRepo: project?.githubRepo ?? (userRepo ? githubRepo : null),
+          };
 
           if (project) {
             await db
               .update(projects)
-              .set({
-                railwayServiceId: result.serviceId,
-                railwayDomain: result.url ?? project.railwayDomain,
-              })
+              .set(neonPersist)
               .where(
                 and(
                   eq(projects.accountId, ctx.accountId),
@@ -232,12 +350,34 @@ export const projectRouter = createTRPCRouter({
               id: input.workflowId,
               accountId: ctx.accountId,
               name: githubRepo.split("/")[1] ?? input.workflowId,
-              githubRepo,
-              contentBackend: "github",
-              railwayServiceId: result.serviceId,
-              railwayDomain: result.url ?? null,
+              contentBackend: userRepo ? "github" : "virtual",
+              ...neonPersist,
             });
           }
+
+          const result = await deployProjectToRailway({
+            config,
+            accountId: ctx.accountId,
+            workflowId: input.workflowId,
+            githubRepo,
+            existingServiceId: project?.railwayServiceId,
+            workloadEnv: { DATABASE_URL: neon.databaseUrl },
+          });
+
+          await addUsage(ctx.accountId, ESTIMATED_DEPLOY_CENTS);
+
+          await db
+            .update(projects)
+            .set({
+              railwayServiceId: result.serviceId,
+              railwayDomain: result.url ?? project?.railwayDomain ?? null,
+            })
+            .where(
+              and(
+                eq(projects.accountId, ctx.accountId),
+                eq(projects.id, input.workflowId),
+              ),
+            );
 
           return {
             status: "success",
