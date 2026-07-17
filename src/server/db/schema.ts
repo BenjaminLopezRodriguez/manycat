@@ -57,6 +57,12 @@ export const projects = createTable(
     templateId: d.varchar({ length: 128 }),
     railwayServiceId: d.varchar({ length: 128 }),
     railwayDomain: d.varchar({ length: 512 }),
+    mirrorGithubRepo: d.varchar({ length: 512 }),
+    neonMode: d.varchar({ length: 16 }).$type<"shared" | "dedicated">(),
+    neonSchema: d.varchar({ length: 128 }),
+    neonRole: d.varchar({ length: 128 }),
+    neonRolePasswordEnc: d.text(),
+    neonProjectId: d.varchar({ length: 128 }),
     createdAt: d
       .timestamp({ withTimezone: true })
       .$defaultFn(() => /* @__PURE__ */ new Date())
