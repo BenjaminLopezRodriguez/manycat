@@ -45,6 +45,9 @@ yarn-error.log*
 # idea files
 .idea
 
+# local cloned project sandboxes (runtime only — never commit)
+.sandbox-workspaces/
+
 # python agent harness
 agent-harness/.venv/
 agent-harness/**/__pycache__/
