@@ -63,6 +63,12 @@ export const projects = createTable(
     neonRole: d.varchar({ length: 128 }),
     neonRolePasswordEnc: d.text(),
     neonProjectId: d.varchar({ length: 128 }),
+    /** UI workflow status for restore after refresh. */
+    status: d
+      .varchar({ length: 32 })
+      .$type<"idle" | "working" | "needs-review" | "done">()
+      .notNull()
+      .default("idle"),
     createdAt: d
       .timestamp({ withTimezone: true })
       .$defaultFn(() => /* @__PURE__ */ new Date())
@@ -72,6 +78,54 @@ export const projects = createTable(
   (t) => [
     primaryKey({ columns: [t.accountId, t.id] }),
     index("project_account_idx").on(t.accountId),
+  ],
+);
+
+/**
+ * Chat messages for a workflow (JSON payload matches UI Msg shape).
+ */
+export const workflowMessages = createTable(
+  "workflow_message",
+  (d) => ({
+    id: d.varchar({ length: 64 }).primaryKey(),
+    accountId: d
+      .varchar({ length: 128 })
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    workflowId: d.varchar({ length: 64 }).notNull(),
+    seq: d.integer().notNull(),
+    payload: d.jsonb().$type<Record<string, unknown>>().notNull(),
+    createdAt: d
+      .timestamp({ withTimezone: true })
+      .$defaultFn(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  }),
+  (t) => [
+    index("workflow_message_scope_idx").on(t.accountId, t.workflowId, t.seq),
+  ],
+);
+
+/**
+ * Workspace file snapshot persisted for refresh / multi-device restore.
+ */
+export const workspaceFiles = createTable(
+  "workspace_file",
+  (d) => ({
+    accountId: d
+      .varchar({ length: 128 })
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    workflowId: d.varchar({ length: 64 }).notNull(),
+    path: d.varchar({ length: 512 }).notNull(),
+    contents: d.text().notNull(),
+    updatedAt: d
+      .timestamp({ withTimezone: true })
+      .$defaultFn(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  }),
+  (t) => [
+    primaryKey({ columns: [t.accountId, t.workflowId, t.path] }),
+    index("workspace_file_scope_idx").on(t.accountId, t.workflowId),
   ],
 );
 
