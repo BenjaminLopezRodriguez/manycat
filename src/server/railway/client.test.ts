@@ -1,8 +1,27 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { railwayServiceName } from "./client";
 
 afterEach(() => {
   vi.unstubAllEnvs();
   vi.resetModules();
+});
+
+describe("railwayServiceName", () => {
+  it("stays within Railway's 32-char limit for email-like ids", () => {
+    const name = railwayServiceName(
+      "benjamin0000rodriguez@gmail.com",
+      "benjamin0000rodriguez@gmail.com",
+    );
+    expect(name.length).toBeLessThanOrEqual(32);
+    expect(name).toMatch(/^mc-[a-z0-9]+(-[a-z0-9]+)*$/);
+    expect(name).not.toMatch(/-$/);
+  });
+
+  it("differs when workflows share a truncated prefix", () => {
+    const a = railwayServiceName("acct@example.com", "workflow-aaaaaaaa");
+    const b = railwayServiceName("acct@example.com", "workflow-bbbbbbbb");
+    expect(a).not.toBe(b);
+  });
 });
 
 describe("assertWorkloadDatabaseUrl", () => {

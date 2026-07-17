@@ -18,6 +18,7 @@ import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import { db } from "@/server/db";
 import { projects } from "@/server/db/schema";
 import type { ContentFile } from "@/server/content/store";
+import { hardenWorkspaceForRailway } from "@/server/content/scaffold-next";
 import { ensureMirroredRepo } from "@/server/github/mirror";
 import { ensureAppDatabase } from "@/server/neon/provision";
 import {
@@ -290,7 +291,7 @@ export const projectRouter = createTRPCRouter({
             const mirrored = await ensureMirroredRepo({
               accountId: ctx.accountId,
               workflowId: input.workflowId,
-              files,
+              files: hardenWorkspaceForRailway(files),
               existingMirrorRepo: project.mirrorGithubRepo,
             });
             mirrorRepo = mirrored.mirrorGithubRepo;

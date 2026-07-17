@@ -239,9 +239,13 @@ function useRemoteAgent({
         messageIdStart: nextId(workflow.messages),
         model,
         effort,
+        files: workflow.workspace.map((f) => ({
+          path: f.path,
+          contents: f.contents,
+        })),
       });
     },
-    [runMutation, workflow.id, workflow.messages, model, effort],
+    [runMutation, workflow.id, workflow.messages, workflow.workspace, model, effort],
   );
 
   const approve = React.useCallback((messageId: number) => {

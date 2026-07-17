@@ -1,11 +1,25 @@
+import { createHash } from "node:crypto";
 import { env } from "@/env";
 
 const RAILWAY_API = "https://backboard.railway.com/graphql/v2";
 
+/** Railway rejects service names longer than this (DNS-style labels). */
+const RAILWAY_SERVICE_NAME_MAX = 32;
+
 /**
  * Workload-plane only. Never create user services in the control-plane project.
- * Service names encode account + workflow for isolation and GC.
+ * Service names encode a short account/workflow slug + hash for uniqueness;
+ * full IDs live in MANYCAT_* env tags for isolation and GC.
  */
+
+function railwaySlug(s: string, max: number) {
+  return s
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, max)
+    .replace(/-+$/g, "");
+}
 
 export type RailwayConfig = {
   token: string;
@@ -29,15 +43,16 @@ export function getWorkloadRailwayConfig(): RailwayConfig | null {
 }
 
 export function railwayServiceName(accountId: string, workflowId: string) {
-  const acct = accountId
-    .toLowerCase()
-    .replace(/[^a-z0-9-]/g, "-")
-    .slice(0, 24);
-  const wf = workflowId
-    .toLowerCase()
-    .replace(/[^a-z0-9-]/g, "-")
-    .slice(0, 32);
-  return `mc-${acct}-${wf}`.slice(0, 63);
+  // Emails / long ids used to produce >32-char names ending in "-" (invalid).
+  const hash = createHash("sha256")
+    .update(`${accountId}\0${workflowId}`)
+    .digest("hex")
+    .slice(0, 8);
+  const acct = railwaySlug(accountId, 8) || "acct";
+  const wf = railwaySlug(workflowId, 8) || "wf";
+  // mc-(3) + acct(≤8) + - + wf(≤8) + - + hash(8) ≤ 29
+  const name = `mc-${acct}-${wf}-${hash}`;
+  return name.slice(0, RAILWAY_SERVICE_NAME_MAX).replace(/-+$/g, "");
 }
 
 /**
@@ -163,7 +178,15 @@ export async function createWorkloadService(opts: {
         variables,
       },
     },
-  );
+  ).catch((err) => {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (/not found or is not accessible|no github installation/i.test(msg)) {
+      throw new Error(
+        `${msg} — Install the Railway GitHub App on org "${opts.githubRepo.split("/")[0]}" with access to All repositories (new mirrors are created dynamically). GitHub → Organization settings → GitHub Apps → Railway.`,
+      );
+    }
+    throw err;
+  });
 
   const serviceId = data.serviceCreate.id;
 
@@ -221,10 +244,12 @@ export async function ensureServiceDomain(opts: {
   serviceId: string;
 }): Promise<string | undefined> {
   try {
-    await railwayGraphql(
+    const created = await railwayGraphql<{
+      serviceDomainCreate: { domain?: string | null };
+    }>(
       opts.config.token,
       `mutation serviceDomainCreate($input: ServiceDomainCreateInput!) {
-        serviceDomainCreate(input: $input) { id }
+        serviceDomainCreate(input: $input) { id domain }
       }`,
       {
         input: {
@@ -233,22 +258,32 @@ export async function ensureServiceDomain(opts: {
         },
       },
     );
+    const createdDomain = created.serviceDomainCreate.domain;
+    if (createdDomain) {
+      return createdDomain.startsWith("http")
+        ? createdDomain
+        : `https://${createdDomain}`;
+    }
   } catch {
-    // Domain may already exist
+    // Domain may already exist — fall through to list.
   }
 
+  // `domains` returns AllDomains { serviceDomains, customDomains }, not a flat list.
   const data = await railwayGraphql<{
-    domains: Array<{ domain?: string | null; serviceId?: string | null }>;
+    domains: {
+      serviceDomains: Array<{ domain: string }>;
+      customDomains: Array<{ domain: string }>;
+    };
   }>(
     opts.config.token,
-    `query domains($environmentId: String!, $projectId: String!, $serviceId: String) {
+    `query domains($environmentId: String!, $projectId: String!, $serviceId: String!) {
       domains(
         environmentId: $environmentId
         projectId: $projectId
         serviceId: $serviceId
       ) {
-        domain
-        serviceId
+        serviceDomains { domain }
+        customDomains { domain }
       }
     }`,
     {
@@ -258,7 +293,9 @@ export async function ensureServiceDomain(opts: {
     },
   );
 
-  const domain = data.domains.find((d) => d.domain)?.domain;
+  const domain =
+    data.domains.serviceDomains[0]?.domain ??
+    data.domains.customDomains[0]?.domain;
   if (!domain) return undefined;
   return domain.startsWith("http") ? domain : `https://${domain}`;
 }
@@ -305,10 +342,15 @@ export async function deployProjectToRailway(opts: {
     serviceId,
   });
 
-  const url = await ensureServiceDomain({
-    config: opts.config,
-    serviceId,
-  });
+  let url: string | undefined;
+  try {
+    url = await ensureServiceDomain({
+      config: opts.config,
+      serviceId,
+    });
+  } catch {
+    // Deploy succeeded; domain attach is best-effort (user can still open via Railway dashboard).
+  }
 
   return { serviceId, url, deploymentId };
 }

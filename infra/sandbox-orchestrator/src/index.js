@@ -18,8 +18,21 @@ const PORT_MIN = Number(process.env.SANDBOX_PORT_MIN ?? 4000);
 const PORT_MAX = Number(process.env.SANDBOX_PORT_MAX ?? 4999);
 const PREVIEW_HOST = process.env.PREVIEW_HOST ?? "localhost";
 
-/** @type {Map<string, { containerId: string, hostPort: number, accountId?: string }>} */
+/**
+ * @typedef {{ containerId: string, hostPort: number, accountId?: string, mode?: "container" }} ContainerSandbox
+ * @typedef {{ containerId?: undefined, hostPort?: undefined, accountId?: string, mode: "workspace-only" }} WorkspaceOnlySandbox
+ * @type {Map<string, ContainerSandbox | WorkspaceOnlySandbox>}
+ */
 const sandboxes = new Map();
+
+async function dockerAvailable() {
+  try {
+    await docker.ping();
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 /** @type {Set<number>} */
 const usedPorts = new Set();
@@ -246,25 +259,6 @@ app.post("/sandboxes", async (req, res) => {
 
     const id = safeId(workflowId);
     const containerName = `manycat-sandbox-${id}`;
-
-    const reused = await reconcileExisting(containerName);
-    if (reused) {
-      sandboxes.set(id, {
-        containerId: reused.containerId,
-        hostPort: reused.hostPort,
-        accountId,
-      });
-      usedPorts.add(reused.hostPort);
-      res.json({
-        workflowId: id,
-        status: "running",
-        hostPort: reused.hostPort,
-        previewUrl: `http://${PREVIEW_HOST}:${reused.hostPort}`,
-        accountId,
-      });
-      return;
-    }
-
     const wsPath = workspacePath(id);
 
     if (seedFiles && seedFiles.length > 0) {
@@ -286,6 +280,40 @@ app.post("/sandboxes", async (req, res) => {
       }
     }
 
+    // Production control plane often has no docker.sock — keep the seeded
+    // workspace so Manycat can still create virtual projects + agent runs.
+    const hasDocker = await dockerAvailable();
+    if (!hasDocker) {
+      sandboxes.set(id, { mode: "workspace-only", accountId });
+      res.status(201).json({
+        workflowId: id,
+        status: "workspace-only",
+        workspacePath: wsPath,
+        accountId,
+        warning: "Docker unavailable; workspace written without preview container",
+      });
+      return;
+    }
+
+    const reused = await reconcileExisting(containerName);
+    if (reused) {
+      sandboxes.set(id, {
+        containerId: reused.containerId,
+        hostPort: reused.hostPort,
+        accountId,
+        mode: "container",
+      });
+      usedPorts.add(reused.hostPort);
+      res.json({
+        workflowId: id,
+        status: "running",
+        hostPort: reused.hostPort,
+        previewUrl: `http://${PREVIEW_HOST}:${reused.hostPort}`,
+        accountId,
+      });
+      return;
+    }
+
     const hostPort = allocatePort();
     const hostWsPath = path.join(HOST_WORKSPACE_ROOT, id);
     const spec = containerSpec(containerName, hostPort, hostWsPath);
@@ -294,7 +322,19 @@ app.post("/sandboxes", async (req, res) => {
     try {
       container = await createAndStart(spec);
     } catch (err) {
-      if (err.statusCode !== 409) throw err;
+      if (err.statusCode !== 409) {
+        // Seeded workspace is still useful without a preview container.
+        releasePort(hostPort);
+        sandboxes.set(id, { mode: "workspace-only", accountId });
+        res.status(201).json({
+          workflowId: id,
+          status: "workspace-only",
+          workspacePath: wsPath,
+          accountId,
+          warning: err instanceof Error ? err.message : String(err),
+        });
+        return;
+      }
       // Race: another request created it between our check and this call.
       const raced = await reconcileExisting(containerName);
       if (raced) {
@@ -303,6 +343,7 @@ app.post("/sandboxes", async (req, res) => {
           containerId: raced.containerId,
           hostPort: raced.hostPort,
           accountId,
+          mode: "container",
         });
         usedPorts.add(raced.hostPort);
         res.json({
@@ -317,7 +358,12 @@ app.post("/sandboxes", async (req, res) => {
       container = await createAndStart(spec);
     }
 
-    sandboxes.set(id, { containerId: container.id, hostPort, accountId });
+    sandboxes.set(id, {
+      containerId: container.id,
+      hostPort,
+      accountId,
+      mode: "container",
+    });
 
     res.status(201).json({
       workflowId: id,
@@ -348,6 +394,46 @@ app.get("/sandboxes/:id/files", async (req, res) => {
   }
 });
 
+app.put("/sandboxes/:id/files", async (req, res) => {
+  const id = safeId(req.params.id);
+  const rawFiles = req.body?.files;
+  if (!Array.isArray(rawFiles)) {
+    res.status(400).json({ error: "files array required" });
+    return;
+  }
+  if (rawFiles.length > 400) {
+    res.status(400).json({ error: "too many files" });
+    return;
+  }
+
+  /** @type {{ path: string, contents: string }[]} */
+  const files = [];
+  for (const f of rawFiles) {
+    if (
+      !f ||
+      typeof f.path !== "string" ||
+      typeof f.contents !== "string" ||
+      f.path.includes("..") ||
+      path.isAbsolute(f.path)
+    ) {
+      res.status(400).json({ error: "invalid files payload" });
+      return;
+    }
+    files.push({ path: f.path, contents: f.contents });
+  }
+
+  const dir = workspacePath(id);
+  try {
+    await writeSeedFiles(dir, files);
+    if (!sandboxes.has(id)) {
+      sandboxes.set(id, { mode: "workspace-only" });
+    }
+    res.json({ workflowId: id, status: "updated", fileCount: files.length });
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
+  }
+});
+
 const EXEC_MAX_BYTES = 200_000;
 
 app.post("/sandboxes/:id/exec", async (req, res) => {
@@ -355,6 +441,12 @@ app.post("/sandboxes/:id/exec", async (req, res) => {
   const record = sandboxes.get(id);
   if (!record) {
     res.status(404).json({ error: "Sandbox not found" });
+    return;
+  }
+  if (record.mode === "workspace-only" || !record.containerId) {
+    res.status(503).json({
+      error: "Sandbox is workspace-only (no Docker container); exec unavailable",
+    });
     return;
   }
 
@@ -415,7 +507,18 @@ app.get("/sandboxes/:id", async (req, res) => {
   const id = safeId(req.params.id);
   const record = sandboxes.get(id);
   if (!record) {
+    // Workspace may still exist on disk from a prior workspace-only create.
+    const dir = path.join(WORKSPACE_ROOT, id);
+    if (fs.existsSync(dir)) {
+      res.json({ workflowId: id, status: "workspace-only" });
+      return;
+    }
     res.status(404).json({ error: "Sandbox not found" });
+    return;
+  }
+
+  if (record.mode === "workspace-only" || !record.containerId) {
+    res.json({ workflowId: id, status: "workspace-only", accountId: record.accountId });
     return;
   }
 
@@ -439,8 +542,22 @@ app.get("/sandboxes/:id", async (req, res) => {
 app.delete("/sandboxes/:id", async (req, res) => {
   const id = safeId(req.params.id);
   const record = sandboxes.get(id);
+  const dir = path.join(WORKSPACE_ROOT, id);
+
   if (!record) {
+    if (fs.existsSync(dir)) {
+      fs.rmSync(dir, { recursive: true, force: true });
+      res.json({ workflowId: id, status: "removed" });
+      return;
+    }
     res.status(404).json({ error: "Sandbox not found" });
+    return;
+  }
+
+  if (record.mode === "workspace-only" || !record.containerId) {
+    sandboxes.delete(id);
+    fs.rmSync(dir, { recursive: true, force: true });
+    res.json({ workflowId: id, status: "removed" });
     return;
   }
 
@@ -458,6 +575,7 @@ app.delete("/sandboxes/:id", async (req, res) => {
 
   sandboxes.delete(id);
   releasePort(record.hostPort);
+  fs.rmSync(dir, { recursive: true, force: true });
   res.json({ workflowId: id, status: "removed" });
 });
 

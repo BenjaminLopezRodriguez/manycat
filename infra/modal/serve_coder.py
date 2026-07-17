@@ -75,6 +75,10 @@ def serve() -> None:
         str(N_GPU),
         "--gpu-memory-utilization",
         "0.90",
+        # Required for agent harness tool loops (tool_choice=auto).
+        "--enable-auto-tool-choice",
+        "--tool-call-parser",
+        "hermes",
     ]
     print("starting:", json.dumps(cmd))
     subprocess.Popen(cmd)
