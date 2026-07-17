@@ -26,6 +26,14 @@ export type NeonProvisionResult = {
 
 export { ensureSharedDbHardened };
 
+/** Always derive schema/role from workflowId — never trust stored names for DDL. */
+export function resolveSharedNames(workflowId: string) {
+  return {
+    schema: schemaNameFor(workflowId),
+    role: roleNameFor(workflowId),
+  };
+}
+
 function assertNotControlUrl(url: string) {
   if (url === env.DATABASE_URL) {
     throw new Error("Refusing to use control DATABASE_URL as workload DB");
@@ -66,8 +74,8 @@ async function ensureShared(opts: {
 
   await ensureSharedDbHardened();
 
-  const schema = opts.existing?.neonSchema ?? schemaNameFor(opts.workflowId);
-  const role = opts.existing?.neonRole ?? roleNameFor(opts.workflowId);
+  // Force derived names before any DDL — do not trust opts.existing schema/role.
+  const { schema, role } = resolveSharedNames(opts.workflowId);
   let password: string;
   let passwordEnc: string;
 
