@@ -3,6 +3,7 @@ import "@/styles/globals.css";
 import { type Metadata } from "next";
 import { DM_Sans, Figtree } from "next/font/google";
 
+import { AuthSessionProvider } from "@/components/auth-session-provider";
 import { TRPCReactProvider } from "@/trpc/react";
 import { cn } from "@/lib/utils";
 
@@ -28,7 +29,9 @@ export default function RootLayout({
       className={cn("font-sans", dmSans.variable, figtreeHeading.variable)}
     >
       <body>
-        <TRPCReactProvider>{children}</TRPCReactProvider>
+        <AuthSessionProvider>
+          <TRPCReactProvider>{children}</TRPCReactProvider>
+        </AuthSessionProvider>
       </body>
     </html>
   );

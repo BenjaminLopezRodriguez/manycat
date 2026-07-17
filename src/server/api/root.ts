@@ -1,5 +1,6 @@
 import { postRouter } from "@/server/api/routers/post";
 import { projectRouter } from "@/server/api/routers/project";
+import { githubRouter } from "@/server/api/routers/github";
 import { workflowRouter } from "@/server/api/routers/workflow";
 import { createCallerFactory, createTRPCRouter } from "@/server/api/trpc";
 
@@ -12,6 +13,7 @@ export const appRouter = createTRPCRouter({
   post: postRouter,
   workflow: workflowRouter,
   project: projectRouter,
+  github: githubRouter,
 });
 
 // export type definition of API

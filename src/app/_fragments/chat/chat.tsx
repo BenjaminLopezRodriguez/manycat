@@ -58,7 +58,6 @@ import {
   messagePreview,
   type ApprovalMsg,
   type DiffMsg,
-  type LastRun,
   type Project,
   type TextMsg,
   type Workflow,
@@ -135,6 +134,17 @@ function StatusBadge({ status }: { status: WorkflowStatus }) {
   );
 }
 
+const EMPTY_WORKFLOW: Workflow = {
+  id: "",
+  name: "",
+  initials: "",
+  avatarClass: "",
+  repo: "",
+  status: "idle",
+  messages: [],
+  workspace: [],
+};
+
 export default function Chat() {
   const isMobile = useIsMobile();
   const [view, setView] = React.useState<View>("feed");
@@ -142,7 +152,9 @@ export default function Chat() {
   const [projects, setProjects] = React.useState<Project[]>(() =>
     deriveProjectsFromWorkflows(initialWorkflows),
   );
-  const [activeId, setActiveId] = React.useState(initialWorkflows[0]!.id);
+  const [activeId, setActiveId] = React.useState<string | null>(
+    initialWorkflows[0]?.id ?? null,
+  );
   const [chatOpen, setChatOpen] = React.useState(false);
   const [diffsOpen, setDiffsOpen] = React.useState(false);
   const [workspaceOpen, setWorkspaceOpen] = React.useState(false);
@@ -161,6 +173,14 @@ export default function Chat() {
   const utils = api.useUtils();
   const activeTeam = TEAMS.find((t) => t.id === teamId) ?? TEAMS[0];
 
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("import") === "1") {
+      setImportOpen(true);
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
+
   const bubbleBadges: BubbleBadge[] = [];
   if (workflows.some((w) => w.status === "working")) bubbleBadges.push("working");
   if (workflows.some((w) => w.status === "needs-review")) {
@@ -170,28 +190,28 @@ export default function Chat() {
     bubbleBadges.push("deploy");
   }
 
-  const active = workflows.find((w) => w.id === activeId)!;
-  const diffs = active.messages.filter((m): m is DiffMsg => m.type === "diff");
-  const promptMsg = active.messages.find(
+  const active = workflows.find((w) => w.id === activeId) ?? null;
+  const diffs = active?.messages.filter((m): m is DiffMsg => m.type === "diff") ?? [];
+  const promptMsg = active?.messages.find(
     (m): m is TextMsg => m.type === "text" && m.from === "me",
   );
-  const prompt = promptMsg?.text ?? active.name;
-  const pendingApproval = active.messages.find(
+  const prompt = promptMsg?.text ?? active?.name ?? "";
+  const pendingApproval = active?.messages.find(
     (m): m is ApprovalMsg => m.type === "approval" && m.resolved === null,
   );
 
   React.useEffect(() => {
-    const first = active.workspace[0]?.path ?? null;
+    const first = active?.workspace[0]?.path ?? null;
     setActivePath(first);
     setActiveDiff(null);
     setPreviewUrl(null);
   }, [activeId]); // eslint-disable-line react-hooks/exhaustive-deps -- reset path when switching workflows
 
   React.useEffect(() => {
-    if (view === "chats") {
+    if (view === "chats" && active) {
       bottomRef.current?.scrollIntoView({ behavior: "smooth" });
     }
-  }, [active.messages.length, activeId, view]);
+  }, [active?.messages.length, activeId, view]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleAgentEvent = React.useCallback(
     (event: AgentEvent) => {
@@ -236,7 +256,7 @@ export default function Chat() {
   );
 
   const agent = useAgent({
-    workflow: active,
+    workflow: active ?? EMPTY_WORKFLOW,
     onEvent: handleAgentEvent,
     onPreviewUrl: setPreviewUrl,
   });
@@ -316,34 +336,6 @@ export default function Chat() {
     });
   }
 
-  function handleProjectRunStart(projectId: string) {
-    setProjects((prev) =>
-      prev.map((p) =>
-        p.id === projectId
-          ? {
-              ...p,
-              lastRun: {
-                status: "running",
-                startedAt: new Date().toISOString(),
-              },
-            }
-          : p,
-      ),
-    );
-  }
-
-  function handleProjectRunDone(projectId: string, run: LastRun) {
-    setProjects((prev) =>
-      prev.map((p) => (p.id === projectId ? { ...p, lastRun: run } : p)),
-    );
-  }
-
-  function handleProjectConfigChange(projectId: string, runConfig: Project["runConfig"]) {
-    setProjects((prev) =>
-      prev.map((p) => (p.id === projectId ? { ...p, runConfig } : p)),
-    );
-  }
-
   async function handleImportSuccess(data: {
     workflowId: string;
     name: string;
@@ -407,6 +399,7 @@ export default function Chat() {
   }
 
   function openDiff(messageId: number) {
+    if (!active) return;
     const msg = active.messages.find((m) => m.id === messageId);
     if (msg?.type !== "diff") return;
     setActiveDiff(msg);
@@ -427,7 +420,7 @@ export default function Chat() {
   function send(e: React.FormEvent) {
     e.preventDefault();
     const text = draft.trim();
-    if (!text) return;
+    if (!text || !active) return;
     if (active.status === "working") return;
     setDraft("");
     agent.run(text);
@@ -474,9 +467,6 @@ export default function Chat() {
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto">
-          <p className="text-sidebar-primary-foreground/40 px-3 pb-0.5 text-[10px] font-medium tracking-wide uppercase">
-            Navigate
-          </p>
           <RailButton
             label="Projects"
             active={view === "feed"}
@@ -503,9 +493,6 @@ export default function Chat() {
           </RailButton>
 
           <div className="bg-sidebar-primary-foreground/10 mx-2 my-2 h-px" />
-          <p className="text-sidebar-primary-foreground/40 px-3 pb-0.5 text-[10px] font-medium tracking-wide uppercase">
-            Account
-          </p>
           <RailButton label="Usage">
             <HugeiconsIcon icon={CreditCardIcon} size={20} />
           </RailButton>
@@ -520,14 +507,7 @@ export default function Chat() {
 
       <main className="flex min-h-0 min-w-0 flex-1">
         {view === "feed" ? (
-          <Projects
-            projects={projects}
-            workflows={workflows}
-            onOpenWorkflow={(id) => openWorkflow(id)}
-            onRunStart={handleProjectRunStart}
-            onRunDone={handleProjectRunDone}
-            onConfigChange={handleProjectConfigChange}
-          />
+          <Projects onImport={() => setImportOpen(true)} />
         ) : (
           <>
             <aside
@@ -569,56 +549,65 @@ export default function Chat() {
                 </div>
               </div>
               <div className="flex-1 overflow-y-auto">
-                {workflows.map((w) => {
-                  const last = w.messages[w.messages.length - 1]!;
-                  return (
-                    <button
-                      key={w.id}
-                      type="button"
-                      onClick={() => openWorkflow(w.id)}
-                      className={cn(
-                        "hover:bg-muted/50 flex w-full items-center gap-3 px-4 py-3 text-left transition-colors",
-                        w.id === activeId && "bg-muted",
-                      )}
-                    >
-                      <Avatar className="size-11">
-                        <AvatarFallback className={w.avatarClass}>
-                          {w.initials}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-baseline justify-between gap-2">
-                          <span className="truncate font-medium">{w.name}</span>
-                          <span className="text-muted-foreground shrink-0 text-xs">
-                            {last.time}
-                          </span>
-                        </div>
-                        <div className="mt-0.5 flex items-center justify-between gap-2">
-                          <span className="text-muted-foreground truncate text-sm">
-                            {messagePreview(last)}
-                          </span>
-                          <div className="flex shrink-0 items-center gap-1.5">
-                            {w.status !== "idle" && (
-                              <StatusBadge status={w.status} />
-                            )}
-                            {w.unread ? (
-                              <span className="bg-primary text-primary-foreground flex size-5 items-center justify-center rounded-full text-xs font-medium">
-                                {w.unread}
+                {workflows.length === 0 ? (
+                  <p className="text-muted-foreground px-4 py-8 text-center text-sm">
+                    No workflows yet — import a project to start.
+                  </p>
+                ) : (
+                  workflows.map((w) => {
+                    const last = w.messages[w.messages.length - 1];
+                    return (
+                      <button
+                        key={w.id}
+                        type="button"
+                        onClick={() => openWorkflow(w.id)}
+                        className={cn(
+                          "hover:bg-muted/50 flex w-full items-center gap-3 px-4 py-3 text-left transition-colors",
+                          w.id === activeId && "bg-muted",
+                        )}
+                      >
+                        <Avatar className="size-11">
+                          <AvatarFallback className={w.avatarClass}>
+                            {w.initials}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-baseline justify-between gap-2">
+                            <span className="truncate font-medium">{w.name}</span>
+                            {last ? (
+                              <span className="text-muted-foreground shrink-0 text-xs">
+                                {last.time}
                               </span>
                             ) : null}
                           </div>
+                          <div className="mt-0.5 flex items-center justify-between gap-2">
+                            <span className="text-muted-foreground truncate text-sm">
+                              {last ? messagePreview(last) : "Empty workflow"}
+                            </span>
+                            <div className="flex shrink-0 items-center gap-1.5">
+                              {w.status !== "idle" && (
+                                <StatusBadge status={w.status} />
+                              )}
+                              {w.unread ? (
+                                <span className="bg-primary text-primary-foreground flex size-5 items-center justify-center rounded-full text-xs font-medium">
+                                  {w.unread}
+                                </span>
+                              ) : null}
+                            </div>
+                          </div>
+                          <div className="text-muted-foreground mt-0.5 truncate font-mono text-[10px]">
+                            {w.repo}
+                          </div>
                         </div>
-                        <div className="text-muted-foreground mt-0.5 truncate font-mono text-[10px]">
-                          {w.repo}
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
+                      </button>
+                    );
+                  })
+                )}
               </div>
             </aside>
 
             {/* Conversation + workspace */}
+            {active ? (
             <section
               className={cn(
                 "min-w-0 flex-1 flex-col md:flex",
@@ -876,6 +865,7 @@ export default function Chat() {
                 </div>
               </div>
             </section>
+            ) : null}
           </>
         )}
       </main>
@@ -967,13 +957,10 @@ export default function Chat() {
           <DrawerHeader className="text-left">
             <DrawerTitle>Menu</DrawerTitle>
             <DrawerDescription className="sr-only">
-              Navigate and account
+              Navigation menu
             </DrawerDescription>
           </DrawerHeader>
           <div className="flex max-h-[min(70dvh,28rem)] flex-col gap-1 overflow-y-auto px-3 pb-6">
-            <p className="text-muted-foreground px-3 pb-1 text-xs font-medium tracking-wide uppercase">
-              Navigate
-            </p>
             <MobileMenuItem
               label="Projects"
               active={view === "feed"}
@@ -1015,9 +1002,6 @@ export default function Chat() {
             </MobileMenuItem>
 
             <div className="bg-border my-2 h-px" />
-            <p className="text-muted-foreground px-3 pb-1 text-xs font-medium tracking-wide uppercase">
-              Account
-            </p>
             <MobileMenuItem
               label="Usage"
               onClick={() => setNavMenuOpen(false)}

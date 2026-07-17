@@ -212,3 +212,468 @@
     color: white;
     padding: 2px;
   ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 530, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_23716680._.js:2472
+[44900252ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[44900864ms] [LOG] [Fast Refresh] done in 683ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[46850981ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[46851552ms] [LOG] %c >> query #2 %cworkflow.isEnabled%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_23716680._.js:2472
+[46851582ms] [LOG] [Fast Refresh] done in 591ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[46851608ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[46851664ms] [LOG] [Fast Refresh] done in 15ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[46852178ms] [LOG] %c << query #2 %cworkflow.isEnabled%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 620, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_23716680._.js:2472
+[46857206ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[46857539ms] [LOG] [Fast Refresh] done in 406ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[46868578ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[46868716ms] [LOG] [Fast Refresh] done in 158ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[46869264ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[46869348ms] [LOG] [Fast Refresh] done in 185ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[46874579ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[46874686ms] ReferenceError: Mic01Icon is not defined
+    at Projects (http://localhost:3000/_next/static/chunks/src_edff754f._.js?id=%255Bproject%255D%252Fsrc%252Fapp%252F_fragments%252Fchat%252Fprojects.tsx+%255Bapp-client%255D+%2528ecmascript%2529:90:39)
+    at Object.react_stack_bottom_frame (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:13072:24)
+    at renderWithHooks (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:4091:24)
+    at updateFunctionComponent (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:5523:21)
+    at beginWork (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:6111:24)
+    at runWithFiberInDEV (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:886:74)
+    at performUnitOfWork (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8298:97)
+    at workLoopSync (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8190:40)
+    at renderRootSync (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8173:13)
+    at performWorkOnRoot (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:7932:56)
+    at performSyncWorkOnRoot (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8890:9)
+    at flushSyncWorkAcrossRoots_impl (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8809:316)
+    at flushSyncWork$1 (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8048:86)
+    at Object.scheduleRefresh (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:294:13)
+    at http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_6a66a683._.js:391:33
+    at Set.forEach (<anonymous>)
+    at Object.performReactRefresh (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_6a66a683._.js:384:38)
+    at applyUpdate (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_6a66a683._.js:878:31)
+    at http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_6a66a683._.js:886:13
+[46874676ms] [LOG] [Fast Refresh] done in 159ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[46874796ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[46874879ms] [LOG] [Fast Refresh] done in 184ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[46875728ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[46875759ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:6289
+[46875836ms] [LOG] [Fast Refresh] done in 131ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[46875936ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[46876017ms] [LOG] [Fast Refresh] done in 181ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[46876569ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:14537
+[46877095ms] [LOG] %c >> query #1 %cworkflow.isEnabled%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_23716680._.js:2472
+[46878499ms] [LOG] %c << query #1 %cworkflow.isEnabled%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 1403, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_23716680._.js:2472
+[46878566ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[46878688ms] [LOG] [Fast Refresh] done in 169ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[46879063ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[46879118ms] [LOG] [Fast Refresh] done in 124ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[46883668ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[46883839ms] [LOG] [Fast Refresh] done in 239ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[46885705ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[46885735ms] [LOG] [Fast Refresh] done in 125ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[46886463ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[46886519ms] [LOG] [Fast Refresh] done in 127ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[46886787ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[46886861ms] [LOG] [Fast Refresh] done in 147ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[46897543ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[46897624ms] [ERROR] ./src/app/_fragments/chat/chat.tsx:889:12
+Parsing ecmascript source code failed
+  887 |               </div>
+  888 |             </section>
+> 889 |           </>
+      |            ^^
+  890 |         )}
+  891 |       </main>
+  892 |
+
+Unterminated regexp literal
+
+Import trace:
+  Server Component:
+    ./src/app/_fragments/chat/chat.tsx
+    ./src/app/page.tsx @ http://localhost:3000/_next/static/chunks/12305_next_dist_cfff89d9._.js:2405
+[46897633ms] [LOG] {file: Object} @ http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_next-devtools_index_0d207618.js:16058
+[46906366ms] [ERROR] ./src/app/_fragments/chat/chat.tsx:889:12
+Parsing ecmascript source code failed
+  887 |               </div>
+  888 |             </section>
+> 889 |           </>
+      |            ^^
+  890 |         )}
+  891 |       </main>
+  892 |
+
+Unterminated regexp literal
+
+Import trace:
+  Server Component:
+    ./src/app/_fragments/chat/chat.tsx
+    ./src/app/page.tsx @ http://localhost:3000/_next/static/chunks/12305_next_dist_cfff89d9._.js:2405
+[46906428ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[46906554ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[46907234ms] [ERROR] ./src/app/_fragments/chat/chat.tsx:889:12
+Parsing ecmascript source code failed
+  887 |               </div>
+  888 |             </section>
+> 889 |           </>
+      |            ^^
+  890 |         )}
+  891 |       </main>
+  892 |
+
+Unterminated regexp literal
+
+Import trace:
+  Server Component:
+    ./src/app/_fragments/chat/chat.tsx
+    ./src/app/page.tsx @ http://localhost:3000/_next/static/chunks/12305_next_dist_cfff89d9._.js:2405
+[46907280ms] [ERROR] ./src/app/_fragments/chat/chat.tsx:889:12
+Parsing ecmascript source code failed
+  887 |               </div>
+  888 |             </section>
+> 889 |           </>
+      |            ^^
+  890 |         )}
+  891 |       </main>
+  892 |
+
+Unterminated regexp literal
+
+Import trace:
+  Server Component:
+    ./src/app/_fragments/chat/chat.tsx
+    ./src/app/page.tsx @ http://localhost:3000/_next/static/chunks/12305_next_dist_cfff89d9._.js:2405
+[46907382ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[46907518ms] [ERROR] ./src/app/_fragments/chat/chat.tsx:889:12
+Parsing ecmascript source code failed
+  887 |               </div>
+  888 |             </section>
+> 889 |           </>
+      |            ^^
+  890 |         )}
+  891 |       </main>
+  892 |
+
+Unterminated regexp literal
+
+Import trace:
+  Server Component:
+    ./src/app/_fragments/chat/chat.tsx
+    ./src/app/page.tsx @ http://localhost:3000/_next/static/chunks/12305_next_dist_cfff89d9._.js:2405
+[46907681ms] [ERROR] ./src/app/_fragments/chat/chat.tsx:889:12
+Parsing ecmascript source code failed
+  887 |               </div>
+  888 |             </section>
+> 889 |           </>
+      |            ^^
+  890 |         )}
+  891 |       </main>
+  892 |
+
+Unterminated regexp literal
+
+Import trace:
+  Server Component:
+    ./src/app/_fragments/chat/chat.tsx
+    ./src/app/page.tsx @ http://localhost:3000/_next/static/chunks/12305_next_dist_cfff89d9._.js:2405
+[46907723ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[46912180ms] [ERROR] ./src/app/_fragments/chat/chat.tsx:889:12
+Parsing ecmascript source code failed
+  887 |               </div>
+  888 |             </section>
+> 889 |           </>
+      |            ^^
+  890 |         )}
+  891 |       </main>
+  892 |
+
+Unterminated regexp literal
+
+Import trace:
+  Server Component:
+    ./src/app/_fragments/chat/chat.tsx
+    ./src/app/page.tsx @ http://localhost:3000/_next/static/chunks/12305_next_dist_cfff89d9._.js:2405
+[46912229ms] [ERROR] ./src/app/_fragments/chat/chat.tsx:889:12
+Parsing ecmascript source code failed
+  887 |               </div>
+  888 |             </section>
+> 889 |           </>
+      |            ^^
+  890 |         )}
+  891 |       </main>
+  892 |
+
+Unterminated regexp literal
+
+Import trace:
+  Server Component:
+    ./src/app/_fragments/chat/chat.tsx
+    ./src/app/page.tsx @ http://localhost:3000/_next/static/chunks/12305_next_dist_cfff89d9._.js:2405
+[46912283ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[46912437ms] [ERROR] ./src/app/_fragments/chat/chat.tsx:889:12
+Parsing ecmascript source code failed
+  887 |               </div>
+  888 |             </section>
+> 889 |           </>
+      |            ^^
+  890 |         )}
+  891 |       </main>
+  892 |
+
+Unterminated regexp literal
+
+Import trace:
+  Server Component:
+    ./src/app/_fragments/chat/chat.tsx
+    ./src/app/page.tsx @ http://localhost:3000/_next/static/chunks/12305_next_dist_cfff89d9._.js:2405
+[46912504ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[46913863ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[46913958ms] [LOG] %c >> query #2 %cworkflow.isEnabled%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_23716680._.js:2472
+[46913981ms] [LOG] [Fast Refresh] done in 173ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[46914222ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[46914298ms] [LOG] [Fast Refresh] done in 176ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[46915242ms] [LOG] %c << query #2 %cworkflow.isEnabled%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 1274, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_23716680._.js:2472
+[46921341ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[46921589ms] ReferenceError: handleImportSuccess is not defined
+    at Chat (http://localhost:3000/_next/static/chunks/src_edff754f._.js?id=%255Bproject%255D%252Fsrc%252Fapp%252F_fragments%252Fchat%252Fchat.tsx+%255Bapp-client%255D+%2528ecmascript%2529:1768:34)
+    at Object.react_stack_bottom_frame (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:13072:24)
+    at renderWithHooks (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:4091:24)
+    at updateFunctionComponent (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:5523:21)
+    at beginWork (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:6111:24)
+    at runWithFiberInDEV (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:886:74)
+    at performUnitOfWork (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8298:97)
+    at workLoopSync (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8190:40)
+    at renderRootSync (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8173:13)
+    at performWorkOnRoot (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:7932:56)
+    at performSyncWorkOnRoot (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8890:9)
+    at flushSyncWorkAcrossRoots_impl (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8809:316)
+    at flushSyncWork$1 (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8048:86)
+    at Object.scheduleRefresh (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:294:13)
+    at http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_6a66a683._.js:391:33
+    at Set.forEach (<anonymous>)
+    at Object.performReactRefresh (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_6a66a683._.js:384:38)
+    at applyUpdate (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_6a66a683._.js:878:31)
+    at http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_6a66a683._.js:886:13
+[46921568ms] [LOG] [Fast Refresh] done in 283ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[46921836ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[46921950ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:6289
+[46921988ms] ReferenceError: handleImportSuccess is not defined
+    at Chat (http://localhost:3000/_next/static/chunks/src_edff754f._.js?id=%255Bproject%255D%252Fsrc%252Fapp%252F_fragments%252Fchat%252Fchat.tsx+%255Bapp-client%255D+%2528ecmascript%2529:1768:34)
+    at Object.react_stack_bottom_frame (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:13072:24)
+    at renderWithHooks (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:4091:24)
+    at updateFunctionComponent (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:5523:21)
+    at beginWork (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:6090:639)
+    at runWithFiberInDEV (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:886:74)
+    at performUnitOfWork (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8298:97)
+    at workLoopSync (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8190:40)
+    at renderRootSync (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8173:13)
+    at performWorkOnRoot (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:7932:56)
+    at performSyncWorkOnRoot (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8890:9)
+    at flushSyncWorkAcrossRoots_impl (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8809:316)
+    at flushSyncWork$1 (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8048:86)
+    at Object.scheduleRefresh (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:294:13)
+    at http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_6a66a683._.js:391:33
+    at Set.forEach (<anonymous>)
+    at Object.performReactRefresh (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_6a66a683._.js:384:38)
+    at applyUpdate (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_6a66a683._.js:878:31)
+    at http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_6a66a683._.js:886:13
+[46921995ms] [LOG] [Fast Refresh] done in 213ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[46922452ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[46922487ms] [LOG] [Fast Refresh] done in 137ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[46923036ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/:0
+[46923276ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:14537
+[46923536ms] ReferenceError: handleImportSuccess is not defined
+    at Chat (http://localhost:3000/_next/static/chunks/src_edff754f._.js:4873:34)
+    at Object.react_stack_bottom_frame (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:13072:24)
+    at renderWithHooks (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:4091:24)
+    at updateFunctionComponent (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:5523:21)
+    at beginWork (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:6090:639)
+    at runWithFiberInDEV (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:886:74)
+    at performUnitOfWork (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8298:97)
+    at workLoopSync (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8190:40)
+    at renderRootSync (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8173:13)
+    at performWorkOnRoot (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:7932:56)
+    at performWorkOnRootViaSchedulerTask (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8882:9)
+    at MessagePort.performWorkUntilDeadline (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_6a66a683._.js:2601:64)
+[46927339ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[46927424ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:6289
+[46927438ms] [LOG] [Fast Refresh] done in 181ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[46927555ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[46927601ms] [LOG] [Fast Refresh] done in 147ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[46928192ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:14537
+[46928343ms] [LOG] %c >> query #1 %cworkflow.isEnabled%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_23716680._.js:2472
+[46929395ms] [LOG] %c << query #1 %cworkflow.isEnabled%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 1051, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_23716680._.js:2472
+[46930169ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[46930311ms] [LOG] [Fast Refresh] done in 204ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[46930607ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[46930713ms] [LOG] [Fast Refresh] done in 179ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[46959071ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[46959188ms] [LOG] [Fast Refresh] done in 218ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47035874ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47036096ms] [LOG] [Fast Refresh] done in 325ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47144145ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47144298ms] [LOG] [Fast Refresh] done in 312ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47155574ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47156079ms] [LOG] [Fast Refresh] done in 605ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47156187ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47156696ms] [LOG] [Fast Refresh] done in 574ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47158677ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47158744ms] [LOG] [Fast Refresh] done in 128ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47187123ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47187707ms] [LOG] [Fast Refresh] done in 683ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47187820ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47187875ms] [LOG] [Fast Refresh] done in 155ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47188144ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47188607ms] [LOG] [Fast Refresh] done in 151ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47191096ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47191193ms] [LOG] [Fast Refresh] done in 197ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47195890ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47196039ms] [LOG] [Fast Refresh] done in 193ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47196206ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47196263ms] [LOG] [Fast Refresh] done in 157ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47197707ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47197800ms] [LOG] [Fast Refresh] done in 107ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47199145ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47199832ms] [LOG] [Fast Refresh] done in 717ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47200080ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47200231ms] [LOG] [Fast Refresh] done in 253ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47201998ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47202263ms] [LOG] [Fast Refresh] done in 176ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47203992ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47204776ms] [LOG] [Fast Refresh] done in 840ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47205190ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47205206ms] [LOG] [Fast Refresh] done in 17ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47206150ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47206232ms] [LOG] [Fast Refresh] done in 181ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47206820ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:14537
+[47207741ms] [LOG] %c >> query #1 %cworkflow.isEnabled%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_e01bab6e._.js:3226
+[47207988ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47208705ms] [LOG] [Fast Refresh] done in 819ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47209128ms] [LOG] %c << query #1 %cworkflow.isEnabled%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 1384, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_e01bab6e._.js:3226
+[47223193ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47223641ms] [LOG] [Fast Refresh] done in 543ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47231311ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47232001ms] [LOG] [Fast Refresh] done in 576ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47241970ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47242117ms] [LOG] [Fast Refresh] done in 248ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47512968ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47513254ms] [LOG] [Fast Refresh] done in 354ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47513389ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47513506ms] [LOG] [Fast Refresh] done in 217ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[47516797ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[47517036ms] [LOG] [Fast Refresh] done in 130ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
