@@ -7,6 +7,7 @@ Run manycat with Docker Compose locally, or on a local Kubernetes cluster (kind)
 - Docker Desktop (or Docker Engine + Compose)
 - For Kubernetes: [kind](https://kind.sigs.k8s.io/), kubectl
 - Optional: LLM API key (`OPENAI_API_KEY` or `ANTHROPIC_API_KEY`) for the programming agent
+- Optional: Modal open-weight coder — see [infra/modal/README.md](../infra/modal/README.md)
 
 ## Architecture
 
@@ -59,8 +60,9 @@ The orchestrator mounts the host Docker socket (dev only) to create sandbox cont
 | `DATABASE_URL` | Postgres connection string |
 | `AGENT_HARNESS_URL` | e.g. `http://agent:8000` in Compose |
 | `SANDBOX_ORCHESTRATOR_URL` | e.g. `http://orchestrator:8080` |
-| `MODEL` | LLM id for agent-harness |
-| `OPENAI_API_KEY` | OpenAI key when using OpenAI models |
+| `MODEL` | LLM id for agent-harness (`openai:coder` for Modal) |
+| `OPENAI_API_KEY` | OpenAI key, or any string when using Modal stub |
+| `OPENAI_BASE_URL` | OpenAI-compatible base URL (Modal vLLM `…/v1`) |
 
 ## Production notes
 

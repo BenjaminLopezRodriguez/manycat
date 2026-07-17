@@ -27,7 +27,11 @@ class ProgrammingAgentHarness:
     def _init_model(self):
         from langchain.chat_models import init_chat_model
 
-        return init_chat_model(self.config.model)
+        kwargs = {}
+        if self.config.openai_base_url:
+            # OpenAI-compatible providers (Modal vLLM, local gateways).
+            kwargs["base_url"] = self.config.openai_base_url
+        return init_chat_model(self.config.model, **kwargs)
 
     def _run_explore(self, description: str, thoroughness: str) -> str:
         agent = self._get_explore_agent()
