@@ -7,17 +7,24 @@ import {
   Add01Icon,
   ArrowDown01Icon,
   ArrowLeft01Icon,
+  ArrowUp01Icon,
   ArrowUpRight01Icon,
+  BotIcon,
   BubbleChatIcon,
   Cancel01Icon,
   CheckmarkCircle02Icon,
+  CloudUploadIcon,
+  CreditCardIcon,
   Edit01Icon,
   GitBranchIcon,
+  HelpCircleIcon,
+  Link01Icon,
   Menu01Icon,
   MoreVerticalIcon,
   News01Icon,
   Search01Icon,
   SentIcon,
+  Settings01Icon,
   SidebarRight01Icon,
 } from "@hugeicons/core-free-icons";
 
@@ -69,6 +76,30 @@ const TEAMS = [
   { id: "acme", name: "Acme Labs", initials: "AL" },
   { id: "northstar", name: "Northstar", initials: "NS" },
 ] as const;
+
+/** Icon badges that can pin to the mobile status bubble */
+type BubbleBadge = "deploy" | "working" | "review";
+
+const BUBBLE_BADGE: Record<
+  BubbleBadge,
+  { icon: typeof ArrowUp01Icon; className: string; label: string }
+> = {
+  deploy: {
+    icon: ArrowUp01Icon,
+    className: "bg-emerald-500 text-white",
+    label: "Deploying",
+  },
+  working: {
+    icon: BotIcon,
+    className: "bg-primary text-primary-foreground",
+    label: "Agent working",
+  },
+  review: {
+    icon: ArrowUpRight01Icon,
+    className: "bg-amber-500 text-white",
+    label: "Needs review",
+  },
+};
 
 function nowTime() {
   return new Date().toLocaleTimeString([], {
@@ -124,10 +155,20 @@ export default function Chat() {
   const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
   const [importOpen, setImportOpen] = React.useState(false);
   const [navMenuOpen, setNavMenuOpen] = React.useState(false);
+  const [teamDrawerOpen, setTeamDrawerOpen] = React.useState(false);
   const [teamId, setTeamId] = React.useState<string>(TEAMS[0].id);
   const bottomRef = React.useRef<HTMLDivElement>(null);
   const utils = api.useUtils();
   const activeTeam = TEAMS.find((t) => t.id === teamId) ?? TEAMS[0];
+
+  const bubbleBadges: BubbleBadge[] = [];
+  if (workflows.some((w) => w.status === "working")) bubbleBadges.push("working");
+  if (workflows.some((w) => w.status === "needs-review")) {
+    bubbleBadges.push("review");
+  }
+  if (projects.some((p) => p.lastRun?.status === "running")) {
+    bubbleBadges.push("deploy");
+  }
 
   const active = workflows.find((w) => w.id === activeId)!;
   const diffs = active.messages.filter((m): m is DiffMsg => m.type === "diff");
@@ -394,43 +435,11 @@ export default function Chat() {
 
   const totalUnread = workflows.reduce((n, w) => n + (w.unread ?? 0), 0);
 
-  const navButtons = (
-    <>
-      <RailButton
-        label="Projects"
-        active={view === "feed"}
-        onClick={() => switchView("feed")}
-      >
-        <HugeiconsIcon icon={News01Icon} size={20} />
-      </RailButton>
-      <RailButton
-        label="Workflows"
-        active={view === "chats"}
-        onClick={() => switchView("chats")}
-      >
-        <span className="relative">
-          <HugeiconsIcon icon={BubbleChatIcon} size={20} />
-          {totalUnread > 0 && (
-            <span className="bg-primary text-primary-foreground absolute -top-1.5 -right-2 flex size-4 items-center justify-center rounded-full text-[10px] font-semibold">
-              {totalUnread}
-            </span>
-          )}
-        </span>
-      </RailButton>
-    </>
-  );
-
   return (
     <div className="bg-background flex h-dvh w-full flex-col overflow-hidden md:flex-row">
       <nav className="bg-sidebar-primary text-sidebar-primary-foreground hidden w-56 shrink-0 flex-col gap-1 px-3 py-4 md:flex">
         <div className="mb-3 flex items-center gap-2 px-1">
-          <Image
-            src="/manycat-logo.png"
-            alt="manycat"
-            width={36}
-            height={36}
-            className="shrink-0"
-          />
+          <StatusBubble badges={bubbleBadges} />
           <DropdownMenu>
             <DropdownMenuTrigger
               className={cn(
@@ -463,7 +472,50 @@ export default function Chat() {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        {navButtons}
+
+        <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto">
+          <p className="text-sidebar-primary-foreground/40 px-3 pb-0.5 text-[10px] font-medium tracking-wide uppercase">
+            Navigate
+          </p>
+          <RailButton
+            label="Projects"
+            active={view === "feed"}
+            onClick={() => switchView("feed")}
+          >
+            <HugeiconsIcon icon={News01Icon} size={20} />
+          </RailButton>
+          <RailButton
+            label="Workflows"
+            active={view === "chats"}
+            badge={totalUnread > 0 ? totalUnread : undefined}
+            onClick={() => switchView("chats")}
+          >
+            <HugeiconsIcon icon={BubbleChatIcon} size={20} />
+          </RailButton>
+          <RailButton label="Deployments">
+            <HugeiconsIcon icon={CloudUploadIcon} size={20} />
+          </RailButton>
+          <RailButton label="Agents">
+            <HugeiconsIcon icon={BotIcon} size={20} />
+          </RailButton>
+          <RailButton label="Integrations">
+            <HugeiconsIcon icon={Link01Icon} size={20} />
+          </RailButton>
+
+          <div className="bg-sidebar-primary-foreground/10 mx-2 my-2 h-px" />
+          <p className="text-sidebar-primary-foreground/40 px-3 pb-0.5 text-[10px] font-medium tracking-wide uppercase">
+            Account
+          </p>
+          <RailButton label="Usage">
+            <HugeiconsIcon icon={CreditCardIcon} size={20} />
+          </RailButton>
+          <RailButton label="Settings">
+            <HugeiconsIcon icon={Settings01Icon} size={20} />
+          </RailButton>
+          <RailButton label="Docs">
+            <HugeiconsIcon icon={HelpCircleIcon} size={20} />
+          </RailButton>
+        </div>
       </nav>
 
       <main className="flex min-h-0 min-w-0 flex-1">
@@ -829,17 +881,22 @@ export default function Chat() {
       </main>
 
       {!(view === "chats" && chatOpen) && (
-        <nav className="bg-sidebar-primary text-sidebar-primary-foreground flex shrink-0 items-center gap-3 px-3 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:hidden">
-          <Image
-            src="/manycat-logo.png"
-            alt="manycat"
-            width={32}
-            height={32}
-            className="shrink-0"
-          />
-          <span className="min-w-0 flex-1 truncate text-sm font-semibold">
-            {activeTeam.name}
-          </span>
+        <nav className="bg-sidebar-primary text-sidebar-primary-foreground flex shrink-0 items-center gap-2 px-3 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:hidden">
+          <StatusBubble badges={bubbleBadges} />
+          <button
+            type="button"
+            onClick={() => setTeamDrawerOpen(true)}
+            className="hover:bg-sidebar-primary-foreground/10 flex min-w-0 flex-1 items-center gap-1 rounded-xl px-2 py-1.5 text-left transition-colors"
+          >
+            <span className="min-w-0 flex-1 truncate text-sm font-semibold">
+              {activeTeam.name}
+            </span>
+            <HugeiconsIcon
+              icon={ArrowDown01Icon}
+              size={14}
+              className="text-sidebar-primary-foreground/60 shrink-0"
+            />
+          </button>
           <Button
             variant="ghost"
             size="icon"
@@ -853,29 +910,26 @@ export default function Chat() {
       )}
 
       <Drawer
-        open={navMenuOpen}
-        onOpenChange={setNavMenuOpen}
+        open={teamDrawerOpen}
+        onOpenChange={setTeamDrawerOpen}
         swipeDirection="down"
         showSwipeHandle
       >
         <DrawerContent className="max-h-[85dvh] md:hidden">
           <DrawerHeader className="text-left">
-            <DrawerTitle>Menu</DrawerTitle>
+            <DrawerTitle>Switch team</DrawerTitle>
             <DrawerDescription className="sr-only">
-              Navigate and switch team
+              Choose which team to work in
             </DrawerDescription>
           </DrawerHeader>
           <div className="flex max-h-[min(70dvh,28rem)] flex-col gap-1 overflow-y-auto px-3 pb-6">
-            <p className="text-muted-foreground px-3 pb-1 text-xs font-medium tracking-wide uppercase">
-              Team
-            </p>
             {TEAMS.map((team) => (
               <button
                 key={team.id}
                 type="button"
                 onClick={() => {
                   setTeamId(team.id);
-                  setNavMenuOpen(false);
+                  setTeamDrawerOpen(false);
                 }}
                 className={cn(
                   "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-colors",
@@ -899,7 +953,24 @@ export default function Chat() {
                 ) : null}
               </button>
             ))}
-            <div className="bg-border my-2 h-px" />
+          </div>
+        </DrawerContent>
+      </Drawer>
+
+      <Drawer
+        open={navMenuOpen}
+        onOpenChange={setNavMenuOpen}
+        swipeDirection="down"
+        showSwipeHandle
+      >
+        <DrawerContent className="max-h-[85dvh] md:hidden">
+          <DrawerHeader className="text-left">
+            <DrawerTitle>Menu</DrawerTitle>
+            <DrawerDescription className="sr-only">
+              Navigate and account
+            </DrawerDescription>
+          </DrawerHeader>
+          <div className="flex max-h-[min(70dvh,28rem)] flex-col gap-1 overflow-y-auto px-3 pb-6">
             <p className="text-muted-foreground px-3 pb-1 text-xs font-medium tracking-wide uppercase">
               Navigate
             </p>
@@ -924,6 +995,47 @@ export default function Chat() {
             >
               <HugeiconsIcon icon={BubbleChatIcon} size={20} />
             </MobileMenuItem>
+            <MobileMenuItem
+              label="Deployments"
+              onClick={() => setNavMenuOpen(false)}
+            >
+              <HugeiconsIcon icon={CloudUploadIcon} size={20} />
+            </MobileMenuItem>
+            <MobileMenuItem
+              label="Agents"
+              onClick={() => setNavMenuOpen(false)}
+            >
+              <HugeiconsIcon icon={BotIcon} size={20} />
+            </MobileMenuItem>
+            <MobileMenuItem
+              label="Integrations"
+              onClick={() => setNavMenuOpen(false)}
+            >
+              <HugeiconsIcon icon={Link01Icon} size={20} />
+            </MobileMenuItem>
+
+            <div className="bg-border my-2 h-px" />
+            <p className="text-muted-foreground px-3 pb-1 text-xs font-medium tracking-wide uppercase">
+              Account
+            </p>
+            <MobileMenuItem
+              label="Usage"
+              onClick={() => setNavMenuOpen(false)}
+            >
+              <HugeiconsIcon icon={CreditCardIcon} size={20} />
+            </MobileMenuItem>
+            <MobileMenuItem
+              label="Settings"
+              onClick={() => setNavMenuOpen(false)}
+            >
+              <HugeiconsIcon icon={Settings01Icon} size={20} />
+            </MobileMenuItem>
+            <MobileMenuItem
+              label="Docs"
+              onClick={() => setNavMenuOpen(false)}
+            >
+              <HugeiconsIcon icon={HelpCircleIcon} size={20} />
+            </MobileMenuItem>
           </div>
         </DrawerContent>
       </Drawer>
@@ -940,15 +1052,64 @@ export default function Chat() {
   );
 }
 
+function StatusBubble({ badges }: { badges: BubbleBadge[] }) {
+  const shown = badges.slice(0, 2);
+  const label =
+    shown.length > 0
+      ? shown.map((b) => BUBBLE_BADGE[b].label).join(", ")
+      : "All clear";
+
+  return (
+    <div
+      className="relative size-9 shrink-0"
+      role="status"
+      aria-label={label}
+      title={label}
+    >
+      <div
+        className={cn(
+          "bg-sidebar-primary-foreground/15 flex size-9 items-center justify-center overflow-hidden rounded-full ring-2 ring-sidebar-primary-foreground/20",
+          badges.includes("working") && "animate-pulse",
+        )}
+      >
+        <Image
+          src="/manycat-logo.png"
+          alt=""
+          width={28}
+          height={28}
+          className="size-7"
+        />
+      </div>
+      {shown.map((badge, i) => {
+        const meta = BUBBLE_BADGE[badge];
+        return (
+          <span
+            key={badge}
+            className={cn(
+              "absolute flex size-4 items-center justify-center rounded-full shadow-sm ring-2 ring-sidebar-primary",
+              meta.className,
+              i === 0 ? "-right-0.5 -bottom-0.5" : "-top-0.5 -left-0.5",
+            )}
+          >
+            <HugeiconsIcon icon={meta.icon} size={10} strokeWidth={2.5} />
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
 function RailButton({
   label,
   active,
+  badge,
   onClick,
   children,
 }: {
   label: string;
-  active: boolean;
-  onClick: () => void;
+  active?: boolean;
+  badge?: number;
+  onClick?: () => void;
   children: React.ReactNode;
 }) {
   return (
@@ -967,7 +1128,12 @@ function RailButton({
       <span className="relative flex size-5 shrink-0 items-center justify-center overflow-visible">
         {children}
       </span>
-      {label}
+      <span className="min-w-0 flex-1 truncate text-left">{label}</span>
+      {badge != null ? (
+        <span className="bg-primary text-primary-foreground flex size-5 items-center justify-center rounded-full text-[10px] font-semibold">
+          {badge}
+        </span>
+      ) : null}
     </button>
   );
 }
@@ -980,7 +1146,7 @@ function MobileMenuItem({
   children,
 }: {
   label: string;
-  active: boolean;
+  active?: boolean;
   badge?: number;
   onClick: () => void;
   children: React.ReactNode;
