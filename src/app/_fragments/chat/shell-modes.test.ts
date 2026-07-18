@@ -19,6 +19,7 @@ describe("parseEnabledModes", () => {
       "research",
     ]);
     expect(parseEnabledModes("dev,research")).toEqual(["dev", "research"]);
+    expect(parseEnabledModes("dev,create")).toEqual(["dev", "create"]);
   });
 
   it("ignores unknown tokens", () => {
@@ -34,10 +35,22 @@ describe("getModes", () => {
     const modes = getModes(["dev"]);
     expect(modes.map((m) => m.id)).toEqual(["dev"]);
     expect(modes[0]?.home).toBe(DEFAULT_SHELL.view);
+    expect(modes[0]?.label).toBe("Build");
   });
 
-  it("includes workspace and research nav when enabled", () => {
-    const ids = getModes(["dev", "workspace", "research"]).map((m) => m.id);
-    expect(ids).toEqual(["dev", "workspace", "research"]);
+  it("includes workspace, research, and create when enabled", () => {
+    const modes = getModes(["dev", "workspace", "research", "create"]);
+    expect(modes.map((m) => m.id)).toEqual([
+      "dev",
+      "workspace",
+      "research",
+      "create",
+    ]);
+    expect(modes.map((m) => m.label)).toEqual([
+      "Build",
+      "Work",
+      "Chat",
+      "Create",
+    ]);
   });
 });

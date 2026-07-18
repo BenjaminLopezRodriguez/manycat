@@ -17,6 +17,7 @@ import {
   Edit01Icon,
   GitBranchIcon,
   HelpCircleIcon,
+  Image01Icon,
   Link01Icon,
   Menu01Icon,
   MoreVerticalIcon,
@@ -729,10 +730,20 @@ export default function Chat() {
     mode === "dev" && (view === "projects" || !signedIn);
   const showWorkspaceWork = signedIn && mode === "workspace" && view === "work";
   const showResearchNew = signedIn && mode === "research" && view === "new";
+  const showCreateNew = signedIn && mode === "create" && view === "new";
   const showHomeComposer =
-    showProjectsLanding || showWorkspaceWork || showResearchNew;
+    showProjectsLanding ||
+    showWorkspaceWork ||
+    showResearchNew ||
+    showCreateNew;
   const composerSurface =
-    mode === "workspace" ? "workspace" : mode === "research" ? "research" : "dev";
+    mode === "workspace"
+      ? "workspace"
+      : mode === "research"
+        ? "research"
+        : mode === "create"
+          ? "create"
+          : "dev";
   const showDevWorkflows = signedIn && mode === "dev" && view === "workflows";
 
   function openDiff(messageId: number) {
@@ -935,6 +946,13 @@ export default function Chat() {
             description="Docs and links the research agent can cite."
             icon={News01Icon}
             emptyLabel="No sources yet."
+          />
+        ) : view === "gallery" ? (
+          <SectionScaffold
+            title="Gallery"
+            description="Images you've generated in Create."
+            icon={Image01Icon}
+            emptyLabel="No images yet. Start from New."
           />
         ) : showDevWorkflows ? (
           <>

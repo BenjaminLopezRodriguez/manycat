@@ -12,7 +12,7 @@ export const STORAGE_LAST_VIEW_KEY = "manycat.shell.lastViewByMode";
 export type ShellState = { mode: ModeId; view: ShellView };
 export type LastViewByMode = Partial<Record<ModeId, ShellView>>;
 
-const ALL_MODE_IDS: ModeId[] = ["dev", "workspace", "research"];
+const ALL_MODE_IDS: ModeId[] = ["dev", "workspace", "research", "create"];
 
 function isModeId(value: string): value is ModeId {
   return (ALL_MODE_IDS as string[]).includes(value);

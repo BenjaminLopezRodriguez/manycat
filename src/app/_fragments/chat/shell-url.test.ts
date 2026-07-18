@@ -8,7 +8,7 @@ import {
   viewForModeSwitch,
 } from "./shell-url";
 
-const ALL = ["dev", "workspace", "research"] as const;
+const ALL = ["dev", "workspace", "research", "create"] as const;
 const DEV_ONLY = ["dev"] as const;
 
 describe("coerceShellState", () => {

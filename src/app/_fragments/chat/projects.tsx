@@ -80,6 +80,12 @@ const RESEARCH_SUGGESTIONS = [
   "Find sources on agent memory architectures",
 ] as const;
 
+const CREATE_SUGGESTIONS = [
+  "Product photo of a ceramic mug on linen, soft daylight",
+  "App icon for a note-taking tool, flat vector, indigo accent",
+  "Wide hero of a coastal road at golden hour, cinematic",
+] as const;
+
 export const LANDING_FEATURES = [
   {
     id: "chat",
@@ -118,7 +124,7 @@ export const LANDING_FEATURES = [
 
 export type LandingFeatureId = (typeof LANDING_FEATURES)[number]["id"];
 
-export type ComposerSurface = "dev" | "workspace" | "research";
+export type ComposerSurface = "dev" | "workspace" | "research" | "create";
 
 type ProjectsProps = {
   onImport: (repoFullName?: string) => void;
@@ -169,19 +175,25 @@ export default function Projects({
       ? "What should we automate today?"
       : surface === "research"
         ? "What should we research?"
-        : "What are we building today?";
+        : surface === "create"
+          ? "Describe an image to generate…"
+          : "What are we building today?";
   const suggestions =
     surface === "workspace"
       ? WORKSPACE_SUGGESTIONS
       : surface === "research"
         ? RESEARCH_SUGGESTIONS
-        : PROMPT_SUGGESTIONS;
+        : surface === "create"
+          ? CREATE_SUGGESTIONS
+          : PROMPT_SUGGESTIONS;
   const submitLabel =
     surface === "workspace"
       ? "Start workspace task"
       : surface === "research"
         ? "Start research"
-        : "Create project";
+        : surface === "create"
+          ? "Generate image"
+          : "Create project";
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
