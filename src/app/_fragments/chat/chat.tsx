@@ -1009,7 +1009,7 @@ export default function Chat() {
             image={session?.user?.image}
             initials={accountInitials}
             provider={session?.provider}
-            hasGitHub={Boolean(session?.hasGitHub)}
+            onOpenIntegrations={() => setIntegrationsOpen(true)}
           />
         </div>
 
@@ -1639,7 +1639,7 @@ export default function Chat() {
               image={session?.user?.image}
               initials={accountInitials}
               provider={session?.provider}
-              hasGitHub={Boolean(session?.hasGitHub)}
+              onOpenIntegrations={() => setIntegrationsOpen(true)}
               onActionComplete={() => setAccountDrawerOpen(false)}
             />
           </div>
@@ -1735,6 +1735,7 @@ export default function Chat() {
         open={integrationsOpen}
         onOpenChange={setIntegrationsOpen}
         hasGitHub={Boolean(session?.hasGitHub)}
+        sessionEmail={session?.user?.email ?? null}
       />
     </div>
   );

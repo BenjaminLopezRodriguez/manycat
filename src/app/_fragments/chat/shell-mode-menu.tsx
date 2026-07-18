@@ -26,7 +26,7 @@ type AccountProps = {
   image?: string | null;
   initials: string;
   provider?: "github" | "google" | "dev" | null;
-  hasGitHub?: boolean;
+  onOpenIntegrations?: () => void;
 };
 
 type ModeProps = {
@@ -47,26 +47,22 @@ function providerLabel(
 function AccountMenuItems({
   signedIn,
   provider,
-  hasGitHub,
-}: Pick<AccountProps, "signedIn" | "provider" | "hasGitHub">) {
+  onOpenIntegrations,
+}: Pick<AccountProps, "signedIn" | "provider" | "onOpenIntegrations">) {
   if (signedIn) {
     return (
       <>
         <div className="text-muted-foreground px-3 py-2 text-xs">
           Signed in with {providerLabel(provider)}
         </div>
-        {!hasGitHub ? (
-          <>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => {
-                void signIn("github", { callbackUrl: "/" });
-              }}
-            >
-              Connect GitHub
-            </DropdownMenuItem>
-          </>
-        ) : null}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={() => {
+            onOpenIntegrations?.();
+          }}
+        >
+          Integrations
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onClick={() => {
@@ -107,7 +103,7 @@ export function ShellModeMenu({
   image,
   initials,
   provider,
-  hasGitHub,
+  onOpenIntegrations,
 }: ModeProps & AccountProps) {
   const [open, setOpen] = React.useState(false);
   const currentLabel =
@@ -164,7 +160,7 @@ export function ShellModeMenu({
         <AccountMenuItems
           signedIn={signedIn}
           provider={provider}
-          hasGitHub={hasGitHub}
+          onOpenIntegrations={onOpenIntegrations}
         />
       </DropdownMenuContent>
     </DropdownMenu>
@@ -181,7 +177,7 @@ export function ShellModeDrawerBody({
   image,
   initials,
   provider,
-  hasGitHub,
+  onOpenIntegrations,
   onActionComplete,
 }: ModeProps &
   AccountProps & {
@@ -238,18 +234,16 @@ export function ShellModeDrawerBody({
               </div>
             </div>
           </div>
-          {!hasGitHub ? (
-            <button
-              type="button"
-              className="hover:bg-muted/60 rounded-xl px-3 py-2.5 text-left text-sm font-medium"
-              onClick={() => {
-                onActionComplete?.();
-                void signIn("github", { callbackUrl: "/" });
-              }}
-            >
-              Connect GitHub
-            </button>
-          ) : null}
+          <button
+            type="button"
+            className="hover:bg-muted/60 rounded-xl px-3 py-2.5 text-left text-sm font-medium"
+            onClick={() => {
+              onActionComplete?.();
+              onOpenIntegrations?.();
+            }}
+          >
+            Integrations
+          </button>
           <button
             type="button"
             className="text-muted-foreground hover:bg-muted/60 hover:text-foreground rounded-xl px-3 py-2.5 text-left text-sm font-medium"
