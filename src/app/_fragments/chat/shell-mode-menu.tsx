@@ -111,7 +111,7 @@ export function ShellModeMenu({
 }: ModeProps & AccountProps) {
   const [open, setOpen] = React.useState(false);
   const currentLabel =
-    modes.find((m) => m.id === mode)?.label ?? "Dev agents";
+    modes.find((m) => m.id === mode)?.label ?? "Build";
   const showModeSection = modes.length >= 2;
 
   return (

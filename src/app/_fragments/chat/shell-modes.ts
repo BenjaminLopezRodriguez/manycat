@@ -5,6 +5,7 @@ import {
   BubbleChatIcon,
   CloudUploadIcon,
   Edit01Icon,
+  Image01Icon,
   Link01Icon,
   News01Icon,
   Search01Icon,
@@ -12,7 +13,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { env } from "@/env";
 
-export type ModeId = "dev" | "workspace" | "research";
+export type ModeId = "dev" | "workspace" | "research" | "create";
 
 export type ShellView =
   | "projects"
@@ -27,7 +28,8 @@ export type ShellView =
   | "new"
   | "chats"
   | "research"
-  | "sources";
+  | "sources"
+  | "gallery";
 
 export type NavItem = {
   view: ShellView;
@@ -47,12 +49,12 @@ export const DEFAULT_SHELL = {
   view: "projects" as const satisfies ShellView,
 };
 
-const ALL_MODE_IDS: ModeId[] = ["dev", "workspace", "research"];
+const ALL_MODE_IDS: ModeId[] = ["dev", "workspace", "research", "create"];
 
 export const MODE_CATALOG: ModeDef[] = [
   {
     id: "dev",
-    label: "Dev agents",
+    label: "Build",
     home: "projects",
     nav: [
       { view: "projects", label: "Projects", icon: News01Icon },
@@ -64,7 +66,7 @@ export const MODE_CATALOG: ModeDef[] = [
   },
   {
     id: "workspace",
-    label: "Workspace",
+    label: "Work",
     home: "work",
     nav: [
       { view: "work", label: "Work", icon: Edit01Icon },
@@ -75,13 +77,22 @@ export const MODE_CATALOG: ModeDef[] = [
   },
   {
     id: "research",
-    label: "Chat + Research",
+    label: "Chat",
     home: "new",
     nav: [
       { view: "new", label: "New", icon: Add01Icon },
       { view: "chats", label: "Chats", icon: BubbleChatIcon },
       { view: "research", label: "Research", icon: Search01Icon },
       { view: "sources", label: "Sources", icon: News01Icon },
+    ],
+  },
+  {
+    id: "create",
+    label: "Create",
+    home: "new",
+    nav: [
+      { view: "new", label: "New", icon: Add01Icon },
+      { view: "gallery", label: "Gallery", icon: Image01Icon },
     ],
   },
 ];
