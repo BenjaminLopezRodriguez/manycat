@@ -192,7 +192,7 @@ export default function Chat() {
   const [aiEffort, setAiEffort] = React.useState<EffortId>("high");
   const createFromPrompt = api.workflow.createFromPrompt.useMutation();
   const importRepo = api.workflow.importRepo.useMutation();
-  const { data: infra } = api.workflow.isEnabled.useQuery();
+  api.workflow.isEnabled.useQuery();
   const activeIdRef = React.useRef(activeId);
   activeIdRef.current = activeId;
   const sessionsQuery = api.workflow.listSessions.useQuery(undefined, {

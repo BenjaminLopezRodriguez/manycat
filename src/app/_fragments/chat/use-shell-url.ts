@@ -130,11 +130,10 @@ export function useShellUrl(): {
     setState((prev) => {
       const mode = partial.mode ?? prev.mode;
       const view =
-        partial.view !== undefined
-          ? partial.view
-          : partial.mode !== undefined && partial.mode !== prev.mode
-            ? viewForModeSwitch(partial.mode, lastRef.current)
-            : prev.view;
+        partial.view ??
+        (partial.mode !== undefined && partial.mode !== prev.mode
+          ? viewForModeSwitch(partial.mode, lastRef.current)
+          : prev.view);
       if (mode === prev.mode && view === prev.view) return prev;
       return { mode, view };
     });
