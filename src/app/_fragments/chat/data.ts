@@ -60,6 +60,8 @@ export type ImageMsg = MsgBase & {
   prompt: string;
   /** data: URL — Modal image harness returns base64 PNG directly. */
   src: string;
+  /** Groups candidates from one generate into a Create revision. */
+  revisionId?: string;
 };
 
 export type Msg =

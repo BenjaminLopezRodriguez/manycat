@@ -222,7 +222,7 @@ function WorkingCard({
         onClick={canExpand ? onToggle : undefined}
         aria-expanded={canExpand ? expanded : undefined}
         className={cn(
-          "border-border/70 bg-background inline-flex w-fit max-w-full items-center gap-2 rounded-lg border px-2.5 py-1.5 text-left text-xs shadow-sm",
+          "border-border/70 bg-card inline-flex w-fit max-w-full items-center gap-2 rounded-lg border px-2.5 py-1.5 text-left text-xs shadow-sm",
           canExpand && "hover:bg-muted/40 cursor-pointer transition-colors",
           !canExpand && "cursor-default",
         )}

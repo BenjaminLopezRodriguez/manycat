@@ -17,6 +17,7 @@ export type ModeId = "dev" | "workspace" | "research" | "create";
 
 export type ShellView =
   | "projects"
+  | "project-list"
   | "workflows"
   | "deployments"
   | "agents"
@@ -42,6 +43,8 @@ export type ModeDef = {
   label: string;
   home: ShellView;
   nav: NavItem[];
+  /** Nested under a Tools group in the rail (Build mode). */
+  tools?: NavItem[];
 };
 
 export const DEFAULT_SHELL = {
@@ -56,9 +59,9 @@ export const MODE_CATALOG: ModeDef[] = [
     id: "dev",
     label: "Build",
     home: "projects",
-    nav: [
-      { view: "projects", label: "Projects", icon: News01Icon },
-      { view: "workflows", label: "Workflows", icon: BubbleChatIcon },
+    nav: [{ view: "projects", label: "New", icon: Add01Icon }],
+    tools: [
+      { view: "project-list", label: "Projects", icon: News01Icon },
       { view: "deployments", label: "Deployments", icon: CloudUploadIcon },
       { view: "agents", label: "Agents", icon: BotIcon },
       { view: "integrations", label: "Integrations", icon: Link01Icon },
@@ -127,7 +130,12 @@ export function modeHome(id: ModeId): ShellView {
 
 export function isViewInMode(mode: ModeId, view: ShellView): boolean {
   const def = MODE_CATALOG.find((m) => m.id === mode);
-  return Boolean(def?.nav.some((n) => n.view === view));
+  if (!def) return false;
+  if (def.nav.some((n) => n.view === view)) return true;
+  if (def.tools?.some((n) => n.view === view)) return true;
+  // Workflow threads open under Build without a top-level nav item.
+  if (mode === "dev" && view === "workflows") return true;
+  return false;
 }
 
 /** Convenience: enabled modes at module evaluation (client bundle). */

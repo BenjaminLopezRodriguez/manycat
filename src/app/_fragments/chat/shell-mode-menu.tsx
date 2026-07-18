@@ -114,13 +114,13 @@ export function ShellModeMenu({
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger
         className={cn(
-          "hover:bg-sidebar-primary-foreground/10 flex min-w-0 flex-1 items-center gap-1.5 rounded-xl px-2 py-1.5 text-left transition-colors",
-          "outline-none focus-visible:ring-2 focus-visible:ring-sidebar-primary-foreground/30",
+          "hover:bg-sidebar-foreground/10 flex min-w-0 flex-1 items-center gap-1.5 rounded-xl px-2 py-1.5 text-left transition-colors",
+          "outline-none focus-visible:ring-2 focus-visible:ring-sidebar-foreground/30",
         )}
       >
         <Avatar className="size-6">
           {image ? <AvatarImage src={image} alt="" /> : null}
-          <AvatarFallback className="bg-sidebar-primary-foreground/15 text-[10px] font-semibold">
+          <AvatarFallback className="bg-sidebar-foreground/15 text-[10px] font-semibold">
             {signedIn ? initials : "MC"}
           </AvatarFallback>
         </Avatar>
@@ -130,7 +130,7 @@ export function ShellModeMenu({
         <HugeiconsIcon
           icon={ArrowDown01Icon}
           size={14}
-          className="text-sidebar-primary-foreground/60 shrink-0"
+          className="text-sidebar-foreground/60 shrink-0"
         />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="min-w-48">
@@ -214,9 +214,10 @@ export function ShellModeDrawerBody({
               </button>
             );
           })}
-          <div className="bg-border mx-2 my-2 h-px" />
         </div>
       ) : null}
+
+      {showModeSection ? <div className="bg-border mx-2 my-2 h-px" /> : null}
 
       {signedIn ? (
         <>

@@ -1,11 +1,9 @@
 "use client";
 
 import * as React from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  Add01Icon,
   ArrowDown01Icon,
   ArrowLeft01Icon,
   ArrowUp01Icon,
@@ -15,20 +13,21 @@ import {
   Cancel01Icon,
   CheckmarkCircle02Icon,
   Edit01Icon,
-  GitBranchIcon,
   HelpCircleIcon,
   Image01Icon,
   Link01Icon,
   Menu01Icon,
-  MoreVerticalIcon,
   News01Icon,
   Search01Icon,
   SentIcon,
   Settings01Icon,
+  GearsIcon,
   SidebarRight01Icon,
   SquareIcon,
 } from "@hugeicons/core-free-icons";
 
+import { ManycatLogo } from "@/components/manycat-logo";
+import { ThemeDrawerSection, ThemeRailButton } from "@/components/theme-toggle";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,18 +52,18 @@ import type { EffortId, ModelId } from "@/lib/ai-models";
 import {
   deriveProjectsFromWorkflows,
   initialWorkflows,
-  messagePreview,
   type ApprovalMsg,
   type DiffMsg,
+  type ImageMsg,
   type Msg,
   type Project,
   type TextMsg,
   type Workflow,
-  type WorkflowStatus,
 } from "./data";
 import ImportRepoDialog from "./import-repo";
 import IntegrationsSheet from "./integrations-sheet";
 import MessageList, { InlineDiffEditor } from "./message-list";
+import type { CreateWork, CreateWorkImage } from "./create-studio";
 import Projects, {
   LANDING_FEATURES,
   type LandingFeatureId,
@@ -74,6 +73,7 @@ import SectionScaffold from "./section-scaffold";
 import { getModes, type ShellView } from "./shell-modes";
 import { ShellModeDrawerBody, ShellModeMenu } from "./shell-mode-menu";
 import { useShellUrl } from "./use-shell-url";
+import { WorkflowChatMenu } from "./workflow-chat-menu";
 import Workspace from "./workspace";
 
 /** Icon badges that can pin to the mobile status bubble */
@@ -124,29 +124,6 @@ function isMsg(value: unknown): value is Workflow["messages"][number] {
   );
 }
 
-const STATUS_LABEL: Record<WorkflowStatus, string> = {
-  idle: "idle",
-  working: "working",
-  "needs-review": "needs review",
-  done: "done",
-};
-
-function StatusBadge({ status }: { status: WorkflowStatus }) {
-  return (
-    <span
-      className={cn(
-        "shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium capitalize",
-        status === "working" && "bg-primary/20 text-primary",
-        status === "needs-review" && "bg-warning/20 text-warning-foreground",
-        status === "done" && "bg-muted text-muted-foreground",
-        status === "idle" && "text-muted-foreground",
-      )}
-    >
-      {STATUS_LABEL[status]}
-    </span>
-  );
-}
-
 const EMPTY_WORKFLOW: Workflow = {
   id: "",
   name: "",
@@ -184,6 +161,9 @@ export default function Chat() {
   const [integrationsOpen, setIntegrationsOpen] = React.useState(false);
   const [navMenuOpen, setNavMenuOpen] = React.useState(false);
   const [accountDrawerOpen, setAccountDrawerOpen] = React.useState(false);
+  const [toolsOpen, setToolsOpen] = React.useState(() =>
+    Boolean(modeDef.tools?.some((t) => t.view === view)),
+  );
   const [landingFeature, setLandingFeature] =
     React.useState<LandingFeatureId>("chat");
   const bottomRef = React.useRef<HTMLDivElement>(null);
@@ -909,6 +889,84 @@ export default function Chat() {
     setChatOpen(false);
   }
 
+  function handleCreateWorkStart(work: { id: string; title: string }) {
+    setWorkflows((prev) => {
+      if (prev.some((w) => w.id === work.id)) return prev;
+      return [
+        ...prev,
+        {
+          id: work.id,
+          name: work.title,
+          initials: work.title.slice(0, 2).toUpperCase() || "CR",
+          avatarClass: "bg-violet-200 text-violet-900",
+          repo: "create",
+          status: "working",
+          messages: [],
+          workspace: [],
+        },
+      ];
+    });
+    setActiveId(work.id);
+  }
+
+  function handleCreateWorkImages(
+    workId: string,
+    revisionId: string,
+    images: CreateWorkImage[],
+  ) {
+    setWorkflows((prev) =>
+      prev.map((w) => {
+        if (w.id !== workId) return w;
+        const startId = (w.messages.at(-1)?.id ?? 0) + 1;
+        const imageMsgs: ImageMsg[] = images.map((img, i) => ({
+          id: startId + i,
+          type: "image",
+          prompt: w.name,
+          src: img.src,
+          revisionId,
+          time: nowTime(),
+        }));
+        return {
+          ...w,
+          status: "idle" as const,
+          messages: [...w.messages, ...imageMsgs],
+        };
+      }),
+    );
+  }
+
+  function openCreateWork(id: string) {
+    setActiveId(id);
+    setView("new");
+    setChatOpen(false);
+  }
+
+  function renameActiveChat(nextName: string) {
+    if (!activeId) return;
+    const initials = nextName.slice(0, 2).toUpperCase();
+    setWorkflows((prev) =>
+      prev.map((w) =>
+        w.id === activeId ? { ...w, name: nextName, initials } : w,
+      ),
+    );
+  }
+
+  function deleteActiveChat() {
+    if (!activeId) return;
+    const id = activeId;
+    const wasCreate = mode === "create";
+    setWorkflows((prev) => prev.filter((w) => w.id !== id));
+    setProjects((prev) =>
+      prev.map((p) => ({
+        ...p,
+        workflowIds: p.workflowIds.filter((wid) => wid !== id),
+      })),
+    );
+    setActiveId(null);
+    setChatOpen(false);
+    switchView(wasCreate ? "new" : "projects");
+  }
+
   // Signed-out Dev keeps the Projects landing; Work/New reuse the same composer.
   const showProjectsLanding =
     mode === "dev" && (view === "projects" || !signedIn);
@@ -993,11 +1051,48 @@ export default function Chat() {
     }
   }
 
-  const totalUnread = workflows.reduce((n, w) => n + (w.unread ?? 0), 0);
+  const toolViews = modeDef.tools ?? [];
+  const toolsActive = toolViews.some((t) => t.view === view);
+  React.useEffect(() => {
+    if (toolsActive) setToolsOpen(true);
+  }, [toolsActive]);
+
+  const buildWorkflows = workflows.filter(
+    (w) =>
+      w.repo !== "create" &&
+      w.repo !== "research" &&
+      w.repo !== "workspace",
+  );
+  const showWorkflowList = signedIn && mode === "dev";
+  const createWorks = workflows.filter((w) => w.repo === "create");
+  const activeCreateWork: CreateWork | null = React.useMemo(() => {
+    if (mode !== "create" || !active || active.repo !== "create") return null;
+    const imageMsgs = active.messages.filter(
+      (m): m is ImageMsg => m.type === "image",
+    );
+    const order: string[] = [];
+    const byRev = new Map<string, CreateWorkImage[]>();
+    for (const m of imageMsgs) {
+      const rid = m.revisionId ?? "rev-1";
+      if (!byRev.has(rid)) {
+        order.push(rid);
+        byRev.set(rid, []);
+      }
+      byRev.get(rid)!.push({ id: String(m.id), src: m.src });
+    }
+    return {
+      id: active.id,
+      title: active.name,
+      revisions: order.map((id) => ({
+        id,
+        images: byRev.get(id) ?? [],
+      })),
+    };
+  }, [mode, active]);
 
   return (
     <div className="bg-background flex h-dvh w-full flex-col overflow-hidden md:flex-row">
-      <nav className="bg-sidebar-primary text-sidebar-primary-foreground hidden w-56 shrink-0 flex-col gap-1 px-3 py-4 md:flex">
+      <nav className="bg-sidebar text-sidebar-foreground hidden w-56 shrink-0 flex-col gap-1 px-3 py-4 md:flex">
         <div className="mb-3 flex items-center gap-2 px-1">
           <StatusBubble badges={bubbleBadges} />
           <ShellModeMenu
@@ -1030,57 +1125,138 @@ export default function Chat() {
                   <HugeiconsIcon icon={feature.icon} size={18} />
                 </FeatureRailButton>
               ))}
-              <div className="bg-sidebar-primary-foreground/10 mx-2 my-2 h-px" />
-              <p className="text-sidebar-primary-foreground/50 px-3 py-2 text-xs leading-relaxed">
+              <div className="bg-sidebar-foreground/10 mx-2 my-2 h-px" />
+              <p className="text-sidebar-foreground/50 px-3 py-2 text-xs leading-relaxed">
                 Sign in to unlock workflows on your projects.
               </p>
             </>
           ) : (
             <>
               {modeDef.nav.map((item) => (
-                <RailButton
-                  key={item.view}
-                  label={item.label}
-                  active={view === item.view}
-                  badge={
-                    item.view === "workflows" && totalUnread > 0
-                      ? totalUnread
-                      : undefined
-                  }
-                  onClick={() => switchView(item.view)}
-                >
-                  <HugeiconsIcon icon={item.icon} size={20} />
-                </RailButton>
+                <React.Fragment key={item.view}>
+                  <RailButton
+                    label={item.label}
+                    active={
+                      item.view === "gallery"
+                        ? view === "gallery" && !activeId
+                        : view === item.view &&
+                          !(mode === "create" && activeId && item.view === "new")
+                    }
+                    onClick={() => {
+                      if (mode === "create" && item.view === "new") {
+                        setActiveId(null);
+                      }
+                      if (mode === "create" && item.view === "gallery") {
+                        setActiveId(null);
+                      }
+                      switchView(item.view);
+                    }}
+                  >
+                    <HugeiconsIcon icon={item.icon} size={20} />
+                  </RailButton>
+                  {mode === "create" &&
+                  item.view === "gallery" &&
+                  createWorks.length > 0 ? (
+                    <div className="flex flex-col gap-0.5">
+                      {createWorks.map((w) => (
+                        <RailButton
+                          key={w.id}
+                          label={w.name}
+                          indented
+                          active={
+                            view === "new" &&
+                            w.id === activeId &&
+                            mode === "create"
+                          }
+                          onClick={() => openCreateWork(w.id)}
+                        />
+                      ))}
+                    </div>
+                  ) : null}
+                </React.Fragment>
               ))}
 
-              <div className="bg-sidebar-primary-foreground/10 mx-2 my-2 h-px" />
-              <RailButton label="Docs">
-                <HugeiconsIcon icon={HelpCircleIcon} size={20} />
-              </RailButton>
+              {showWorkflowList && buildWorkflows.length > 0 ? (
+                <div className="mt-1 flex flex-col gap-0.5">
+                  {buildWorkflows.map((w) => (
+                    <RailButton
+                      key={w.id}
+                      label={w.name}
+                      indented
+                      active={view === "workflows" && w.id === activeId}
+                      badge={w.unread && w.unread > 0 ? w.unread : undefined}
+                      onClick={() => openWorkflow(w.id)}
+                    />
+                  ))}
+                </div>
+              ) : null}
+
+              {toolViews.length > 0 ? (
+                <>
+                  <div className="bg-sidebar-foreground/10 mx-2 my-2 h-px" />
+                  <ToolsRailGroup
+                    open={toolsOpen}
+                    active={!toolsOpen && toolsActive}
+                    onToggle={() => setToolsOpen((o) => !o)}
+                  >
+                    {toolViews.map((item) => (
+                      <RailButton
+                        key={item.view}
+                        label={item.label}
+                        active={view === item.view}
+                        indented
+                        onClick={() => switchView(item.view)}
+                      >
+                        <HugeiconsIcon icon={item.icon} size={18} />
+                      </RailButton>
+                    ))}
+                    <RailButton
+                      label="Docs"
+                      indented
+                    >
+                      <HugeiconsIcon icon={HelpCircleIcon} size={18} />
+                    </RailButton>
+                  </ToolsRailGroup>
+                </>
+              ) : (
+                <>
+                  <div className="bg-sidebar-foreground/10 mx-2 my-2 h-px" />
+                  <RailButton label="Docs">
+                    <HugeiconsIcon icon={HelpCircleIcon} size={20} />
+                  </RailButton>
+                </>
+              )}
             </>
           )}
         </div>
 
-        {signedIn || mode !== "dev" ? (
-          <div className="mt-auto flex shrink-0 flex-col gap-1.5 pt-3">
-            <UpdatesPromoCard />
-            <UsageProgressBar budget={budgetQuery.data} />
+        <div className="mt-auto flex shrink-0 flex-col gap-1.5 pt-3">
+          {signedIn || mode !== "dev" ? (
+            <>
+              <UpdatesPromoCard />
+              <UsageProgressBar budget={budgetQuery.data} />
+            </>
+          ) : null}
+          <ThemeRailButton />
+          {signedIn || mode !== "dev" ? (
             <RailButton label="Settings">
               <HugeiconsIcon icon={Settings01Icon} size={20} />
             </RailButton>
-          </div>
-        ) : null}
+          ) : null}
+        </div>
       </nav>
 
       <main className="flex min-h-0 min-w-0 flex-1">
-        {showHomeComposer && activeModeThread ? (
+        {showHomeComposer &&
+        activeModeThread &&
+        activeModeThread.repo !== "create" ? (
           <ModeThreadView
-            mode={activeModeThread.repo as "research" | "workspace" | "create"}
+            mode={activeModeThread.repo as "research" | "workspace"}
             active={activeModeThread}
             sending={creatingFromPrompt}
             onSend={(text) =>
               void handleModeHarness(
-                activeModeThread.repo as "research" | "workspace" | "create",
+                activeModeThread.repo as "research" | "workspace",
                 text,
               )
             }
@@ -1097,7 +1273,14 @@ export default function Chat() {
             effort={aiEffort}
             onModelChange={setAiModel}
             onEffortChange={setAiEffort}
+            createWork={mode === "create" ? activeCreateWork : null}
+            onCreateWorkStart={handleCreateWorkStart}
+            onCreateWorkImages={handleCreateWorkImages}
+            onRenameCreateWork={renameActiveChat}
+            onDeleteCreateWork={deleteActiveChat}
           />
+        ) : mode === "dev" && view === "project-list" ? (
+          <ProjectListPanel projects={projects} />
         ) : mode === "dev" && view === "deployments" ? (
           <DeploymentsPanel
             projects={projects}
@@ -1188,171 +1371,50 @@ export default function Chat() {
             emptyLabel="No sources yet."
           />
         ) : view === "gallery" ? (
-          <SectionScaffold
-            title="Gallery"
-            description="Images you've generated in Create."
-            icon={Image01Icon}
-            emptyLabel="No images yet. Start from New."
-          />
+          <GalleryPanel works={createWorks} onOpenWork={openCreateWork} />
         ) : showDevWorkflows ? (
-          <>
-            <aside
-              className={cn(
-                "w-full shrink-0 flex-col md:flex md:w-80 md:border-r",
-                chatOpen ? "hidden" : "flex",
-              )}
-            >
-              <header className="flex h-16 items-center justify-between px-4">
-                <h1 className="text-lg font-semibold">Projects</h1>
-                <div className="flex items-center gap-1">
-                  <Button variant="ghost" size="icon" aria-label="New project">
-                    <HugeiconsIcon icon={Add01Icon} size={18} />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    aria-label="Import from GitHub"
-                    onClick={() => setImportOpen(true)}
-                  >
-                    <HugeiconsIcon icon={GitBranchIcon} size={18} />
-                  </Button>
-                  <Button variant="ghost" size="icon" aria-label="Menu">
-                    <HugeiconsIcon icon={MoreVerticalIcon} size={18} />
-                  </Button>
-                </div>
-              </header>
-              <div className="px-3 pb-3">
-                <div className="relative">
-                  <HugeiconsIcon
-                    icon={Search01Icon}
-                    size={16}
-                    className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2"
-                  />
-                  <Input
-                    placeholder="Search projects"
-                    className="pl-9 text-base md:text-sm"
-                  />
-                </div>
-              </div>
-              <div className="flex-1 overflow-y-auto">
-                {workflows.length === 0 ? (
-                  <p className="text-muted-foreground px-4 py-8 text-center text-sm">
-                    No projects yet — import a repo to start.
-                  </p>
-                ) : (
-                  workflows.map((w) => {
-                    const last = w.messages[w.messages.length - 1];
-                    return (
-                      <button
-                        key={w.id}
-                        type="button"
-                        onClick={() => openWorkflow(w.id)}
-                        className={cn(
-                          "hover:bg-muted/50 flex w-full items-center gap-3 px-4 py-3 text-left transition-colors",
-                          w.id === activeId && "bg-muted",
-                        )}
-                      >
-                        <Avatar className="size-11">
-                          <AvatarFallback className={w.avatarClass}>
-                            {w.initials}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-baseline justify-between gap-2">
-                            <span className="truncate font-medium">{w.name}</span>
-                            {last ? (
-                              <span className="text-muted-foreground shrink-0 text-xs">
-                                {last.time}
-                              </span>
-                            ) : null}
-                          </div>
-                          <div className="mt-0.5 flex items-center justify-between gap-2">
-                            <span className="text-muted-foreground truncate text-sm">
-                              {last ? messagePreview(last) : "Empty workflow"}
-                            </span>
-                            <div className="flex shrink-0 items-center gap-1.5">
-                              {w.status !== "idle" && (
-                                <StatusBadge status={w.status} />
-                              )}
-                              {w.unread ? (
-                                <span className="bg-primary text-primary-foreground flex size-5 items-center justify-center rounded-full text-xs font-medium">
-                                  {w.unread}
-                                </span>
-                              ) : null}
-                            </div>
-                          </div>
-                          <div className="text-muted-foreground mt-0.5 truncate font-mono text-[10px]">
-                            {w.repo}
-                          </div>
-                        </div>
-                      </button>
-                    );
-                  })
-                )}
-              </div>
-            </aside>
-
-            {/* Conversation + workspace */}
-            {active ? (
-            <section
-              className={cn(
-                "min-w-0 flex-1 flex-col md:flex",
-                chatOpen ? "flex" : "hidden",
-              )}
-            >
+          active ? (
+            <section className="flex min-w-0 flex-1 flex-col">
               <div className="flex min-h-0 min-w-0 flex-1">
                 {/* Chat thread */}
-                <div className="flex min-w-0 flex-1 flex-col">
-                  <header className="flex h-16 shrink-0 items-center gap-2 border-b px-2 md:gap-3 md:px-4">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      aria-label="Back to workflows"
-                      className="md:hidden"
-                      onClick={() => setChatOpen(false)}
-                    >
-                      <HugeiconsIcon icon={ArrowLeft01Icon} size={20} />
-                    </Button>
-                    <Avatar className="size-10">
-                      <AvatarFallback className={active.avatarClass}>
-                        {active.initials}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 truncate font-medium">
-                        {active.name}
-                        <StatusBadge status={active.status} />
-                      </div>
-                      <div className="text-muted-foreground truncate font-mono text-xs">
-                        {active.repo}
-                        {previewUrl ? (
-                          <>
-                            {" · "}
-                            <a
-                              href={previewUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-primary hover:underline"
-                            >
-                              sandbox preview
-                            </a>
-                          </>
-                        ) : null}
+                <div className="relative flex min-w-0 flex-1 flex-col">
+                  <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-start justify-between gap-2 p-3 md:justify-end md:p-4">
+                    <div className="pointer-events-auto md:hidden">
+                      <div className="bg-background/90 flex items-center rounded-full p-1 shadow-md ring-1 ring-black/5 backdrop-blur-sm dark:ring-white/10">
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label="Back to new"
+                          className="size-8 rounded-full"
+                          onClick={() => {
+                            setChatOpen(false);
+                            switchView("projects");
+                          }}
+                        >
+                          <HugeiconsIcon icon={ArrowLeft01Icon} size={18} />
+                        </Button>
                       </div>
                     </div>
-
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      aria-label="Show diffs"
-                      onClick={() => setDiffsOpen(true)}
-                    >
-                      <HugeiconsIcon icon={SidebarRight01Icon} size={18} />
-                    </Button>
-                    <Button variant="ghost" size="icon" aria-label="More">
-                      <HugeiconsIcon icon={MoreVerticalIcon} size={18} />
-                    </Button>
-                  </header>
+                    <div className="pointer-events-auto">
+                      <div className="bg-background/90 flex items-center gap-0.5 rounded-full p-1 shadow-md ring-1 ring-black/5 backdrop-blur-sm dark:ring-white/10">
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label="Show diffs"
+                          className="size-8 rounded-full"
+                          onClick={() => setDiffsOpen(true)}
+                        >
+                          <HugeiconsIcon icon={SidebarRight01Icon} size={18} />
+                        </Button>
+                        <WorkflowChatMenu
+                          workflowId={active.id}
+                          name={active.name}
+                          onRename={renameActiveChat}
+                          onDelete={deleteActiveChat}
+                        />
+                      </div>
+                    </div>
+                  </div>
 
                   <Drawer
                     open={diffsOpen}
@@ -1503,7 +1565,7 @@ export default function Chat() {
                     </DrawerContent>
                   </Drawer>
 
-                  <div className="bg-muted/20 flex-1 overflow-y-auto px-4 py-4 md:px-6">
+                  <div className="bg-muted/20 flex-1 overflow-y-auto px-4 pt-14 pb-4 md:px-6 md:pt-16">
                     <div className="mx-auto flex max-w-3xl flex-col gap-3">
                       <Marker role="status" className="my-2">
                         <MarkerContent>Workflow · {active.repo}</MarkerContent>
@@ -1582,18 +1644,21 @@ export default function Chat() {
                 </div>
               </div>
             </section>
-            ) : null}
-          </>
+          ) : (
+            <div className="text-muted-foreground flex flex-1 items-center justify-center px-6 text-center text-sm">
+              Select a request from the sidebar to open it.
+            </div>
+          )
         ) : null}
       </main>
 
-      {!(mode === "dev" && view === "workflows" && chatOpen) && (
-        <nav className="bg-sidebar-primary text-sidebar-primary-foreground flex shrink-0 items-center gap-2 px-3 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:hidden">
+      {!(showDevWorkflows && active) && (
+        <nav className="bg-sidebar text-sidebar-foreground flex shrink-0 items-center gap-2 px-3 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:hidden">
           <StatusBubble badges={bubbleBadges} />
           <button
             type="button"
             onClick={() => setAccountDrawerOpen(true)}
-            className="hover:bg-sidebar-primary-foreground/10 flex min-w-0 flex-1 items-center gap-1 rounded-xl px-2 py-1.5 text-left transition-colors"
+            className="hover:bg-sidebar-foreground/10 flex min-w-0 flex-1 items-center gap-1 rounded-xl px-2 py-1.5 text-left transition-colors"
           >
             <span className="min-w-0 flex-1 truncate text-sm font-semibold">
               {modeDef.label}
@@ -1601,14 +1666,14 @@ export default function Chat() {
             <HugeiconsIcon
               icon={ArrowDown01Icon}
               size={14}
-              className="text-sidebar-primary-foreground/60 shrink-0"
+              className="text-sidebar-foreground/60 shrink-0"
             />
           </button>
           <Button
             variant="ghost"
             size="icon"
             aria-label="Open menu"
-            className="text-sidebar-primary-foreground hover:bg-sidebar-primary-foreground/10 hover:text-sidebar-primary-foreground shrink-0"
+            className="text-sidebar-foreground hover:bg-sidebar-foreground/10 hover:text-sidebar-foreground shrink-0"
             onClick={() => setNavMenuOpen(true)}
           >
             <HugeiconsIcon icon={Menu01Icon} size={20} />
@@ -1677,39 +1742,150 @@ export default function Chat() {
                     <HugeiconsIcon icon={feature.icon} size={18} />
                   </MobileFeatureItem>
                 ))}
+                <div className="bg-border my-2 h-px" />
+                <ThemeDrawerSection
+                  onActionComplete={() => setNavMenuOpen(false)}
+                />
               </>
             ) : (
               <>
                 {modeDef.nav.map((item) => (
-                  <MobileMenuItem
-                    key={item.view}
-                    label={item.label}
-                    active={view === item.view}
-                    badge={
-                      item.view === "workflows" && totalUnread > 0
-                        ? totalUnread
-                        : undefined
-                    }
-                    onClick={() => {
-                      switchView(item.view);
-                      setNavMenuOpen(false);
-                    }}
-                  >
-                    <HugeiconsIcon icon={item.icon} size={20} />
-                  </MobileMenuItem>
+                  <React.Fragment key={item.view}>
+                    <MobileMenuItem
+                      label={item.label}
+                      active={
+                        item.view === "gallery"
+                          ? view === "gallery" && !activeId
+                          : view === item.view &&
+                            !(
+                              mode === "create" &&
+                              activeId &&
+                              item.view === "new"
+                            )
+                      }
+                      onClick={() => {
+                        if (mode === "create" && item.view === "new") {
+                          setActiveId(null);
+                        }
+                        if (mode === "create" && item.view === "gallery") {
+                          setActiveId(null);
+                        }
+                        switchView(item.view);
+                        setNavMenuOpen(false);
+                      }}
+                    >
+                      <HugeiconsIcon icon={item.icon} size={20} />
+                    </MobileMenuItem>
+                    {mode === "create" &&
+                    item.view === "gallery" &&
+                    createWorks.length > 0
+                      ? createWorks.map((w) => (
+                          <MobileMenuItem
+                            key={w.id}
+                            label={w.name}
+                            active={
+                              view === "new" &&
+                              w.id === activeId &&
+                              mode === "create"
+                            }
+                            onClick={() => {
+                              openCreateWork(w.id);
+                              setNavMenuOpen(false);
+                            }}
+                          />
+                        ))
+                      : null}
+                  </React.Fragment>
                 ))}
 
-                <div className="bg-border my-2 h-px" />
-                <MobileMenuItem
-                  label="Docs"
-                  onClick={() => setNavMenuOpen(false)}
-                >
-                  <HugeiconsIcon icon={HelpCircleIcon} size={20} />
-                </MobileMenuItem>
-                <div className="bg-sidebar-primary text-sidebar-primary-foreground mt-3 flex flex-col gap-1.5 rounded-2xl p-2">
+                {showWorkflowList && buildWorkflows.length > 0 ? (
+                  <div className="mt-1 flex flex-col gap-0.5">
+                    {buildWorkflows.map((w) => (
+                      <MobileMenuItem
+                        key={w.id}
+                        label={w.name}
+                        active={view === "workflows" && w.id === activeId}
+                        badge={w.unread && w.unread > 0 ? w.unread : undefined}
+                        onClick={() => {
+                          openWorkflow(w.id);
+                          setNavMenuOpen(false);
+                        }}
+                      />
+                    ))}
+                  </div>
+                ) : null}
+
+                {toolViews.length > 0 ? (
+                  <>
+                    <div className="bg-border my-2 h-px" />
+                    <button
+                      type="button"
+                      onClick={() => setToolsOpen((o) => !o)}
+                      aria-expanded={toolsOpen}
+                      className={cn(
+                        "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-colors",
+                        toolsActive
+                          ? "bg-muted text-foreground"
+                          : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+                      )}
+                    >
+                      <span className="flex size-5 shrink-0 items-center justify-center">
+                        <HugeiconsIcon icon={GearsIcon} size={20} />
+                      </span>
+                      <span className="min-w-0 flex-1 truncate">Tools</span>
+                      <HugeiconsIcon
+                        icon={ArrowDown01Icon}
+                        size={14}
+                        className={cn(
+                          "shrink-0 transition-transform",
+                          toolsOpen && "rotate-180",
+                        )}
+                      />
+                    </button>
+                    {toolsOpen ? (
+                      <div className="flex flex-col gap-0.5 pl-2">
+                        {toolViews.map((item) => (
+                          <MobileMenuItem
+                            key={item.view}
+                            label={item.label}
+                            active={view === item.view}
+                            onClick={() => {
+                              switchView(item.view);
+                              setNavMenuOpen(false);
+                            }}
+                          >
+                            <HugeiconsIcon icon={item.icon} size={18} />
+                          </MobileMenuItem>
+                        ))}
+                        <MobileMenuItem
+                          label="Docs"
+                          onClick={() => setNavMenuOpen(false)}
+                        >
+                          <HugeiconsIcon icon={HelpCircleIcon} size={18} />
+                        </MobileMenuItem>
+                      </div>
+                    ) : null}
+                  </>
+                ) : (
+                  <>
+                    <div className="bg-border my-2 h-px" />
+                    <MobileMenuItem
+                      label="Docs"
+                      onClick={() => setNavMenuOpen(false)}
+                    >
+                      <HugeiconsIcon icon={HelpCircleIcon} size={20} />
+                    </MobileMenuItem>
+                  </>
+                )}
+
+                <div className="bg-sidebar text-sidebar-foreground mt-3 flex flex-col gap-1.5 rounded-2xl p-2">
                   <UpdatesPromoCard />
                   <UsageProgressBar budget={budgetQuery.data} />
                 </div>
+                <div className="bg-border my-2 h-px" />
+                <ThemeDrawerSection
+                  onActionComplete={() => setNavMenuOpen(false)}
+                />
                 <MobileMenuItem
                   label="Settings"
                   onClick={() => setNavMenuOpen(false)}
@@ -1757,17 +1933,11 @@ function StatusBubble({ badges }: { badges: BubbleBadge[] }) {
     >
       <div
         className={cn(
-          "bg-sidebar-primary-foreground/15 flex size-9 items-center justify-center overflow-hidden rounded-full ring-2 ring-sidebar-primary-foreground/20",
+          "bg-sidebar-foreground/15 flex size-9 items-center justify-center overflow-hidden rounded-full ring-2 ring-sidebar-foreground/20",
           badges.includes("working") && "animate-pulse",
         )}
       >
-        <Image
-          src="/manycat-logo.png"
-          alt=""
-          width={28}
-          height={28}
-          className="size-7"
-        />
+        <ManycatLogo alt="" width={28} height={28} className="size-7" />
       </div>
       {shown.map((badge, i) => {
         const meta = BUBBLE_BADGE[badge];
@@ -1775,7 +1945,7 @@ function StatusBubble({ badges }: { badges: BubbleBadge[] }) {
           <span
             key={badge}
             className={cn(
-              "absolute flex size-4 items-center justify-center rounded-full shadow-sm ring-2 ring-sidebar-primary",
+              "absolute flex size-4 items-center justify-center rounded-full shadow-sm ring-2 ring-sidebar",
               meta.className,
               i === 0 ? "-right-0.5 -bottom-0.5" : "-top-0.5 -left-0.5",
             )}
@@ -1784,6 +1954,117 @@ function StatusBubble({ badges }: { badges: BubbleBadge[] }) {
           </span>
         );
       })}
+    </div>
+  );
+}
+
+function GalleryPanel({
+  works,
+  onOpenWork,
+}: {
+  works: Workflow[];
+  onOpenWork: (id: string) => void;
+}) {
+  const images = works.flatMap((w) =>
+    w.messages
+      .filter((m): m is ImageMsg => m.type === "image")
+      .map((m) => ({ workId: w.id, title: w.name, src: m.src, id: m.id })),
+  );
+
+  return (
+    <div className="bg-background flex flex-1 flex-col overflow-y-auto">
+      <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-8 py-8 md:px-10">
+        <header className="flex flex-col gap-2">
+          <div className="text-muted-foreground flex items-center gap-2">
+            <HugeiconsIcon icon={Image01Icon} size={18} />
+            <span className="text-xs font-medium tracking-wide uppercase">
+              Gallery
+            </span>
+          </div>
+          <h1 className="text-2xl font-semibold tracking-tight">Gallery</h1>
+          <p className="text-muted-foreground max-w-xl text-sm leading-relaxed">
+            Images from your Create sessions. Open a work to revise it.
+          </p>
+        </header>
+
+        {images.length === 0 ? (
+          <div className="border-border flex flex-1 flex-col items-center justify-center gap-4 rounded-2xl border border-dashed px-8 py-16 text-center">
+            <p className="text-muted-foreground text-sm">
+              No images yet. Start from New.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+            {images.map((img) => (
+              <button
+                key={`${img.workId}-${img.id}`}
+                type="button"
+                onClick={() => onOpenWork(img.workId)}
+                className="bg-muted group relative aspect-square overflow-hidden rounded-2xl text-left"
+                title={img.title}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element -- data URLs from image harness */}
+                <img
+                  src={img.src}
+                  alt={img.title}
+                  className="size-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                />
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ProjectListPanel({ projects }: { projects: Project[] }) {
+  return (
+    <div className="bg-background flex flex-1 flex-col overflow-y-auto">
+      <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-8 py-8 md:px-10">
+        <header className="flex flex-col gap-2">
+          <div className="text-muted-foreground flex items-center gap-2">
+            <HugeiconsIcon icon={News01Icon} size={18} />
+            <span className="text-xs font-medium tracking-wide uppercase">
+              Projects
+            </span>
+          </div>
+          <h1 className="text-2xl font-semibold tracking-tight">Projects</h1>
+          <p className="text-muted-foreground max-w-xl text-sm leading-relaxed">
+            Repos and scaffolds that remain after chats are deleted. Start a new
+            chat from New anytime.
+          </p>
+        </header>
+
+        {projects.length === 0 ? (
+          <div className="border-border flex flex-1 flex-col items-center justify-center gap-4 rounded-2xl border border-dashed px-8 py-16 text-center">
+            <p className="text-muted-foreground text-sm">
+              No projects yet. Create one from New.
+            </p>
+          </div>
+        ) : (
+          <ul className="divide-border flex flex-col divide-y rounded-2xl border">
+            {projects.map((p) => (
+              <li
+                key={p.id}
+                className="flex items-center justify-between gap-4 px-4 py-3.5"
+              >
+                <div className="min-w-0">
+                  <div className="truncate font-medium">{p.name}</div>
+                  <div className="text-muted-foreground truncate font-mono text-xs">
+                    {p.repo}
+                  </div>
+                </div>
+                <span className="text-muted-foreground shrink-0 text-xs">
+                  {p.workflowIds.length === 0
+                    ? "No open chats"
+                    : `${p.workflowIds.length} chat${p.workflowIds.length === 1 ? "" : "s"}`}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }
@@ -1810,8 +2091,8 @@ function FeatureRailButton({
       className={cn(
         "flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left transition-colors",
         active
-          ? "bg-sidebar-primary-foreground/15 text-sidebar-primary-foreground"
-          : "text-sidebar-primary-foreground/50 hover:bg-sidebar-primary-foreground/10 hover:text-sidebar-primary-foreground/80",
+          ? "bg-sidebar-foreground/15 text-sidebar-foreground"
+          : "text-sidebar-foreground/50 hover:bg-sidebar-foreground/10 hover:text-sidebar-foreground/80",
       )}
     >
       <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center">
@@ -1823,8 +2104,8 @@ function FeatureRailButton({
           className={cn(
             "mt-0.5 block text-[11px] leading-snug",
             active
-              ? "text-sidebar-primary-foreground/70"
-              : "text-sidebar-primary-foreground/40",
+              ? "text-sidebar-foreground/70"
+              : "text-sidebar-foreground/40",
           )}
         >
           {blurb}
@@ -1834,20 +2115,19 @@ function FeatureRailButton({
   );
 }
 
-const MODE_THREAD_TITLE: Record<"research" | "workspace" | "create", string> = {
+const MODE_THREAD_TITLE: Record<"research" | "workspace", string> = {
   research: "Chat",
   workspace: "Work",
-  create: "Create",
 };
 
-/** Chat/Create/Work conversation — stays in its own mode chrome (no dev split-view, no diffs/sandbox). */
+/** Chat/Work conversation — stays in its own mode chrome (no dev split-view, no diffs/sandbox). */
 function ModeThreadView({
   mode,
   active,
   sending,
   onSend,
 }: {
-  mode: "research" | "workspace" | "create";
+  mode: "research" | "workspace";
   active: Workflow;
   sending: boolean;
   onSend: (text: string) => void;
@@ -1899,9 +2179,7 @@ function ModeThreadView({
           <Input
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder={
-              mode === "create" ? "Describe an image…" : "Message…"
-            }
+            placeholder="Message…"
             className="text-base md:text-sm"
           />
           <Button type="submit" disabled={sending || !text.trim()}>
@@ -1913,18 +2191,60 @@ function ModeThreadView({
   );
 }
 
+function ToolsRailGroup({
+  open,
+  active,
+  onToggle,
+  children,
+}: {
+  open: boolean;
+  active?: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-label="Tools"
+        aria-expanded={open}
+        className={cn(
+          "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
+          active
+            ? "bg-sidebar-foreground/15 text-sidebar-foreground"
+            : "text-sidebar-foreground/50 hover:bg-sidebar-foreground/10 hover:text-sidebar-foreground/80",
+        )}
+      >
+        <span className="relative flex size-5 shrink-0 items-center justify-center overflow-visible">
+          <HugeiconsIcon icon={GearsIcon} size={20} />
+        </span>
+        <span className="min-w-0 flex-1 truncate text-left">Tools</span>
+        <HugeiconsIcon
+          icon={ArrowDown01Icon}
+          size={14}
+          className={cn("shrink-0 opacity-70 transition-transform", open && "rotate-180")}
+        />
+      </button>
+      {open ? <div className="flex flex-col gap-0.5">{children}</div> : null}
+    </div>
+  );
+}
+
 function RailButton({
   label,
   active,
   badge,
+  indented,
   onClick,
   children,
 }: {
   label: string;
   active?: boolean;
   badge?: number;
+  indented?: boolean;
   onClick?: () => void;
-  children: React.ReactNode;
+  children?: React.ReactNode;
 }) {
   return (
     <button
@@ -1932,16 +2252,20 @@ function RailButton({
       onClick={onClick}
       aria-label={label}
       aria-pressed={active}
+      title={label}
       className={cn(
-        "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
+        "flex w-full items-center gap-3 rounded-xl py-2 text-sm font-medium transition-colors",
+        indented ? "px-3 py-2 pl-4" : "px-3 py-2.5",
         active
-          ? "bg-sidebar-primary-foreground/15 text-sidebar-primary-foreground"
-          : "text-sidebar-primary-foreground/50 hover:bg-sidebar-primary-foreground/10 hover:text-sidebar-primary-foreground/80",
+          ? "bg-sidebar-foreground/15 text-sidebar-foreground"
+          : "text-sidebar-foreground/50 hover:bg-sidebar-foreground/10 hover:text-sidebar-foreground/80",
       )}
     >
-      <span className="relative flex size-5 shrink-0 items-center justify-center overflow-visible">
-        {children}
-      </span>
+      {children != null ? (
+        <span className="relative flex size-5 shrink-0 items-center justify-center overflow-visible">
+          {children}
+        </span>
+      ) : null}
       <span className="min-w-0 flex-1 truncate text-left">{label}</span>
       {badge != null ? (
         <span className="bg-primary text-primary-foreground flex size-5 items-center justify-center rounded-full text-[10px] font-semibold">
@@ -1986,25 +2310,25 @@ function UsageProgressBar({
     <button
       type="button"
       aria-label={`Usage ${pct}%`}
-      className="hover:bg-sidebar-primary-foreground/10 flex w-full flex-col gap-1.5 rounded-xl px-3 py-2.5 text-left transition-colors"
+      className="hover:bg-sidebar-foreground/10 flex w-full flex-col gap-1.5 rounded-xl px-3 py-2.5 text-left transition-colors"
     >
       <div className="flex items-center justify-between gap-2">
-        <span className="text-sidebar-primary-foreground/60 text-xs font-medium">
+        <span className="text-sidebar-foreground/60 text-xs font-medium">
           Usage
         </span>
-        <span className="text-sidebar-primary-foreground/40 text-[11px] tabular-nums">
+        <span className="text-sidebar-foreground/40 text-[11px] tabular-nums">
           {label}
         </span>
       </div>
       <div
-        className="bg-sidebar-primary-foreground/10 h-1.5 w-full overflow-hidden rounded-full"
+        className="bg-sidebar-foreground/10 h-1.5 w-full overflow-hidden rounded-full"
         role="progressbar"
         aria-valuenow={pct}
         aria-valuemin={0}
         aria-valuemax={100}
       >
         <div
-          className="bg-sidebar-primary-foreground/55 h-full rounded-full transition-[width] duration-500 ease-out"
+          className="bg-sidebar-foreground/55 h-full rounded-full transition-[width] duration-500 ease-out"
           style={{ width: `${pct}%` }}
         />
       </div>
@@ -2116,13 +2440,14 @@ function MobileMenuItem({
   active?: boolean;
   badge?: number;
   onClick: () => void;
-  children: React.ReactNode;
+  children?: React.ReactNode;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       aria-pressed={active}
+      title={label}
       className={cn(
         "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-colors",
         active
@@ -2130,9 +2455,11 @@ function MobileMenuItem({
           : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
       )}
     >
-      <span className="flex size-5 shrink-0 items-center justify-center">
-        {children}
-      </span>
+      {children != null ? (
+        <span className="flex size-5 shrink-0 items-center justify-center">
+          {children}
+        </span>
+      ) : null}
       <span className="min-w-0 flex-1 truncate">{label}</span>
       {badge != null ? (
         <span className="bg-primary text-primary-foreground flex size-5 items-center justify-center rounded-full text-[10px] font-semibold">

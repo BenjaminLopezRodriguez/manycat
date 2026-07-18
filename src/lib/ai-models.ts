@@ -45,8 +45,52 @@ export const AI_MODELS = [
 
 export type ModelId = (typeof AI_MODELS)[number]["id"];
 
+/** Image models for Create mode (UI catalog; harness may map later). */
+export const IMAGE_MODELS = [
+  {
+    id: "auto",
+    label: "Auto",
+    description: "Best available image model",
+  },
+  {
+    id: "nanobanana",
+    label: "Nano Banana",
+    description: "Fast concept sketches",
+  },
+  {
+    id: "midjourney",
+    label: "Midjourney",
+    description: "Stylized, cinematic",
+  },
+  {
+    id: "flux",
+    label: "FLUX",
+    description: "High-fidelity diffusion",
+  },
+  {
+    id: "dall-e-3",
+    label: "DALL·E 3",
+    description: "OpenAI images",
+  },
+  {
+    id: "stable-diffusion",
+    label: "Stable Diffusion",
+    description: "Open-weight classic",
+  },
+] as const;
+
+export type ImageModelId = (typeof IMAGE_MODELS)[number]["id"];
+
+export const IMAGE_CANDIDATE_COUNTS = [1, 2, 3, 4, 5] as const;
+export type ImageCandidateCount = (typeof IMAGE_CANDIDATE_COUNTS)[number];
+export const DEFAULT_IMAGE_CANDIDATES: ImageCandidateCount = 2;
+
 export function isModelId(value: string): value is ModelId {
   return AI_MODELS.some((m) => m.id === value);
+}
+
+export function isImageModelId(value: string): value is ImageModelId {
+  return IMAGE_MODELS.some((m) => m.id === value);
 }
 
 export function isEffortId(value: string): value is EffortId {

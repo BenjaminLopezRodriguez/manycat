@@ -1,4 +1,3 @@
-import Image from "next/image";
 import { AuthError } from "next-auth";
 import { redirect } from "next/navigation";
 
@@ -8,6 +7,8 @@ import {
   googleAuthConfigured,
   signIn,
 } from "@/auth";
+import { ManycatLogo } from "@/components/manycat-logo";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 
 const isDev = process.env.NODE_ENV === "development";
@@ -26,11 +27,13 @@ export default async function SignInPage({
   }
 
   return (
-    <div className="bg-background flex min-h-dvh flex-col items-center justify-center px-4">
+    <div className="bg-background relative flex min-h-dvh flex-col items-center justify-center px-4">
+      <div className="absolute top-4 right-4">
+        <ThemeToggle />
+      </div>
       <div className="flex w-full max-w-sm flex-col items-center gap-8">
         <div className="flex flex-col items-center gap-3 text-center">
-          <Image
-            src="/manycat-logo.png"
+          <ManycatLogo
             alt="manycat"
             width={56}
             height={56}

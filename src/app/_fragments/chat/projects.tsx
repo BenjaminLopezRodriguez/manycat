@@ -38,6 +38,10 @@ import {
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 
+import CreateStudio, {
+  type CreateWork,
+  type CreateWorkImage,
+} from "./create-studio";
 import ImportRepoDialog from "./import-repo";
 
 const ATTACH_OPTIONS = [
@@ -78,12 +82,6 @@ const RESEARCH_SUGGESTIONS = [
   "Compare the top open-source vector databases",
   "Brief me on recent Next.js App Router changes",
   "Find sources on agent memory architectures",
-] as const;
-
-const CREATE_SUGGESTIONS = [
-  "Product photo of a ceramic mug on linen, soft daylight",
-  "App icon for a note-taking tool, flat vector, indigo accent",
-  "Wide hero of a coastal road at golden hour, cinematic",
 ] as const;
 
 export const LANDING_FEATURES = [
@@ -141,6 +139,16 @@ type ProjectsProps = {
   onFeatureChange?: (id: LandingFeatureId) => void;
   /** Which mode's home composer this is — copy/suggestions only. */
   surface?: ComposerSurface;
+  /** Active Create work when surface is create. */
+  createWork?: CreateWork | null;
+  onCreateWorkStart?: (work: { id: string; title: string }) => void;
+  onCreateWorkImages?: (
+    workId: string,
+    revisionId: string,
+    images: CreateWorkImage[],
+  ) => void;
+  onRenameCreateWork?: (name: string) => void;
+  onDeleteCreateWork?: () => void;
 };
 
 export default function Projects({
@@ -154,6 +162,11 @@ export default function Projects({
   onModelChange,
   onEffortChange,
   surface = "dev",
+  createWork = null,
+  onCreateWorkStart,
+  onCreateWorkImages,
+  onRenameCreateWork,
+  onDeleteCreateWork,
 }: ProjectsProps) {
   const { status } = useSession();
   const signedIn = status === "authenticated";
@@ -175,25 +188,19 @@ export default function Projects({
       ? "What should we automate today?"
       : surface === "research"
         ? "What should we research?"
-        : surface === "create"
-          ? "Describe an image to generate…"
-          : "What are we building today?";
+        : "What are we building today?";
   const suggestions =
     surface === "workspace"
       ? WORKSPACE_SUGGESTIONS
       : surface === "research"
         ? RESEARCH_SUGGESTIONS
-        : surface === "create"
-          ? CREATE_SUGGESTIONS
-          : PROMPT_SUGGESTIONS;
+        : PROMPT_SUGGESTIONS;
   const submitLabel =
     surface === "workspace"
       ? "Start workspace task"
       : surface === "research"
         ? "Start research"
-        : surface === "create"
-          ? "Generate image"
-          : "Create project";
+        : "Create project";
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -225,6 +232,18 @@ export default function Projects({
         fullName,
       },
     ]);
+  }
+
+  if (signedIn && surface === "create") {
+    return (
+      <CreateStudio
+        activeWork={createWork}
+        onWorkStart={onCreateWorkStart ?? (() => undefined)}
+        onWorkImages={onCreateWorkImages ?? (() => undefined)}
+        onRenameWork={onRenameCreateWork}
+        onDeleteWork={onDeleteCreateWork}
+      />
+    );
   }
 
   if (!signedIn) {
@@ -309,7 +328,7 @@ export default function Projects({
           <form
             onSubmit={submit}
             className={cn(
-              "bg-background flex w-full flex-col rounded-3xl border shadow-sm",
+              "bg-card flex w-full flex-col rounded-3xl border shadow-sm",
               "focus-within:border-ring focus-within:ring-ring/30 focus-within:ring-3",
             )}
           >

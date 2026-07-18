@@ -51,6 +51,13 @@ export const env = createEnv({
     RESEND_API_KEY: z.string().min(1).optional(),
     RESEND_FROM: z.string().min(1).optional(),
     INTEGRATION_REQUEST_TO: z.string().email().optional(),
+    /** Private S3 bucket for Create images (keys under S3_KEY_PREFIX/{chatId}/…). */
+    S3_BUCKET: z.string().min(1).optional(),
+    S3_REGION: z.string().min(1).optional(),
+    S3_ACCESS_KEY_ID: z.string().min(1).optional(),
+    S3_SECRET_ACCESS_KEY: z.string().min(1).optional(),
+    S3_SIGNED_URL_TTL: z.coerce.number().int().positive().optional(),
+    S3_KEY_PREFIX: z.string().min(1).optional(),
   },
 
   /**
@@ -97,6 +104,12 @@ export const env = createEnv({
     RESEND_API_KEY: process.env.RESEND_API_KEY,
     RESEND_FROM: process.env.RESEND_FROM,
     INTEGRATION_REQUEST_TO: process.env.INTEGRATION_REQUEST_TO,
+    S3_BUCKET: process.env.S3_BUCKET,
+    S3_REGION: process.env.S3_REGION,
+    S3_ACCESS_KEY_ID: process.env.S3_ACCESS_KEY_ID,
+    S3_SECRET_ACCESS_KEY: process.env.S3_SECRET_ACCESS_KEY,
+    S3_SIGNED_URL_TTL: process.env.S3_SIGNED_URL_TTL,
+    S3_KEY_PREFIX: process.env.S3_KEY_PREFIX,
     NEXT_PUBLIC_SANDBOX_ENABLED: process.env.NEXT_PUBLIC_SANDBOX_ENABLED,
     NEXT_PUBLIC_ENABLED_MODES: process.env.NEXT_PUBLIC_ENABLED_MODES,
   },
