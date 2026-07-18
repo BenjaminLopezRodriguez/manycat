@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDown01Icon } from "@hugeicons/core-free-icons";
 import { signIn, signOut } from "next-auth/react";
@@ -108,12 +109,13 @@ export function ShellModeMenu({
   provider,
   hasGitHub,
 }: ModeProps & AccountProps) {
+  const [open, setOpen] = React.useState(false);
   const currentLabel =
     modes.find((m) => m.id === mode)?.label ?? "Dev agents";
   const showModeSection = modes.length >= 2;
 
   return (
-    <DropdownMenu>
+    <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger
         className={cn(
           "hover:bg-sidebar-primary-foreground/10 flex min-w-0 flex-1 items-center gap-1.5 rounded-xl px-2 py-1.5 text-left transition-colors",
@@ -145,6 +147,7 @@ export function ShellModeMenu({
                 onValueChange={(value) => {
                   if (typeof value === "string") {
                     onModeChange(value as ModeId);
+                    setOpen(false);
                   }
                 }}
               >

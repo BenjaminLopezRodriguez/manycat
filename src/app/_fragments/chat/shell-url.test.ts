@@ -22,7 +22,7 @@ describe("coerceShellState", () => {
   it("uses mode home when view invalid for mode", () => {
     expect(coerceShellState("workspace", "projects", [...ALL])).toEqual({
       mode: "workspace",
-      view: "connections",
+      view: "work",
     });
   });
 
@@ -105,14 +105,15 @@ describe("viewForModeSwitch + historyAction", () => {
     expect(viewForModeSwitch("research", { research: "sources" })).toBe(
       "sources",
     );
-    expect(viewForModeSwitch("workspace", {})).toBe("connections");
+    expect(viewForModeSwitch("workspace", {})).toBe("work");
+    expect(viewForModeSwitch("research", {})).toBe("new");
   });
 
   it("pushes only when mode changes", () => {
     expect(
       historyAction(
         { mode: "dev", view: "projects" },
-        { mode: "research", view: "chats" },
+        { mode: "research", view: "new" },
       ),
     ).toBe("push");
     expect(

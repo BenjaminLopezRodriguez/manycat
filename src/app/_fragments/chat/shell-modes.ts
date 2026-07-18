@@ -1,8 +1,10 @@
 import {
+  Add01Icon,
   ArrowUpRight01Icon,
   BotIcon,
   BubbleChatIcon,
   CloudUploadIcon,
+  Edit01Icon,
   Link01Icon,
   News01Icon,
   Search01Icon,
@@ -18,9 +20,11 @@ export type ShellView =
   | "deployments"
   | "agents"
   | "integrations"
+  | "work"
   | "connections"
   | "automations"
   | "activity"
+  | "new"
   | "chats"
   | "research"
   | "sources";
@@ -61,8 +65,9 @@ export const MODE_CATALOG: ModeDef[] = [
   {
     id: "workspace",
     label: "Workspace",
-    home: "connections",
+    home: "work",
     nav: [
+      { view: "work", label: "Work", icon: Edit01Icon },
       { view: "connections", label: "Connections", icon: Link01Icon },
       { view: "automations", label: "Automations", icon: Settings01Icon },
       { view: "activity", label: "Activity", icon: ArrowUpRight01Icon },
@@ -71,8 +76,9 @@ export const MODE_CATALOG: ModeDef[] = [
   {
     id: "research",
     label: "Chat + Research",
-    home: "chats",
+    home: "new",
     nav: [
+      { view: "new", label: "New", icon: Add01Icon },
       { view: "chats", label: "Chats", icon: BubbleChatIcon },
       { view: "research", label: "Research", icon: Search01Icon },
       { view: "sources", label: "Sources", icon: News01Icon },

@@ -68,6 +68,18 @@ const PROMPT_SUGGESTIONS = [
   "Scaffold a Stripe checkout for a SaaS plan",
 ] as const;
 
+const WORKSPACE_SUGGESTIONS = [
+  "Summarize unread Gmail and draft replies",
+  "When a Zapier form submits, create a Notion task",
+  "Sync calendar holds into a weekly digest",
+] as const;
+
+const RESEARCH_SUGGESTIONS = [
+  "Compare the top open-source vector databases",
+  "Brief me on recent Next.js App Router changes",
+  "Find sources on agent memory architectures",
+] as const;
+
 export const LANDING_FEATURES = [
   {
     id: "chat",
@@ -106,6 +118,8 @@ export const LANDING_FEATURES = [
 
 export type LandingFeatureId = (typeof LANDING_FEATURES)[number]["id"];
 
+export type ComposerSurface = "dev" | "workspace" | "research";
+
 type ProjectsProps = {
   onImport: (repoFullName?: string) => void;
   onCreateFromPrompt?: (
@@ -119,6 +133,8 @@ type ProjectsProps = {
   creating?: boolean;
   featureId?: LandingFeatureId;
   onFeatureChange?: (id: LandingFeatureId) => void;
+  /** Which mode's home composer this is — copy/suggestions only. */
+  surface?: ComposerSurface;
 };
 
 export default function Projects({
@@ -131,6 +147,7 @@ export default function Projects({
   effort: effortProp,
   onModelChange,
   onEffortChange,
+  surface = "dev",
 }: ProjectsProps) {
   const { status } = useSession();
   const signedIn = status === "authenticated";
@@ -145,6 +162,26 @@ export default function Projects({
   const setEffort = onEffortChange ?? setEffortLocal;
   const active =
     LANDING_FEATURES.find((f) => f.id === featureId) ?? LANDING_FEATURES[0];
+
+  const headline = "Ready when you are.";
+  const placeholder =
+    surface === "workspace"
+      ? "What should we automate today?"
+      : surface === "research"
+        ? "What should we research?"
+        : "What are we building today?";
+  const suggestions =
+    surface === "workspace"
+      ? WORKSPACE_SUGGESTIONS
+      : surface === "research"
+        ? RESEARCH_SUGGESTIONS
+        : PROMPT_SUGGESTIONS;
+  const submitLabel =
+    surface === "workspace"
+      ? "Start workspace task"
+      : surface === "research"
+        ? "Start research"
+        : "Create project";
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -252,7 +289,7 @@ export default function Projects({
       <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col items-center justify-center gap-6 px-8 py-8 md:px-10">
         <header className="flex max-w-xl flex-col items-center gap-2 text-center">
           <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
-            Ready when you are.
+            {headline}
           </h1>
         </header>
 
@@ -273,10 +310,10 @@ export default function Projects({
                   e.currentTarget.form?.requestSubmit();
                 }
               }}
-              placeholder="What are we building today?"
+              placeholder={placeholder}
               rows={2}
               className="placeholder:text-muted-foreground min-h-16 w-full resize-none bg-transparent px-4 pt-4 pb-2 text-base outline-none md:text-sm"
-              aria-label="What are we building today?"
+              aria-label={placeholder}
             />
             <div className="flex items-center justify-between gap-2 px-2 pb-1">
               <div className="flex min-w-0 flex-1 items-center gap-1.5">
@@ -297,7 +334,7 @@ export default function Projects({
                   type="submit"
                   size="icon"
                   className="size-8 shrink-0 rounded-full bg-slate-300 text-black hover:bg-slate-300/80"
-                  aria-label="Create project"
+                  aria-label={submitLabel}
                   disabled={creating}
                 >
                   <HugeiconsIcon
@@ -321,7 +358,7 @@ export default function Projects({
             <p className="text-muted-foreground text-sm">Spawning workspace…</p>
           ) : (
             <ul className="divide-border flex w-full flex-col divide-y">
-              {PROMPT_SUGGESTIONS.map((suggestion) => (
+              {suggestions.map((suggestion) => (
                 <li key={suggestion}>
                   <button
                     type="button"

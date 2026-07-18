@@ -724,9 +724,15 @@ export default function Chat() {
     setChatOpen(false);
   }
 
-  // Signed-out Dev keeps the Projects landing; other modes still show stubs.
+  // Signed-out Dev keeps the Projects landing; Work/New reuse the same composer.
   const showProjectsLanding =
     mode === "dev" && (view === "projects" || !signedIn);
+  const showWorkspaceWork = signedIn && mode === "workspace" && view === "work";
+  const showResearchNew = signedIn && mode === "research" && view === "new";
+  const showHomeComposer =
+    showProjectsLanding || showWorkspaceWork || showResearchNew;
+  const composerSurface =
+    mode === "workspace" ? "workspace" : mode === "research" ? "research" : "dev";
   const showDevWorkflows = signedIn && mode === "dev" && view === "workflows";
 
   function openDiff(messageId: number) {
@@ -833,8 +839,9 @@ export default function Chat() {
       </nav>
 
       <main className="flex min-h-0 min-w-0 flex-1">
-        {showProjectsLanding ? (
+        {showHomeComposer ? (
           <Projects
+            surface={composerSurface}
             onImport={handleImportFromComposer}
             onCreateFromPrompt={(p, opts) => void handleCreateFromPrompt(p, opts)}
             creating={creatingFromPrompt}

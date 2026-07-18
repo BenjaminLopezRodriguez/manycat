@@ -40,11 +40,13 @@ Shared **Account** block (all modes, below divider): Usage · Settings · Docs.
 | Mode | Home | Rail views |
 |------|------|------------|
 | `dev` | `projects` | projects, workflows, deployments, agents, integrations |
-| `workspace` | `connections` | connections, automations, activity |
-| `research` | `chats` | chats, research, sources |
+| `workspace` | `work` | work, connections, automations, activity |
+| `research` | `new` | new, chats, research, sources |
 
-Dev projects / workflows / deployments stay wired. Agents, Integrations, and all
-Workspace / Research panes use `SectionScaffold` stubs.
+Dev projects / workflows / deployments stay wired. Workspace **Work** and
+Research **New** reuse the Projects home composer (`Projects` + `surface`).
+Agents, Integrations, and remaining Workspace / Research panes use
+`SectionScaffold` stubs.
 
 Slug migration from the old in-memory shell: `feed` → `projects`, `chats` →
 `workflows`. Workflow thread open state (`chatOpen`) stays client-only.
