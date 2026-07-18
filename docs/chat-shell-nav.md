@@ -1,96 +1,94 @@
 # Chat shell / nav — agent handoff
 
-Written for a future Claude/Cursor session. All of this lives in
-`src/app/_fragments/chat/chat.tsx` unless noted.
+Written for a future Claude/Cursor session. Shell chrome lives mainly in
+`src/app/_fragments/chat/chat.tsx`, with mode/URL helpers extracted beside it.
 
 ## What shipped
 
-The product chrome (left sidebar on desktop, bottom bar on mobile) was rebuilt
-from a narrow icon rail into a team-scoped nav shell, roughly in the style of
-Vercel / Cursor sidebars.
+The product chrome (left sidebar on desktop, bottom bar on mobile) is a
+**mode-scoped shell**: Dev agents, Workspace, and Chat + Research. The top
+control shows the **mode label** (not the account login); the menu is hybrid
+Mode radios + account actions.
+
+### URL + persistence
+
+Shallow client sync only (`history.pushState` / `replaceState` + `popstate`).
+Do **not** drive `mode`/`view` with App Router `router.push` — that refetches RSC.
+
+| Piece | Behavior |
+|-------|----------|
+| Params | `/?mode=dev&view=projects` (and peers) |
+| Mode switch | `push` when mode actually changes (deduped) |
+| Rail switch | `replace` on `view` only |
+| Storage | `manycat.shell.mode`, `manycat.shell.lastViewByMode` |
+| Boot | URL → localStorage → `dev` + `projects` |
+| Gate | `NEXT_PUBLIC_ENABLED_MODES` (comma-separated; default `dev` only; `dev` always included) |
+
+Modules:
+
+| File | Role |
+|------|------|
+| `shell-modes.ts` | Catalog, `getModes` / `MODES`, nav per mode |
+| `shell-url.ts` | Parse/coerce, persist, shallow history helpers |
+| `use-shell-url.ts` | React hook: `mode`/`view`/`setMode`/`setView`/`forceDevWorkflows` |
+| `shell-mode-menu.tsx` | `ShellModeMenu` + `ShellModeDrawerBody` |
+
+### Modes & rails
+
+Shared **Account** block (all modes, below divider): Usage · Settings · Docs.
+
+| Mode | Home | Rail views |
+|------|------|------------|
+| `dev` | `projects` | projects, workflows, deployments, agents, integrations |
+| `workspace` | `work` | work, connections, automations, activity |
+| `research` | `new` | new, chats, research, sources |
+
+Dev projects / workflows / deployments stay wired. Workspace **Work** and
+Research **New** reuse the Projects home composer (`Projects` + `surface`).
+Agents, Integrations, and remaining Workspace / Research panes use
+`SectionScaffold` stubs.
+
+Slug migration from the old in-memory shell: `feed` → `projects`, `chats` →
+`workflows`. Workflow thread open state (`chatOpen`) stays client-only.
 
 ### Desktop (`md+`)
 
-- Sidebar widened from `w-16` icon rail → `w-56` panel
-  (`nav.bg-sidebar-primary … hidden … md:flex`).
-- Top of sidebar: **status bubble** + **team dropdown** (Personal / Acme Labs /
-  Northstar — mock `TEAMS` const in `chat.tsx`).
-- Below that, two labeled sections:
-  - **Navigate:** Projects, Workflows (unread badge), Deployments, Agents,
-    Integrations
-  - **Account:** Usage, Settings, Docs
-- Projects / Workflows still switch the existing `view` state (`"feed"` |
-  `"chats"`). The other items are UI stubs (buttons with no routes yet).
+- Sidebar `w-56`: status bubble + `ShellModeMenu` (mode label + account menu).
+- Navigate section is **fully replaced** per `modeDef.nav` (not relabeled slots).
+- Workflows unread badge only when the nav item’s `view === "workflows"`.
 
 ### Mobile (`md:hidden`)
 
-- Bottom bar is no longer a tab strip. Layout is:
-  `[StatusBubble] [team name ▾] ………… [☰ menu]`
-- Tapping **team name** opens a **Switch team** drawer (list of `TEAMS`).
-- Tapping **menu** opens a **Menu** drawer with the same Navigate + Account
-  items as desktop (team list is *not* duplicated there).
-- Bar is hidden while a workflow chat thread is open
-  (`!(view === "chats" && chatOpen)`).
+- Bottom bar: `[StatusBubble] [mode label ▾] ………… [☰ menu]`
+- Mode button opens a drawer with `ShellModeDrawerBody` (mode radios + account).
+- Hamburger lists the **current mode’s** rail + Account stubs.
+- Bar hidden while `mode === "dev" && view === "workflows" && chatOpen`.
+
+### Force-Dev product paths
+
+Create-from-prompt and import call `forceDevWorkflows()` so the shell lands on
+Dev + `workflows` (URL + localStorage mode / Dev last-view). Workflow /
+`activeId` / `chatOpen` state stays in `Chat` parent so mode switches do not
+wipe an open Dev thread.
 
 ### Status bubble (`StatusBubble`)
 
-Replaces the plain logo in both chrome surfaces. Renders
-`/public/manycat-logo.png` inside a ringed circle, then overlays up to **two**
-icon badges derived from live client state:
-
-| Badge     | Icon              | When                                              |
-|-----------|-------------------|---------------------------------------------------|
-| `working` | `BotIcon`         | any workflow `status === "working"`               |
-| `review`  | `ArrowUpRight01`  | any workflow `status === "needs-review"`          |
-| `deploy`  | `ArrowUp01`       | any project `lastRun?.status === "running"`       |
-
-Badge metadata is in `BUBBLE_BADGE`. Seed data currently includes a
-`needs-review` workflow, so the amber review badge usually shows on load.
-This is the intended place to pin more activity icons later (deploy ↑, etc.).
-
-### Team model (mock only)
-
-```ts
-const TEAMS = [
-  { id: "personal", name: "Personal", initials: "P" },
-  { id: "acme", name: "Acme Labs", initials: "AL" },
-  { id: "northstar", name: "Northstar", initials: "NS" },
-] as const;
-```
-
-`teamId` is React state only — no tRPC, no DB, no persistence. Desktop uses
-shadcn/`DropdownMenu` + `DropdownMenuRadioGroup`. Mobile uses a bottom
-`Drawer`. Switching team does **not** yet filter projects/workflows.
-
-### Helpers added in `chat.tsx`
-
-- `StatusBubble` — logo + badge overlays
-- `RailButton` — desktop sidebar row (optional `active`, `badge`, `onClick`)
-- `MobileMenuItem` — drawer list row (same shape)
-
-UI primitives used: `@/components/ui/dropdown-menu`, `@/components/ui/drawer`,
-`Avatar`, Hugeicons from `@hugeicons/core-free-icons`.
+Same as before: logo + up to two badges (`working` / `review` / `deploy`) from
+live client state. Metadata in `BUBBLE_BADGE`.
 
 ## What is intentionally unfinished
 
-- Deployments / Agents / Integrations / Usage / Settings / Docs — chrome only,
-  no pages or routers.
-- Teams are fixtures; no org membership API.
-- Status badges do not yet track real deploy pipelines (only
-  `Project.lastRun.status === "running"`).
-- No sync between desktop dropdown and anything server-side.
-
-## Related commits
-
-- `dc93205` — “Ship sidebar status bubble, team drawers, and feature nav to prod.”
-  (actual `chat.tsx` UI change)
-- This doc commit — handoff notes so the next agent does not rediscover the above.
+- Workspace connectors / OAuth, research agent backend, sources persistence.
+- Deployments / Agents / Integrations / Usage / Settings / Docs — chrome or stubs only where noted.
+- No per-mode visual themes; no server-side shell preference; no flag platform
+  beyond `NEXT_PUBLIC_ENABLED_MODES`.
 
 ## Where to edit next
 
-| Goal                         | Start here                                      |
-|------------------------------|-------------------------------------------------|
-| New sidebar item             | Desktop nav block + mobile Menu drawer in `chat.tsx` |
-| New bubble badge kind        | `BubbleBadge` + `BUBBLE_BADGE` + `bubbleBadges` |
-| Real teams                   | Replace `TEAMS` / `teamId` with tRPC + schema   |
-| Wire Deployments etc.        | Add `View` variants or routes; hook `RailButton` / `MobileMenuItem` `onClick` |
+| Goal | Start here |
+|------|------------|
+| New mode or rail item | `shell-modes.ts` catalog + pane map in `chat.tsx` |
+| URL / restore rules | `shell-url.ts` + `use-shell-url.ts` |
+| Mode / account menu | `shell-mode-menu.tsx` |
+| Wire a stub pane | Main-pane branch in `chat.tsx` |
+| New bubble badge | `BubbleBadge` + `BUBBLE_BADGE` + `bubbleBadges` |
