@@ -55,8 +55,15 @@ export type MilestoneMsg = MsgBase & {
   text: string;
 };
 
+export type ImageMsg = MsgBase & {
+  type: "image";
+  prompt: string;
+  /** data: URL — Modal image harness returns base64 PNG directly. */
+  src: string;
+};
+
 export type Msg =
-  TextMsg | AgentStatusMsg | DiffMsg | ApprovalMsg | MilestoneMsg;
+  TextMsg | AgentStatusMsg | DiffMsg | ApprovalMsg | MilestoneMsg | ImageMsg;
 
 export type Workflow = {
   id: string;
@@ -109,6 +116,8 @@ export function messagePreview(m: Msg): string {
       return m.text;
     case "milestone":
       return m.text;
+    case "image":
+      return `Image: ${m.prompt}`;
   }
 }
 

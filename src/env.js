@@ -18,6 +18,11 @@ export const env = createEnv({
     // agent-harness's own OPENAI_API_KEY (Modal routing) — same value works
     // for both, but this one only needs to be real for the structuring call.
     OPENAI_API_KEY: z.string().min(1).optional(),
+    // Modal-hosted open-weight models, called directly (no coding tool loop
+    // needed) — research/workspace share MODAL_CHAT_URL, create uses
+    // MODAL_IMAGE_URL. See infra/modal/serve_chat.py / serve_image.py.
+    MODAL_CHAT_URL: z.string().url().optional(),
+    MODAL_IMAGE_URL: z.string().url().optional(),
     // TODO: single-user v1 — this token deploys under one Vercel account for everyone.
     // Per-project tokens are required before multi-user.
     VERCEL_TOKEN: z.string().optional(),
@@ -65,6 +70,8 @@ export const env = createEnv({
     AGENT_HARNESS_URL: process.env.AGENT_HARNESS_URL,
     SANDBOX_ORCHESTRATOR_URL: process.env.SANDBOX_ORCHESTRATOR_URL,
     OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+    MODAL_CHAT_URL: process.env.MODAL_CHAT_URL,
+    MODAL_IMAGE_URL: process.env.MODAL_IMAGE_URL,
     VERCEL_TOKEN: process.env.VERCEL_TOKEN,
     RAILWAY_API_TOKEN: process.env.RAILWAY_API_TOKEN,
     RAILWAY_WORKLOAD_PROJECT_ID: process.env.RAILWAY_WORKLOAD_PROJECT_ID,

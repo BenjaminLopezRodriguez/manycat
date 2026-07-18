@@ -56,6 +56,7 @@ import {
   messagePreview,
   type ApprovalMsg,
   type DiffMsg,
+  type Msg,
   type Project,
   type TextMsg,
   type Workflow,
@@ -196,6 +197,8 @@ export default function Chat() {
   const [aiModel, setAiModel] = React.useState<ModelId>("auto");
   const [aiEffort, setAiEffort] = React.useState<EffortId>("high");
   const createFromPrompt = api.workflow.createFromPrompt.useMutation();
+  const runChat = api.workflow.runChat.useMutation();
+  const runImage = api.workflow.runImage.useMutation();
   const importRepo = api.workflow.importRepo.useMutation();
   api.workflow.isEnabled.useQuery();
   const activeIdRef = React.useRef(activeId);
@@ -622,12 +625,87 @@ export default function Chat() {
     );
   }
 
+  /** research/workspace/create modes route to their own harness, not the coding one. */
+  async function handleModeHarness(mode: "research" | "workspace" | "create", promptText: string) {
+    setCreatingFromPrompt(true);
+    const id = `${mode}-${Date.now()}`;
+    const userMsg: Msg = {
+      id: 1,
+      type: "text",
+      from: "me",
+      text: promptText,
+      time: nowTime(),
+    };
+    setWorkflows((prev) => [
+      ...prev,
+      {
+        id,
+        name: promptText.slice(0, 32),
+        initials: promptText.slice(0, 2).toUpperCase() || "AI",
+        avatarClass: "bg-sky-200 text-sky-900",
+        repo: mode,
+        status: "working",
+        messages: [userMsg],
+        workspace: [],
+      },
+    ]);
+    openWorkflow(id);
+
+    const appendReply = (reply: Msg) => {
+      setWorkflows((prev) =>
+        prev.map((w) =>
+          w.id === id
+            ? { ...w, status: "idle", messages: [...w.messages, reply] }
+            : w,
+        ),
+      );
+    };
+
+    try {
+      if (mode === "create") {
+        const { image } = await runImage.mutateAsync({ prompt: promptText });
+        appendReply({
+          id: 2,
+          type: "image",
+          prompt: promptText,
+          src: image,
+          time: nowTime(),
+        });
+      } else {
+        const { reply } = await runChat.mutateAsync({ mode, prompt: promptText });
+        appendReply({
+          id: 2,
+          type: "text",
+          from: "agent",
+          text: reply,
+          time: nowTime(),
+        });
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      appendReply({
+        id: 2,
+        type: "text",
+        from: "agent",
+        text: `Couldn't get a response: ${message}`,
+        time: nowTime(),
+      });
+    } finally {
+      setCreatingFromPrompt(false);
+    }
+  }
+
   async function handleCreateFromPrompt(
     promptText: string,
     opts?: { model: ModelId; effort: EffortId },
   ) {
     if (opts?.model) setAiModel(opts.model);
     if (opts?.effort) setAiEffort(opts.effort);
+
+    if (mode === "research" || mode === "workspace" || mode === "create") {
+      return handleModeHarness(mode, promptText);
+    }
+
     setCreatingFromPrompt(true);
     const optimisticId = `pending-${Date.now()}`;
     const shortName = promptText.slice(0, 32);

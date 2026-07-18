@@ -404,6 +404,21 @@ export default function MessageList({
                 </MessageContent>
               </Message>
             );
+
+          case "image":
+            return (
+              <Message key={m.id} align="start">
+                <MessageContent>
+                  {/* eslint-disable-next-line @next/next/no-img-element -- data: URL, Next Image optimizer doesn't apply */}
+                  <img
+                    src={m.src}
+                    alt={m.prompt}
+                    className="max-w-[min(100%,24rem)] rounded-xl"
+                  />
+                  <MessageFooter>{m.time}</MessageFooter>
+                </MessageContent>
+              </Message>
+            );
         }
       })}
       {showLive && liveStatus ? <LiveWorkingIndicator msg={liveStatus} /> : null}

@@ -20,6 +20,8 @@ import {
   scaffoldFromPrompt,
 } from "@/server/content/scaffold";
 import { structurePrompt } from "@/server/ai/structure-prompt";
+import { runChatCompletion, type ChatMessage } from "@/server/ai/modal-chat";
+import { runImageGeneration } from "@/server/ai/modal-image";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "@/server/api/trpc";
 import { db } from "@/server/db";
 import { projectChanges, projects } from "@/server/db/schema";
@@ -637,5 +639,54 @@ export const workflowRouter = createTRPCRouter({
       });
 
       return { events, previewUrl: sandbox.previewUrl };
+    }),
+
+  /**
+   * Chat harness — shared Modal chat model for "research" (Chat) and
+   * "workspace" (Work) shell modes. No filesystem/coding tools, no sandbox.
+   * ponytail: workspace's Zapier-style tool calling isn't wired yet — same
+   * model, different system prompt, until tools are actually built.
+   */
+  runChat: protectedProcedure
+    .input(
+      z.object({
+        mode: z.enum(["research", "workspace"]),
+        prompt: z.string().min(1),
+        history: z
+          .array(
+            z.object({
+              role: z.enum(["user", "assistant"]),
+              content: z.string(),
+            }),
+          )
+          .max(20)
+          .default([]),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      const systemPrompt =
+        input.mode === "workspace"
+          ? "You are Manycat's workplace assistant. Help the user plan and " +
+            "track their work. You do not have any connected tools yet " +
+            "(Zapier-style integrations are coming) — say so if asked to " +
+            "take an action outside the conversation."
+          : "You are Manycat's chat assistant. Answer helpfully and concisely.";
+
+      const messages: ChatMessage[] = [
+        { role: "system", content: systemPrompt },
+        ...input.history,
+        { role: "user", content: input.prompt },
+      ];
+
+      const reply = await runChatCompletion(messages);
+      return { reply };
+    }),
+
+  /** Image harness — Modal-hosted FLUX.1-schnell for "create" shell mode. */
+  runImage: protectedProcedure
+    .input(z.object({ prompt: z.string().min(1) }))
+    .mutation(async ({ input }) => {
+      const image = await runImageGeneration(input.prompt);
+      return { image };
     }),
 });
