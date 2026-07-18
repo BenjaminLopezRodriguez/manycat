@@ -40,7 +40,11 @@ export const integrationRouter = createTRPCRouter({
         });
       }
 
-      const contactEmail = input.contactEmail?.trim() || undefined;
+      const trimmedContact = input.contactEmail?.trim();
+      const contactEmail =
+        trimmedContact !== undefined && trimmedContact.length > 0
+          ? trimmedContact
+          : undefined;
       const sessionEmail = ctx.session?.user?.email ?? null;
       const userLabel =
         ctx.session?.login ??

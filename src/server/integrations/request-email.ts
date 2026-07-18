@@ -21,15 +21,20 @@ export type SendIntegrationRequestDeps = {
   }) => Promise<void>;
 };
 
+function nonempty(value?: string | null) {
+  const trimmed = value?.trim();
+  return trimmed !== undefined && trimmed.length > 0 ? trimmed : undefined;
+}
+
 export function buildIntegrationRequestEmail(payload: IntegrationRequestPayload) {
   const contact =
-    payload.contactEmail?.trim() ||
-    payload.sessionEmail?.trim() ||
+    nonempty(payload.contactEmail) ??
+    nonempty(payload.sessionEmail) ??
     "(none)";
   const subject = `Integration request: ${payload.name}`;
   const text = [
     `Integration: ${payload.name}`,
-    `Note: ${payload.note?.trim() || "(none)"}`,
+    `Note: ${nonempty(payload.note) ?? "(none)"}`,
     `Contact email: ${contact}`,
     `User: ${payload.userLabel} (${payload.userId})`,
     `At: ${new Date().toISOString()}`,
