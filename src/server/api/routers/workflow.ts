@@ -33,6 +33,7 @@ import {
 export type AgentEventPayload =
   | { kind: "status"; status: WorkflowStatus }
   | { kind: "append"; message: Msg }
+  | { kind: "upsert-status"; message: Extract<Msg, { type: "agent-status" }> }
   | {
       kind: "patch-workspace";
       path: string;
@@ -514,12 +515,18 @@ export const workflowRouter = createTRPCRouter({
         type: "agent-status" as const,
         text:
           workspaceFiles.length > 0
-            ? `Agent is working in sandbox… (${workspaceFiles.length} files synced)`
-            : "Agent is working in sandbox… (warning: empty workspace)",
+            ? `Working in sandbox (${workspaceFiles.length} files)…`
+            : "Working in sandbox…",
+        action: "building",
+        path: "page.tsx",
+        thinking:
+          workspaceFiles.length > 0
+            ? `Synced ${workspaceFiles.length} files into the sandbox and starting the agent loop.`
+            : "Sandbox workspace is empty — agent may need to scaffold files first.",
         streaming: true,
         time: nowTime(),
       };
-      events.push({ kind: "append", message: statusMsg });
+      events.push({ kind: "upsert-status", message: statusMsg });
 
       const agentRes = await fetch(`${env.AGENT_HARNESS_URL}/run`, {
         method: "POST",

@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { ArrowUp01Icon } from "@hugeicons/core-free-icons";
 
@@ -8,6 +9,7 @@ type SectionScaffoldProps = {
   description: string;
   icon: typeof ArrowUp01Icon;
   emptyLabel: string;
+  action?: ReactNode;
 };
 
 export default function SectionScaffold({
@@ -15,6 +17,7 @@ export default function SectionScaffold({
   description,
   icon,
   emptyLabel,
+  action,
 }: SectionScaffoldProps) {
   return (
     <div className="bg-background flex flex-1 flex-col overflow-y-auto">
@@ -32,8 +35,9 @@ export default function SectionScaffold({
           </p>
         </header>
 
-        <div className="border-border flex flex-1 flex-col items-center justify-center rounded-2xl border border-dashed px-8 py-16 text-center">
+        <div className="border-border flex flex-1 flex-col items-center justify-center gap-4 rounded-2xl border border-dashed px-8 py-16 text-center">
           <p className="text-muted-foreground text-sm">{emptyLabel}</p>
+          {action}
         </div>
       </div>
     </div>

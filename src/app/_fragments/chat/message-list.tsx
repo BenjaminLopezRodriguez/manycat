@@ -1,11 +1,13 @@
 "use client";
 
+import * as React from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
+  ArrowDown01Icon,
+  ArrowRight01Icon,
   Cancel01Icon,
   CheckmarkCircle02Icon,
   SourceCodeIcon,
-  SparklesIcon,
   TickDouble02Icon,
 } from "@hugeicons/core-free-icons";
 
@@ -17,14 +19,21 @@ import {
   MessageFooter,
 } from "@/components/ui/message";
 import { cn } from "@/lib/utils";
-import type { DiffMsg, Msg } from "./data";
+import type { AgentStatusMsg, DiffMsg, Msg } from "./data";
 
 type MessageListProps = {
   messages: Msg[];
+  /** True while the current run is in flight — shows one live working chip */
+  isWorking?: boolean;
   onOpenDiff: (messageId: number) => void;
   onApprove: (messageId: number) => void;
   onRequestChanges: (messageId: number) => void;
 };
+
+function fileName(path: string) {
+  const parts = path.split("/");
+  return parts[parts.length - 1] || path;
+}
 
 /** Build a short unified-diff preview centered on the first change */
 function previewLines(diff: DiffMsg, max = 8) {
@@ -41,20 +50,16 @@ function previewLines(diff: DiffMsg, max = 8) {
   const lines: { kind: "same" | "add" | "del"; text: string; n: number }[] =
     [];
 
-  // One line of context above the change
   if (i > 0) {
     lines.push({ kind: "same", text: before[i - 1]!, n: i });
   }
 
-  // Show removed lines from the divergence point
   for (let j = i; j < before.length && lines.length < max; j++) {
     if (j < after.length && before[j] === after[j]) break;
-    // Stop removing once we find a line that exists later in after (heuristic)
     if (j > i && after.includes(before[j]!)) break;
     lines.push({ kind: "del", text: before[j]!, n: j + 1 });
   }
 
-  // Show added lines from the divergence point
   for (let j = i; j < after.length && lines.length < max; j++) {
     if (j < before.length && before[j] === after[j] && j > i) {
       lines.push({ kind: "same", text: after[j]!, n: j + 1 });
@@ -181,52 +186,150 @@ export function InlineDiffEditor({
   );
 }
 
+function workingLabel(msg: AgentStatusMsg) {
+  if (msg.action) {
+    return `${msg.action} ${msg.path ? fileName(msg.path) : ""}`.trim();
+  }
+  // Legacy status lines from older runs — keep the chip short
+  const pathMatch = msg.text.match(
+    /\b([\w.-]+\.(?:tsx?|jsx?|css|json|md))\b/i,
+  );
+  if (pathMatch) {
+    const verb = msg.text.split(/\s+/)[0]?.toLowerCase() ?? "working";
+    return `${verb.replace(/[^a-z]/g, "") || "working"} ${pathMatch[1]}`;
+  }
+  if (/sandbox/i.test(msg.text)) return "working sandbox";
+  return msg.text.replace(/…$/, "").slice(0, 36);
+}
+
+function WorkingCard({
+  msg,
+  expanded,
+  onToggle,
+}: {
+  msg: AgentStatusMsg;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  const label = workingLabel(msg);
+  const detail = msg.thinking?.trim() || msg.text;
+  const canExpand = Boolean(detail);
+
+  return (
+    <div className="flex w-fit max-w-[min(100%,16rem)] flex-col gap-1.5">
+      <button
+        type="button"
+        onClick={canExpand ? onToggle : undefined}
+        aria-expanded={canExpand ? expanded : undefined}
+        className={cn(
+          "border-border/70 bg-background inline-flex w-fit max-w-full items-center gap-2 rounded-lg border px-2.5 py-1.5 text-left text-xs shadow-sm",
+          canExpand && "hover:bg-muted/40 cursor-pointer transition-colors",
+          !canExpand && "cursor-default",
+        )}
+      >
+        <span
+          className={cn(
+            "size-2 shrink-0 rounded-full",
+            msg.streaming
+              ? "bg-primary animate-pulse"
+              : "bg-muted-foreground/50",
+          )}
+          aria-hidden
+        />
+        <span
+          className={cn(
+            "max-w-[11rem] truncate font-mono text-[12px]",
+            msg.streaming && "shimmer",
+          )}
+        >
+          {label}
+        </span>
+        {canExpand && (
+          <HugeiconsIcon
+            icon={expanded ? ArrowDown01Icon : ArrowRight01Icon}
+            size={12}
+            className="text-muted-foreground shrink-0"
+          />
+        )}
+      </button>
+
+      {canExpand && expanded && (
+        <div className="border-border/60 bg-muted/30 text-muted-foreground w-fit max-w-[min(100%,20rem)] rounded-lg border px-3 py-2 text-xs leading-relaxed">
+          {detail}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LiveWorkingIndicator({ msg }: { msg: AgentStatusMsg }) {
+  const [expanded, setExpanded] = React.useState(false);
+
+  // New step → collapse so the thread doesn't jump
+  React.useEffect(() => {
+    setExpanded(false);
+  }, [msg.id, msg.text, msg.action, msg.path]);
+
+  return (
+    <Message align="start">
+      <MessageContent className="items-start">
+        <WorkingCard
+          msg={msg}
+          expanded={expanded}
+          onToggle={() => setExpanded((v) => !v)}
+        />
+      </MessageContent>
+    </Message>
+  );
+}
+
 export default function MessageList({
   messages,
+  isWorking = false,
   onOpenDiff,
   onApprove,
   onRequestChanges,
 }: MessageListProps) {
+  // Status chips are ephemeral — never archive them into the thread.
+  const thread = messages.filter(
+    (m): m is Exclude<Msg, AgentStatusMsg> => m.type !== "agent-status",
+  );
+  const liveStatus = [...messages]
+    .reverse()
+    .find((m): m is AgentStatusMsg => m.type === "agent-status");
+  const showLive =
+    Boolean(liveStatus) && (Boolean(liveStatus?.streaming) || isWorking);
+
   return (
     <>
-      {messages.map((m) => {
+      {thread.map((m) => {
         switch (m.type) {
           case "text":
+            if (m.from === "agent") {
+              // Agent owns the canvas — no bubble chrome, just prose in the thread.
+              return (
+                <Message key={m.id} align="start">
+                  <MessageContent className="max-w-none">
+                    <p className="text-foreground text-sm leading-relaxed wrap-break-word">
+                      {m.text}
+                    </p>
+                    <MessageFooter>{m.time}</MessageFooter>
+                  </MessageContent>
+                </Message>
+              );
+            }
             return (
-              <Message key={m.id} align={m.from === "me" ? "end" : "start"}>
+              <Message key={m.id} align="end">
                 <MessageContent>
-                  <Bubble variant={m.from === "me" ? "default" : "muted"}>
-                    <BubbleContent>{m.text}</BubbleContent>
-                  </Bubble>
-                  <MessageFooter className="gap-1">
-                    {m.time}
-                    {m.from === "me" && (
-                      <HugeiconsIcon icon={TickDouble02Icon} size={14} />
-                    )}
-                  </MessageFooter>
-                </MessageContent>
-              </Message>
-            );
-
-          case "agent-status":
-            return (
-              <Message key={m.id} align="start">
-                <MessageContent>
-                  <Bubble variant="ghost">
-                    <BubbleContent
-                      className={cn(
-                        "text-muted-foreground flex items-center gap-2 text-xs",
-                        m.streaming && "shimmer",
-                      )}
-                    >
-                      <HugeiconsIcon
-                        icon={SparklesIcon}
-                        size={14}
-                        className="text-primary shrink-0"
-                      />
+                  <Bubble variant="default">
+                    <BubbleContent className="max-w-[min(100%,24rem)]">
                       {m.text}
                     </BubbleContent>
                   </Bubble>
+                  <MessageFooter className="gap-1">
+                    {m.time}
+                    <HugeiconsIcon icon={TickDouble02Icon} size={14} />
+                  </MessageFooter>
                 </MessageContent>
               </Message>
             );
@@ -303,6 +406,7 @@ export default function MessageList({
             );
         }
       })}
+      {showLive && liveStatus ? <LiveWorkingIndicator msg={liveStatus} /> : null}
     </>
   );
 }

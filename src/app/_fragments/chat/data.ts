@@ -23,7 +23,14 @@ export type TextMsg = MsgBase & {
 
 export type AgentStatusMsg = MsgBase & {
   type: "agent-status";
+  /** Short doing line, e.g. "Building page.tsx…" */
   text: string;
+  /** Verb for the working card, e.g. "building" */
+  action?: string;
+  /** File path shown on the working card */
+  path?: string;
+  /** Model reasoning — collapsed behind thinking toggle */
+  thinking?: string;
   /** True while the agent is still streaming this status line */
   streaming?: boolean;
 };
@@ -168,11 +175,18 @@ const authLoginAfter = `export async function login(email: string, password: str
 
 export const initialWorkflows: Workflow[] = [];
 
+export type AgentStatusStep = {
+  action: string;
+  path: string;
+  text: string;
+  thinking: string;
+};
+
 /** Seeded edits the simulator applies when a user kicks off a workflow run */
 export const agentScripts: Record<
   string,
   {
-    statuses: string[];
+    statuses: AgentStatusStep[];
     path: string;
     before: string;
     after: string;
@@ -182,9 +196,27 @@ export const agentScripts: Record<
 > = {
   "checkout-bug": {
     statuses: [
-      "Re-reading CartTotal against the latest cart schema…",
-      "Confirming taxRate is optional on Item…",
-      "Updating CartTotal…",
+      {
+        action: "reading",
+        path: "src/components/CartTotal.tsx",
+        text: "Reading CartTotal.tsx…",
+        thinking:
+          "Cart total ignores taxRate. Need to confirm Item schema still has optional taxRate before patching the reduce.",
+      },
+      {
+        action: "checking",
+        path: "src/types/cart.ts",
+        text: "Confirming taxRate on Item…",
+        thinking:
+          "taxRate is optional on Item — safe to multiply with ?? 0 so untaxed lines stay unchanged.",
+      },
+      {
+        action: "editing",
+        path: "src/components/CartTotal.tsx",
+        text: "Updating CartTotal…",
+        thinking:
+          "Fold tax into the reduce so checkout total matches the charge amount.",
+      },
     ],
     path: "src/components/CartTotal.tsx",
     before: checkoutCartBefore,
@@ -194,9 +226,25 @@ export const agentScripts: Record<
   },
   "landing-v2": {
     statuses: [
-      "Opening Hero.tsx…",
-      "Drafting brand-aligned hero copy…",
-      "Applying layout and CTA…",
+      {
+        action: "reading",
+        path: "src/components/Hero.tsx",
+        text: "Opening Hero.tsx…",
+        thinking: "Current hero is generic — brand name should lead the first viewport.",
+      },
+      {
+        action: "drafting",
+        path: "src/components/Hero.tsx",
+        text: "Drafting brand-aligned hero…",
+        thinking:
+          "One headline, one short line, one CTA. Drop the secondary marketing clutter.",
+      },
+      {
+        action: "building",
+        path: "src/components/Hero.tsx",
+        text: "Applying layout and CTA…",
+        thinking: "Full-bleed section with manycat as the hero signal and a single Start CTA.",
+      },
     ],
     path: "src/components/Hero.tsx",
     before: landingHeroBefore,
@@ -206,9 +254,24 @@ export const agentScripts: Record<
   },
   "auth-hardening": {
     statuses: [
-      "Inspecting login flow…",
-      "Wiring verifyPassword…",
-      "Hardening credential check…",
+      {
+        action: "reading",
+        path: "src/auth/login.ts",
+        text: "Inspecting login flow…",
+        thinking: "Login returns the user without verifying the password hash — credential check is missing.",
+      },
+      {
+        action: "wiring",
+        path: "src/auth/login.ts",
+        text: "Wiring verifyPassword…",
+        thinking: "Call verifyPassword against passwordHash before returning any user fields.",
+      },
+      {
+        action: "hardening",
+        path: "src/auth/login.ts",
+        text: "Hardening credential check…",
+        thinking: "Return a minimal {id, email} shape so the hash never leaves the auth boundary.",
+      },
     ],
     path: "src/auth/login.ts",
     before: authLoginBefore,

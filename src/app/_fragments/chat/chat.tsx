@@ -26,6 +26,7 @@ import {
   SentIcon,
   Settings01Icon,
   SidebarRight01Icon,
+  SquareIcon,
 } from "@hugeicons/core-free-icons";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -60,6 +61,7 @@ import {
   type WorkflowStatus,
 } from "./data";
 import ImportRepoDialog from "./import-repo";
+import IntegrationsSheet from "./integrations-sheet";
 import MessageList, { InlineDiffEditor } from "./message-list";
 import Projects, {
   LANDING_FEATURES,
@@ -177,6 +179,7 @@ export default function Chat() {
   const [draft, setDraft] = React.useState("");
   const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
   const [importOpen, setImportOpen] = React.useState(false);
+  const [integrationsOpen, setIntegrationsOpen] = React.useState(false);
   const [navMenuOpen, setNavMenuOpen] = React.useState(false);
   const [accountDrawerOpen, setAccountDrawerOpen] = React.useState(false);
   const [landingFeature, setLandingFeature] =
@@ -210,6 +213,12 @@ export default function Chat() {
         s.contentBackend === "virtual"
           ? "virtual"
           : (s.githubRepo ?? "virtual");
+      const rawStatus = s.status ?? "idle";
+      // Refresh mid-run has no attached stream — don't leave a permanent live chip.
+      const orphanedWorking = rawStatus === "working";
+      const baseMessages = (s.messages ?? [])
+        .filter(isMsg)
+        .filter((m) => m.type !== "agent-status");
       return {
         id: s.id,
         name,
@@ -219,8 +228,19 @@ export default function Chat() {
             ? "bg-sky-200 text-sky-900"
             : "bg-emerald-200 text-emerald-900",
         repo,
-        status: s.status ?? "idle",
-        messages: (s.messages ?? []).filter(isMsg),
+        status: orphanedWorking ? "idle" : rawStatus,
+        messages: orphanedWorking
+          ? [
+              ...baseMessages,
+              {
+                id: nextMsgId(baseMessages),
+                type: "text" as const,
+                from: "agent" as const,
+                text: "Previous run was interrupted (page reloaded). Send a message to continue.",
+                time: nowTime(),
+              },
+            ]
+          : baseMessages,
         workspace: (s.files ?? []).map((f) => ({
           path: f.path,
           contents: f.contents,
@@ -316,9 +336,27 @@ export default function Chat() {
         if (w.id !== activeIdRef.current) return w;
         switch (event.kind) {
           case "status":
-            return { ...w, status: event.status };
+            return {
+              ...w,
+              status: event.status,
+              // Drop ephemeral working chips once the run leaves "working"
+              messages:
+                event.status === "working"
+                  ? w.messages
+                  : w.messages.filter((m) => m.type !== "agent-status"),
+            };
           case "append":
             return { ...w, messages: [...w.messages, event.message] };
+          case "upsert-status": {
+            // One live status row per run — replace any prior agent-status
+            const withoutStatus = w.messages.filter(
+              (m) => m.type !== "agent-status",
+            );
+            return {
+              ...w,
+              messages: [...withoutStatus, event.message],
+            };
+          }
           case "patch-workspace":
             return {
               ...w,
@@ -352,14 +390,42 @@ export default function Chat() {
   const handleAgentEventRef = React.useRef(handleAgentEvent);
   handleAgentEventRef.current = handleAgentEvent;
 
+  // Create-from-prompt still owns a separate mutation — Stop must cover it too.
+  const createRunStopRef = React.useRef(false);
+  const [createRunStopping, setCreateRunStopping] = React.useState(false);
+
+  const finishCreateRunStopped = React.useCallback(() => {
+    createRunStopRef.current = false;
+    setCreateRunStopping(false);
+    handleAgentEventRef.current({
+      kind: "append",
+      message: {
+        id: Date.now(),
+        type: "text",
+        from: "agent",
+        text: "Stopped — the previous run may have left partial workspace changes. Review files before sending a new instruction.",
+        time: nowTime(),
+      },
+    });
+    handleAgentEventRef.current({ kind: "status", status: "idle" });
+  }, []);
+
   const runAgentMutation = api.workflow.runAgent.useMutation({
     onSuccess: (data) => {
+      if (createRunStopRef.current) {
+        finishCreateRunStopped();
+        return;
+      }
       for (const event of data.events) {
         handleAgentEventRef.current(event);
       }
       if (data.previewUrl) setPreviewUrl(data.previewUrl);
     },
     onError: (err) => {
+      if (createRunStopRef.current) {
+        finishCreateRunStopped();
+        return;
+      }
       handleAgentEventRef.current({
         kind: "append",
         message: {
@@ -425,6 +491,9 @@ export default function Chat() {
           id: 1,
           type: "agent-status",
           text: `Cloning ${owner}/${repo}…`,
+          action: "cloning",
+          path: repo,
+          thinking: `Fetching ${owner}/${repo} into a fresh sandbox workspace.`,
           streaming: true,
           time: nowTime(),
         },
@@ -578,7 +647,11 @@ export default function Chat() {
           {
             id: 2,
             type: "agent-status",
-            text: "Creating virtual workspace and spawning sandbox…",
+            text: "Creating virtual workspace…",
+            action: "spawning",
+            path: "sandbox",
+            thinking:
+              "Provisioning a virtual workspace and spinning up the Next scaffold sandbox.",
             streaming: true,
             time: nowTime(),
           },
@@ -627,7 +700,11 @@ export default function Chat() {
                   {
                     id: 3,
                     type: "agent-status",
-                    text: "Building your app on the Next scaffold…",
+                    text: "Building page.tsx…",
+                    action: "building",
+                    path: "page.tsx",
+                    thinking:
+                      "Replacing the scaffold homepage with a working UI for the request.",
                     streaming: true,
                     time: nowTime(),
                   },
@@ -680,7 +757,8 @@ export default function Chat() {
         void runAgentMutation.mutateAsync({
           workflowId: data.workflowId,
           prompt: wrapNextScaffoldBootstrapPrompt(promptText),
-          messageIdStart: 3,
+          // Reuse status id 3 so upsert-status mutates the optimistic WorkingCard
+          messageIdStart: 2,
           model,
           effort,
           files: data.files.map((f) => ({ path: f.path, contents: f.contents })),
@@ -765,13 +843,43 @@ export default function Chat() {
     setWorkspaceOpen(true);
   }
 
+  const runLocked =
+    active?.status === "working" ||
+    agent.isStopping ||
+    createRunStopping ||
+    agent.isRunPending ||
+    runAgentMutation.isPending;
+  const showStop = Boolean(runLocked);
+
   function send(e: React.FormEvent) {
     e.preventDefault();
     const text = draft.trim();
     if (!text || !active) return;
-    if (active.status === "working") return;
+    if (runLocked) return;
     setDraft("");
     agent.run(text);
+  }
+
+  function stopAgent() {
+    if (agent.isStopping || createRunStopping) return;
+    agent.cancel();
+    if (runAgentMutation.isPending) {
+      createRunStopRef.current = true;
+      setCreateRunStopping(true);
+      handleAgentEvent({
+        kind: "upsert-status",
+        message: {
+          id: Date.now(),
+          type: "agent-status",
+          text: "Stopping…",
+          action: "stopping",
+          thinking:
+            "Waiting for the in-flight run to finish. Send stays locked until then — the sandbox may still be mutating.",
+          streaming: true,
+          time: nowTime(),
+        },
+      });
+    }
   }
 
   const totalUnread = workflows.reduce((n, w) => n + (w.unread ?? 0), 0);
@@ -901,9 +1009,14 @@ export default function Chat() {
         ) : mode === "dev" && view === "integrations" ? (
           <SectionScaffold
             title="Integrations"
-            description="Connect GitHub, Vercel, and other tools so Manycat can ship from chat."
+            description="Connect external accounts and tools so agents can ship from chat."
             icon={Link01Icon}
-            emptyLabel="No integrations connected. GitHub sign-in is the first step."
+            emptyLabel="Browse integrations to connect GitHub or request a tool."
+            action={
+              <Button onClick={() => setIntegrationsOpen(true)}>
+                Browse integrations
+              </Button>
+            }
           />
         ) : view === "connections" ? (
           <SectionScaffold
@@ -963,9 +1076,9 @@ export default function Chat() {
               )}
             >
               <header className="flex h-16 items-center justify-between px-4">
-                <h1 className="text-lg font-semibold">Workflows</h1>
+                <h1 className="text-lg font-semibold">Projects</h1>
                 <div className="flex items-center gap-1">
-                  <Button variant="ghost" size="icon" aria-label="New workflow">
+                  <Button variant="ghost" size="icon" aria-label="New project">
                     <HugeiconsIcon icon={Add01Icon} size={18} />
                   </Button>
                   <Button
@@ -989,7 +1102,7 @@ export default function Chat() {
                     className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2"
                   />
                   <Input
-                    placeholder="Search workflows"
+                    placeholder="Search projects"
                     className="pl-9 text-base md:text-sm"
                   />
                 </div>
@@ -997,7 +1110,7 @@ export default function Chat() {
               <div className="flex-1 overflow-y-auto">
                 {workflows.length === 0 ? (
                   <p className="text-muted-foreground px-4 py-8 text-center text-sm">
-                    No workflows yet — import a project to start.
+                    No projects yet — import a repo to start.
                   </p>
                 ) : (
                   workflows.map((w) => {
@@ -1270,15 +1383,15 @@ export default function Chat() {
                       </Marker>
                       <MessageList
                         messages={active.messages}
+                        isWorking={
+                          active.status === "working" ||
+                          agent.isStopping ||
+                          createRunStopping
+                        }
                         onOpenDiff={openDiff}
                         onApprove={agent.approve}
                         onRequestChanges={agent.requestChanges}
                       />
-                      {active.status === "working" && (
-                        <div className="text-muted-foreground shimmer px-3.5 text-xs">
-                          Agent is working…
-                        </div>
-                      )}
                       <div ref={bottomRef} />
                     </div>
                   </div>
@@ -1287,30 +1400,56 @@ export default function Chat() {
                     onSubmit={send}
                     className="flex shrink-0 items-center gap-2 border-t px-4 py-3"
                   >
-                    <Input
-                      value={draft}
-                      onChange={(e) => setDraft(e.target.value)}
-                      placeholder={
-                        active.status === "working"
-                          ? "Agent is working…"
-                          : `Message agent · ${active.name}`
-                      }
-                      disabled={active.status === "working"}
-                      className="flex-1 text-base md:text-sm"
-                    />
-                    <Button
-                      type="submit"
-                      size="icon"
-                      aria-label="Send"
-                      disabled={active.status === "working"}
-                      className="bg-slate-300 text-black hover:bg-slate-300/80"
-                    >
-                      <HugeiconsIcon
-                        icon={SentIcon}
-                        size={18}
-                        className="text-black"
+                    <div className="relative min-w-0 flex-1">
+                      <Input
+                        value={draft}
+                        onChange={(e) => setDraft(e.target.value)}
+                        placeholder={
+                          agent.isStopping || createRunStopping
+                            ? "Stopping… (send locked)"
+                            : showStop
+                              ? "Agent is working… (stop to send)"
+                              : `Message agent · ${active.name}`
+                        }
+                        className="pr-12 text-base md:text-sm"
+                        onKeyDown={(e) => {
+                          if (e.key === "Escape" && showStop) {
+                            e.preventDefault();
+                            stopAgent();
+                          }
+                        }}
                       />
-                    </Button>
+                      {showStop ? (
+                        <Button
+                          type="button"
+                          size="icon-sm"
+                          aria-label={
+                            agent.isStopping || createRunStopping
+                              ? "Stopping"
+                              : "Stop agent"
+                          }
+                          onClick={stopAgent}
+                          disabled={agent.isStopping || createRunStopping}
+                          className="bg-foreground text-background hover:bg-foreground/90 absolute top-1/2 right-1.5 size-8 -translate-y-1/2 rounded-full disabled:opacity-60"
+                        >
+                          <HugeiconsIcon icon={SquareIcon} size={12} />
+                        </Button>
+                      ) : (
+                        <Button
+                          type="submit"
+                          size="icon-sm"
+                          aria-label="Send"
+                          disabled={!draft.trim() || runLocked}
+                          className="absolute top-1/2 right-1.5 size-8 -translate-y-1/2 rounded-full bg-slate-300 text-black hover:bg-slate-300/80 disabled:opacity-40"
+                        >
+                          <HugeiconsIcon
+                            icon={SentIcon}
+                            size={14}
+                            className="text-black"
+                          />
+                        </Button>
+                      )}
+                    </div>
                   </form>
 
                 </div>
@@ -1465,6 +1604,12 @@ export default function Chat() {
         onImportStart={handleImportStart}
         onImportSuccess={handleImportSuccess}
         onImportError={handleImportError}
+      />
+
+      <IntegrationsSheet
+        open={integrationsOpen}
+        onOpenChange={setIntegrationsOpen}
+        hasGitHub={Boolean(session?.hasGitHub)}
       />
     </div>
   );
