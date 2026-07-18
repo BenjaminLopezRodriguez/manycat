@@ -13,7 +13,6 @@ import {
   BubbleChatIcon,
   Cancel01Icon,
   CheckmarkCircle02Icon,
-  CloudUploadIcon,
   CreditCardIcon,
   Edit01Icon,
   GitBranchIcon,
@@ -28,7 +27,7 @@ import {
   SidebarRight01Icon,
 } from "@hugeicons/core-free-icons";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Marker, MarkerContent } from "@/components/ui/marker";
@@ -45,7 +44,7 @@ import { wrapNextScaffoldBootstrapPrompt } from "@/lib/bootstrap-prompt";
 import { dedupeId, slugify } from "@/lib/slug";
 import { cn } from "@/lib/utils";
 import { api } from "@/trpc/react";
-import { signIn, signOut, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { applyWorkspacePatch, useAgent, type AgentEvent } from "./agent-sim";
 import type { EffortId, ModelId } from "@/lib/ai-models";
 import {
@@ -67,12 +66,10 @@ import Projects, {
 } from "./projects";
 import DeploymentsPanel from "./deployments-panel";
 import SectionScaffold from "./section-scaffold";
-import { MODES } from "./shell-modes";
-import { ShellModeMenu } from "./shell-mode-menu";
+import { getModes, type ShellView } from "./shell-modes";
+import { ShellModeDrawerBody, ShellModeMenu } from "./shell-mode-menu";
 import { useShellUrl } from "./use-shell-url";
 import Workspace from "./workspace";
-
-type View = "feed" | "chats" | "deployments" | "agents" | "integrations";
 
 /** Icon badges that can pin to the mobile status bubble */
 type BubbleBadge = "deploy" | "working" | "review";
@@ -158,7 +155,9 @@ const EMPTY_WORKFLOW: Workflow = {
 
 export default function Chat() {
   const isMobile = useIsMobile();
-  const [view, setView] = React.useState<View>("feed");
+  const { mode, view, setMode, setView, forceDevWorkflows } = useShellUrl();
+  const modes = React.useMemo(() => getModes(), []);
+  const modeDef = modes.find((m) => m.id === mode) ?? modes[0]!;
   const [workflows, setWorkflows] = React.useState(initialWorkflows);
   const [projects, setProjects] = React.useState<Project[]>(() =>
     deriveProjectsFromWorkflows(initialWorkflows),
@@ -188,8 +187,6 @@ export default function Chat() {
   const accountLabel =
     session?.login ?? session?.user?.name ?? session?.user?.email ?? "Account";
   const accountInitials = accountLabel.slice(0, 2).toUpperCase();
-  const { mode, setMode } = useShellUrl();
-  const modes = MODES;
   const [creatingFromPrompt, setCreatingFromPrompt] = React.useState(false);
   const [aiModel, setAiModel] = React.useState<ModelId>("auto");
   const [aiEffort, setAiEffort] = React.useState<EffortId>("high");
@@ -307,10 +304,10 @@ export default function Chat() {
   }, [activeId]); // eslint-disable-line react-hooks/exhaustive-deps -- reset path when switching workflows
 
   React.useEffect(() => {
-    if (view === "chats" && active) {
+    if (mode === "dev" && view === "workflows" && active) {
       bottomRef.current?.scrollIntoView({ behavior: "smooth" });
     }
-  }, [active?.messages.length, activeId, view]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [active?.messages.length, activeId, mode, view]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleAgentEvent = React.useCallback((event: AgentEvent) => {
     setWorkflows((prev) =>
@@ -385,7 +382,7 @@ export default function Chat() {
   });
 
   function openWorkflow(id: string, opts?: { openDiff?: boolean }) {
-    setView("chats");
+    forceDevWorkflows();
     setActiveId(id);
     setChatOpen(true);
     setWorkflows((prev) =>
@@ -589,7 +586,6 @@ export default function Chat() {
       },
     ]);
     openWorkflow(optimisticId);
-    switchView("chats");
 
     try {
       const data = await createFromPrompt.mutateAsync({
@@ -723,10 +719,15 @@ export default function Chat() {
     }
   }
 
-  function switchView(v: View) {
+  function switchView(v: ShellView) {
     setView(v);
     setChatOpen(false);
   }
+
+  // Signed-out Dev keeps the Projects landing; other modes still show stubs.
+  const showProjectsLanding =
+    mode === "dev" && (view === "projects" || !signedIn);
+  const showDevWorkflows = signedIn && mode === "dev" && view === "workflows";
 
   function openDiff(messageId: number) {
     if (!active) return;
@@ -777,44 +778,44 @@ export default function Chat() {
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto">
-          {signedIn ? (
+          {!signedIn && mode === "dev" ? (
             <>
-              <RailButton
-                label="Projects"
-                active={view === "feed"}
-                onClick={() => switchView("feed")}
-              >
-                <HugeiconsIcon icon={News01Icon} size={20} />
-              </RailButton>
-              <RailButton
-                label="Workflows"
-                active={view === "chats"}
-                badge={totalUnread > 0 ? totalUnread : undefined}
-                onClick={() => switchView("chats")}
-              >
-                <HugeiconsIcon icon={BubbleChatIcon} size={20} />
-              </RailButton>
-              <RailButton
-                label="Deployments"
-                active={view === "deployments"}
-                onClick={() => switchView("deployments")}
-              >
-                <HugeiconsIcon icon={CloudUploadIcon} size={20} />
-              </RailButton>
-              <RailButton
-                label="Agents"
-                active={view === "agents"}
-                onClick={() => switchView("agents")}
-              >
-                <HugeiconsIcon icon={BotIcon} size={20} />
-              </RailButton>
-              <RailButton
-                label="Integrations"
-                active={view === "integrations"}
-                onClick={() => switchView("integrations")}
-              >
-                <HugeiconsIcon icon={Link01Icon} size={20} />
-              </RailButton>
+              {LANDING_FEATURES.map((feature) => (
+                <FeatureRailButton
+                  key={feature.id}
+                  label={feature.label}
+                  blurb={feature.blurb}
+                  active={landingFeature === feature.id}
+                  onClick={() => {
+                    setLandingFeature(feature.id);
+                    switchView("projects");
+                  }}
+                >
+                  <HugeiconsIcon icon={feature.icon} size={18} />
+                </FeatureRailButton>
+              ))}
+              <div className="bg-sidebar-primary-foreground/10 mx-2 my-2 h-px" />
+              <p className="text-sidebar-primary-foreground/50 px-3 py-2 text-xs leading-relaxed">
+                Sign in to unlock workflows on your projects.
+              </p>
+            </>
+          ) : (
+            <>
+              {modeDef.nav.map((item) => (
+                <RailButton
+                  key={item.view}
+                  label={item.label}
+                  active={view === item.view}
+                  badge={
+                    item.view === "workflows" && totalUnread > 0
+                      ? totalUnread
+                      : undefined
+                  }
+                  onClick={() => switchView(item.view)}
+                >
+                  <HugeiconsIcon icon={item.icon} size={20} />
+                </RailButton>
+              ))}
 
               <div className="bg-sidebar-primary-foreground/10 mx-2 my-2 h-px" />
               <RailButton label="Usage">
@@ -827,33 +828,12 @@ export default function Chat() {
                 <HugeiconsIcon icon={HelpCircleIcon} size={20} />
               </RailButton>
             </>
-          ) : (
-            <>
-              {LANDING_FEATURES.map((feature) => (
-                <FeatureRailButton
-                  key={feature.id}
-                  label={feature.label}
-                  blurb={feature.blurb}
-                  active={landingFeature === feature.id}
-                  onClick={() => {
-                    setLandingFeature(feature.id);
-                    switchView("feed");
-                  }}
-                >
-                  <HugeiconsIcon icon={feature.icon} size={18} />
-                </FeatureRailButton>
-              ))}
-              <div className="bg-sidebar-primary-foreground/10 mx-2 my-2 h-px" />
-              <p className="text-sidebar-primary-foreground/50 px-3 py-2 text-xs leading-relaxed">
-                Sign in to unlock workflows on your projects.
-              </p>
-            </>
           )}
         </div>
       </nav>
 
       <main className="flex min-h-0 min-w-0 flex-1">
-        {!signedIn || view === "feed" ? (
+        {showProjectsLanding ? (
           <Projects
             onImport={handleImportFromComposer}
             onCreateFromPrompt={(p, opts) => void handleCreateFromPrompt(p, opts)}
@@ -865,7 +845,7 @@ export default function Chat() {
             onModelChange={setAiModel}
             onEffortChange={setAiEffort}
           />
-        ) : view === "deployments" ? (
+        ) : mode === "dev" && view === "deployments" ? (
           <DeploymentsPanel
             projects={projects}
             onProjectRunResult={(projectId, result) => {
@@ -893,21 +873,63 @@ export default function Chat() {
               });
             }}
           />
-        ) : view === "agents" ? (
+        ) : mode === "dev" && view === "agents" ? (
           <SectionScaffold
             title="Agents"
             description="Specialist agents assigned to your repos — who is working, idle, or waiting on review."
             icon={BotIcon}
             emptyLabel="No agents yet. Import a project to spin up your first one."
           />
-        ) : view === "integrations" ? (
+        ) : mode === "dev" && view === "integrations" ? (
           <SectionScaffold
             title="Integrations"
             description="Connect GitHub, Vercel, and other tools so Manycat can ship from chat."
             icon={Link01Icon}
             emptyLabel="No integrations connected. GitHub sign-in is the first step."
           />
-        ) : (
+        ) : view === "connections" ? (
+          <SectionScaffold
+            title="Connections"
+            description="Link Gmail, Zapier, and other apps so Workspace agents can act on your behalf."
+            icon={Link01Icon}
+            emptyLabel="No apps connected yet."
+          />
+        ) : view === "automations" ? (
+          <SectionScaffold
+            title="Automations"
+            description="Recipes that run across your connected apps."
+            icon={Settings01Icon}
+            emptyLabel="No automations yet."
+          />
+        ) : view === "activity" ? (
+          <SectionScaffold
+            title="Activity"
+            description="Recent runs from Workspace agents."
+            icon={ArrowUpRight01Icon}
+            emptyLabel="No activity yet."
+          />
+        ) : view === "chats" ? (
+          <SectionScaffold
+            title="Chats"
+            description="Conversations with the research agent."
+            icon={BubbleChatIcon}
+            emptyLabel="No research chats yet."
+          />
+        ) : view === "research" ? (
+          <SectionScaffold
+            title="Research"
+            description="Deep research threads and briefs."
+            icon={Search01Icon}
+            emptyLabel="No research threads yet."
+          />
+        ) : view === "sources" ? (
+          <SectionScaffold
+            title="Sources"
+            description="Docs and links the research agent can cite."
+            icon={News01Icon}
+            emptyLabel="No sources yet."
+          />
+        ) : showDevWorkflows ? (
           <>
             <aside
               className={cn(
@@ -1271,10 +1293,10 @@ export default function Chat() {
             </section>
             ) : null}
           </>
-        )}
+        ) : null}
       </main>
 
-      {!(view === "chats" && chatOpen) && (
+      {!(mode === "dev" && view === "workflows" && chatOpen) && (
         <nav className="bg-sidebar-primary text-sidebar-primary-foreground flex shrink-0 items-center gap-2 px-3 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:hidden">
           <StatusBubble badges={bubbleBadges} />
           <button
@@ -1283,7 +1305,7 @@ export default function Chat() {
             className="hover:bg-sidebar-primary-foreground/10 flex min-w-0 flex-1 items-center gap-1 rounded-xl px-2 py-1.5 text-left transition-colors"
           >
             <span className="min-w-0 flex-1 truncate text-sm font-semibold">
-              {signedIn ? accountLabel : "Sign in"}
+              {modeDef.label}
             </span>
             <HugeiconsIcon
               icon={ArrowDown01Icon}
@@ -1311,74 +1333,24 @@ export default function Chat() {
       >
         <DrawerContent className="max-h-[85dvh] md:hidden">
           <DrawerHeader className="text-left">
-            <DrawerTitle>Account</DrawerTitle>
+            <DrawerTitle>{modeDef.label}</DrawerTitle>
             <DrawerDescription className="sr-only">
-              GitHub account
+              Mode and account
             </DrawerDescription>
           </DrawerHeader>
-          <div className="flex flex-col gap-1 px-3 pb-6">
-            {signedIn ? (
-              <>
-                <div className="flex items-center gap-3 rounded-xl px-3 py-2.5">
-                  <Avatar className="size-8">
-                    {session?.user?.image ? (
-                      <AvatarImage src={session.user.image} alt="" />
-                    ) : null}
-                    <AvatarFallback className="text-[10px] font-semibold">
-                      {accountInitials}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                    {accountLabel}
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  className="text-muted-foreground hover:bg-muted/60 hover:text-foreground rounded-xl px-3 py-2.5 text-left text-sm font-medium"
-                  onClick={() => {
-                    setAccountDrawerOpen(false);
-                    void signOut({ callbackUrl: "/signin" });
-                  }}
-                >
-                  Sign out
-                </button>
-                {!session?.hasGitHub ? (
-                  <button
-                    type="button"
-                    className="hover:bg-muted/60 rounded-xl px-3 py-2.5 text-left text-sm font-medium"
-                    onClick={() => {
-                      setAccountDrawerOpen(false);
-                      void signIn("github", { callbackUrl: "/" });
-                    }}
-                  >
-                    Connect GitHub
-                  </button>
-                ) : null}
-              </>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  className="bg-primary text-primary-foreground rounded-xl px-3 py-2.5 text-left text-sm font-medium"
-                  onClick={() => {
-                    setAccountDrawerOpen(false);
-                    void signIn("google", { callbackUrl: "/" });
-                  }}
-                >
-                  Continue with Google
-                </button>
-                <button
-                  type="button"
-                  className="hover:bg-muted/60 rounded-xl px-3 py-2.5 text-left text-sm font-medium"
-                  onClick={() => {
-                    setAccountDrawerOpen(false);
-                    void signIn("github", { callbackUrl: "/" });
-                  }}
-                >
-                  Continue with GitHub
-                </button>
-              </>
-            )}
+          <div className="px-3 pb-6">
+            <ShellModeDrawerBody
+              modes={modes}
+              mode={mode}
+              onModeChange={setMode}
+              signedIn={signedIn}
+              label={accountLabel}
+              image={session?.user?.image}
+              initials={accountInitials}
+              provider={session?.provider}
+              hasGitHub={Boolean(session?.hasGitHub)}
+              onActionComplete={() => setAccountDrawerOpen(false)}
+            />
           </div>
         </DrawerContent>
       </Drawer>
@@ -1397,59 +1369,44 @@ export default function Chat() {
             </DrawerDescription>
           </DrawerHeader>
           <div className="flex max-h-[min(70dvh,28rem)] flex-col gap-1 overflow-y-auto px-3 pb-6">
-            {signedIn ? (
+            {!signedIn && mode === "dev" ? (
               <>
-                <MobileMenuItem
-                  label="Projects"
-                  active={view === "feed"}
-                  onClick={() => {
-                    switchView("feed");
-                    setNavMenuOpen(false);
-                  }}
-                >
-                  <HugeiconsIcon icon={News01Icon} size={20} />
-                </MobileMenuItem>
-                <MobileMenuItem
-                  label="Workflows"
-                  active={view === "chats"}
-                  badge={totalUnread > 0 ? totalUnread : undefined}
-                  onClick={() => {
-                    switchView("chats");
-                    setNavMenuOpen(false);
-                  }}
-                >
-                  <HugeiconsIcon icon={BubbleChatIcon} size={20} />
-                </MobileMenuItem>
-                <MobileMenuItem
-                  label="Deployments"
-                  active={view === "deployments"}
-                  onClick={() => {
-                    switchView("deployments");
-                    setNavMenuOpen(false);
-                  }}
-                >
-                  <HugeiconsIcon icon={CloudUploadIcon} size={20} />
-                </MobileMenuItem>
-                <MobileMenuItem
-                  label="Agents"
-                  active={view === "agents"}
-                  onClick={() => {
-                    switchView("agents");
-                    setNavMenuOpen(false);
-                  }}
-                >
-                  <HugeiconsIcon icon={BotIcon} size={20} />
-                </MobileMenuItem>
-                <MobileMenuItem
-                  label="Integrations"
-                  active={view === "integrations"}
-                  onClick={() => {
-                    switchView("integrations");
-                    setNavMenuOpen(false);
-                  }}
-                >
-                  <HugeiconsIcon icon={Link01Icon} size={20} />
-                </MobileMenuItem>
+                {LANDING_FEATURES.map((feature) => (
+                  <MobileFeatureItem
+                    key={feature.id}
+                    label={feature.label}
+                    blurb={feature.blurb}
+                    active={landingFeature === feature.id}
+                    onClick={() => {
+                      setLandingFeature(feature.id);
+                      switchView("projects");
+                      setNavMenuOpen(false);
+                    }}
+                  >
+                    <HugeiconsIcon icon={feature.icon} size={18} />
+                  </MobileFeatureItem>
+                ))}
+              </>
+            ) : (
+              <>
+                {modeDef.nav.map((item) => (
+                  <MobileMenuItem
+                    key={item.view}
+                    label={item.label}
+                    active={view === item.view}
+                    badge={
+                      item.view === "workflows" && totalUnread > 0
+                        ? totalUnread
+                        : undefined
+                    }
+                    onClick={() => {
+                      switchView(item.view);
+                      setNavMenuOpen(false);
+                    }}
+                  >
+                    <HugeiconsIcon icon={item.icon} size={20} />
+                  </MobileMenuItem>
+                ))}
 
                 <div className="bg-border my-2 h-px" />
                 <MobileMenuItem
@@ -1470,24 +1427,6 @@ export default function Chat() {
                 >
                   <HugeiconsIcon icon={HelpCircleIcon} size={20} />
                 </MobileMenuItem>
-              </>
-            ) : (
-              <>
-                {LANDING_FEATURES.map((feature) => (
-                  <MobileFeatureItem
-                    key={feature.id}
-                    label={feature.label}
-                    blurb={feature.blurb}
-                    active={landingFeature === feature.id}
-                    onClick={() => {
-                      setLandingFeature(feature.id);
-                      switchView("feed");
-                      setNavMenuOpen(false);
-                    }}
-                  >
-                    <HugeiconsIcon icon={feature.icon} size={18} />
-                  </MobileFeatureItem>
-                ))}
               </>
             )}
           </div>
