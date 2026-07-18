@@ -10,6 +10,7 @@ import {
 } from "./shell-modes";
 import {
   applyShellToUrl,
+  buildShellSearch,
   forceDevWorkflows as forceDevState,
   historyAction,
   persistShell,
@@ -55,16 +56,13 @@ export function useShellUrl(): {
       : readLastViewByMode(window.localStorage.getItem(STORAGE_LAST_VIEW_KEY)),
   );
   const prevRef = React.useRef<ShellState>(state);
-  /** When false, next state write skips history (popstate already updated the URL). */
-  const syncUrlRef = React.useRef(true);
 
-  // Write URL + localStorage when shell state settles (skip history on popstate).
+  // Write URL + localStorage when shell state settles.
+  // Skip history only when the URL already mirrors state (e.g. popstate).
   React.useEffect(() => {
     const prev = prevRef.current;
-    if (syncUrlRef.current) {
+    if (window.location.search !== buildShellSearch(state)) {
       applyShellToUrl(state, historyAction(prev, state));
-    } else {
-      syncUrlRef.current = true;
     }
     lastRef.current = persistShell(
       window.localStorage,
@@ -82,7 +80,6 @@ export function useShellUrl(): {
         lastViewRaw: window.localStorage.getItem(STORAGE_LAST_VIEW_KEY),
         enabled,
       });
-      syncUrlRef.current = false;
       setState(next);
     }
     window.addEventListener("popstate", onPopState);
@@ -110,9 +107,15 @@ export function useShellUrl(): {
     partial: Partial<ShellState> & { mode?: ModeId; view?: ShellView },
   ) {
     setState((prev) => {
-      const next = { ...prev, ...partial };
-      if (next.mode === prev.mode && next.view === prev.view) return prev;
-      return next;
+      const mode = partial.mode ?? prev.mode;
+      const view =
+        partial.view !== undefined
+          ? partial.view
+          : partial.mode !== undefined && partial.mode !== prev.mode
+            ? viewForModeSwitch(partial.mode, lastRef.current)
+            : prev.view;
+      if (mode === prev.mode && view === prev.view) return prev;
+      return { mode, view };
     });
   }
 
