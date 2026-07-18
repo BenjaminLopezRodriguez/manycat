@@ -55,3 +55,9 @@ agent-harness/**/*.egg-info/
 agent-harness/.pytest_cache/
 .env*
 .worktrees/
+
+# package manager local store (never commit)
+.pnpm-store/
+
+# python bytecode
+**/__pycache__/
