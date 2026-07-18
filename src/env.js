@@ -48,6 +48,9 @@ export const env = createEnv({
     NEON_SHARED_PROJECT_ID: z.string().min(1).optional(),
     NEON_SHARED_DATABASE_URL: z.string().url().optional(),
     APP_DB_ENCRYPTION_KEY: z.string().min(32).optional(),
+    RESEND_API_KEY: z.string().min(1).optional(),
+    RESEND_FROM: z.string().min(1).optional(),
+    INTEGRATION_REQUEST_TO: z.string().email().optional(),
   },
 
   /**
@@ -91,6 +94,9 @@ export const env = createEnv({
     NEON_SHARED_PROJECT_ID: process.env.NEON_SHARED_PROJECT_ID,
     NEON_SHARED_DATABASE_URL: process.env.NEON_SHARED_DATABASE_URL,
     APP_DB_ENCRYPTION_KEY: process.env.APP_DB_ENCRYPTION_KEY,
+    RESEND_API_KEY: process.env.RESEND_API_KEY,
+    RESEND_FROM: process.env.RESEND_FROM,
+    INTEGRATION_REQUEST_TO: process.env.INTEGRATION_REQUEST_TO,
     NEXT_PUBLIC_SANDBOX_ENABLED: process.env.NEXT_PUBLIC_SANDBOX_ENABLED,
     NEXT_PUBLIC_ENABLED_MODES: process.env.NEXT_PUBLIC_ENABLED_MODES,
   },
