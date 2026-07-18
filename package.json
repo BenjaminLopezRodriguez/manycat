@@ -48,6 +48,7 @@
     "postgres": "^3.4.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "resend": "^6.17.2",
     "server-only": "^0.0.1",
     "shadcn": "^4.13.0",
     "superjson": "^2.2.1",
