@@ -86,7 +86,10 @@ TOOL_DISCIPLINE = """\
 - After editing code, run relevant checks (tests, lint, typecheck) when
   feasible — do not claim success without evidence.
 - If a tool is denied or fails, do not repeat the identical call; adjust
-  your approach."""
+  your approach.
+- NEVER paste tool calls as JSON / markdown in your reply. Always invoke the
+  real tool interface (write_file / edit_file / …). Prose JSON does not edit
+  files. Prefer write_file for new or full-file rewrites."""
 
 CODE_EDITING = """\
 # Code editing

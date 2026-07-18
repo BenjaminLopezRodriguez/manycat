@@ -8,6 +8,7 @@ from langgraph.prebuilt import create_react_agent
 from programming_agent.config import AgentConfig
 from programming_agent.prompts.assembler import SessionContext, assemble_system_prompt, load_project_rules
 from programming_agent.prompts.sections import AgentMode
+from programming_agent.prose_tools import wrap_model_for_prose_tools
 from programming_agent.tools import ToolContext, build_tools
 from programming_agent.tools.filesystem import make_filesystem_tools
 
@@ -34,7 +35,10 @@ class ProgrammingAgentHarness:
         if self.config.openai_base_url:
             # OpenAI-compatible providers (Modal vLLM, local gateways).
             kwargs["base_url"] = self.config.openai_base_url
-        return init_chat_model(self.config.model, **kwargs)
+        model = init_chat_model(self.config.model, **kwargs)
+        # Qwen/vLLM often dumps JSON tool stubs in prose; lift them into
+        # native tool_calls so the ReAct loop actually mutates the workspace.
+        return wrap_model_for_prose_tools(model)
 
     def _run_explore(self, description: str, thoroughness: str) -> str:
         agent = self._get_explore_agent()

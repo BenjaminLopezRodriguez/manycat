@@ -14,13 +14,14 @@ EFFORT_PRESETS: dict[str, dict[str, float | int]] = {
         "max_turns": 12,
         "recursion_limit": 24,
         "temperature": 0.5,
-        "max_tokens": 1024,
+        # Coding edits need headroom; 1024 truncates write_file / prose tools mid-JSON.
+        "max_tokens": 4096,
     },
     "medium": {
         "max_turns": 24,
         "recursion_limit": 48,
         "temperature": 0.35,
-        "max_tokens": 2048,
+        "max_tokens": 4096,
     },
     "high": {
         "max_turns": 40,

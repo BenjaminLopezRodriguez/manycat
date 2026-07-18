@@ -113,18 +113,56 @@ def make_filesystem_tools(ctx: ToolContext) -> list[StructuredTool]:
         replace_all: bool = False,
     ) -> str:
         resolved = ctx.resolve(path)
+        # Models often call edit_file with empty old_string to create a file.
+        if not (old_string or "").strip():
+            resolved.parent.mkdir(parents=True, exist_ok=True)
+            resolved.write_text(new_string, encoding="utf-8")
+            return f"Wrote {resolved} ({len(new_string)} bytes)"
+
+        if not resolved.exists():
+            resolved.parent.mkdir(parents=True, exist_ok=True)
+            resolved.write_text(new_string, encoding="utf-8")
+            return f"File missing; wrote {resolved} ({len(new_string)} bytes)"
+
         text = resolved.read_text(encoding="utf-8")
-        count = text.count(old_string)
-        if count == 0:
-            raise ValueError("old_string not found in file")
+        candidates = [old_string]
+        # JSON / prose stubs often keep literal \n instead of real newlines.
+        if "\\n" in old_string:
+            candidates.append(old_string.replace("\\n", "\n").replace("\\t", "\t"))
+        # Tolerate CRLF / trailing whitespace drift.
+        candidates.append(old_string.replace("\r\n", "\n"))
+
+        matched: Optional[str] = None
+        for cand in candidates:
+            if cand and cand in text:
+                matched = cand
+                break
+
+        if matched is None:
+            # Weak models invent wrong old_string for full-page rewrites.
+            # Prefer applying new_string over failing the whole agent run.
+            if len(new_string) >= 40:
+                resolved.write_text(new_string, encoding="utf-8")
+                return (
+                    f"old_string not found; overwrote {resolved} "
+                    f"({len(new_string)} bytes). Prefer write_file for full rewrites."
+                )
+            return (
+                "Error: old_string not found in file. "
+                "Re-read the file and call write_file with the full new contents, "
+                "or edit_file with an exact substring from the file."
+            )
+
+        count = text.count(matched)
         if count > 1 and not replace_all:
-            raise ValueError(
-                f"old_string appears {count} times; set replace_all=true or provide more context"
+            return (
+                f"Error: old_string appears {count} times; "
+                "set replace_all=true or provide more unique context."
             )
         updated = (
-            text.replace(old_string, new_string)
+            text.replace(matched, new_string)
             if replace_all
-            else text.replace(old_string, new_string, 1)
+            else text.replace(matched, new_string, 1)
         )
         resolved.write_text(updated, encoding="utf-8")
         return f"Edited {resolved}"
@@ -169,36 +207,49 @@ def make_filesystem_tools(ctx: ToolContext) -> list[StructuredTool]:
 
         return "\n".join(hits[:200]) or "(no matches)"
 
+    # handle_tool_error=True: never crash /run with tool exceptions (weak models
+    # often pass bad paths / old_string; agent should recover in-loop).
     return [
         StructuredTool.from_function(
             func=read_file,
             name="read_file",
             description="Read a file with 1-based line numbers. Prefer over shell cat.",
             args_schema=ReadFileInput,
+            handle_tool_error=True,
         ),
         StructuredTool.from_function(
             func=write_file,
             name="write_file",
-            description="Write full contents to a file. Creates parent dirs.",
+            description=(
+                "Write full contents to a file (create or overwrite). "
+                "Prefer this over edit_file when replacing a whole page/component."
+            ),
             args_schema=WriteFileInput,
+            handle_tool_error=True,
         ),
         StructuredTool.from_function(
             func=edit_file,
             name="edit_file",
-            description="Replace exact text in a file. Provide unique old_string context.",
+            description=(
+                "Replace exact text in a file. old_string must appear verbatim. "
+                "For full-file rewrites prefer write_file."
+            ),
             args_schema=EditFileInput,
+            handle_tool_error=True,
         ),
         StructuredTool.from_function(
             func=glob_search,
             name="glob",
             description="Find files by glob pattern under the workspace.",
             args_schema=GlobInput,
+            handle_tool_error=True,
         ),
         StructuredTool.from_function(
             func=grep,
             name="grep",
             description="Search file contents with regex. Prefer over shell grep.",
             args_schema=GrepInput,
+            handle_tool_error=True,
         ),
     ]
 
@@ -234,6 +285,7 @@ def make_bash_tool(ctx: ToolContext) -> StructuredTool:
             "Prefer dedicated tools for file read/write/search."
         ),
         args_schema=BashInput,
+        handle_tool_error=True,
     )
 
 
@@ -252,6 +304,7 @@ def make_todo_tool() -> StructuredTool:
         name="todo_write",
         description="Track multi-step tasks. Only one item should be in_progress.",
         args_schema=TodoWriteInput,
+        handle_tool_error=True,
     )
 
 
@@ -267,4 +320,5 @@ def make_task_tool(explore_runner) -> StructuredTool:
             "Use for broad searches; implement changes yourself."
         ),
         args_schema=TaskInput,
+        handle_tool_error=True,
     )

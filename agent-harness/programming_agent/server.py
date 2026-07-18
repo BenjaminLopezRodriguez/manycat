@@ -117,11 +117,51 @@ def build_user_prompt(prompt: str, files: list[WorkspaceFile]) -> str:
         "You are editing an existing project already present in the workspace. "
         "Apply the user's request by calling tools (glob/read_file/edit_file/write_file). "
         "Do not claim there is no project or no design task. "
-        "Do not answer with JSON tool stubs in prose — invoke tools, then summarize.\n\n"
+        "Do not answer with JSON tool stubs in prose — invoke tools, then summarize. "
+        "Replace scaffold placeholders (e.g. 'Scaffolded by Manycat') with a real working UI.\n\n"
         f"Workspace file tree ({file_count} files):\n{tree}"
         f"{body}\n\n"
         f"User request:\n{prompt}"
     )
+
+
+SCAFFOLD_MARKER = "Scaffolded by Manycat"
+
+
+def still_has_scaffold(files: list[WorkspaceFile]) -> bool:
+    """True when homepage still looks like the Manycat placeholder."""
+    for f in files:
+        if f.path not in ("app/page.tsx", "app/page.jsx", "src/app/page.tsx"):
+            continue
+        text = f.contents
+        if SCAFFOLD_MARKER in text:
+            return True
+        # Marker stripped but still a inert title-only stub (common Qwen miss).
+        lowered = text.lower()
+        interactive = any(
+            token in lowered
+            for token in (
+                "usestate",
+                "onclick",
+                "<button",
+                "onsubmit",
+                "type=\"button\"",
+                "type='button'",
+            )
+        )
+        if len(text) < 400 and not interactive:
+            return True
+    return False
+
+
+RETRY_PROMPT = (
+    "Previous turn did not build a real UI. You MUST call write_file on "
+    "`app/page.tsx` with a complete working implementation of the user request "
+    "(include 'use client' if you use hooks/events). Do not use edit_file. "
+    "Do not describe the code — write the full file contents with write_file. "
+    "Remove any 'Scaffolded by Manycat' text. Include real interactive UI "
+    "(buttons / inputs / state), not just a title."
+)
 
 
 @app.get("/health")
@@ -185,9 +225,26 @@ def run_agent(body: RunRequest) -> RunResponse:
     harness = ProgrammingAgentHarness(config)
     mode = AgentMode(body.mode)
     prompt = build_user_prompt(body.prompt, seeded)
+    had_scaffold = still_has_scaffold(seeded)
 
     try:
         output = harness.run(prompt, mode=mode)
+        files_after = walk_workspace(workspace)
+        # One recovery pass when Modal/Qwen talked about edits but left the template.
+        if had_scaffold and still_has_scaffold(files_after) and mode == AgentMode.DEFAULT:
+            retry = (
+                f"{RETRY_PROMPT}\n\nOriginal user request:\n{body.prompt}"
+            )
+            output2 = harness.run(retry, mode=mode)
+            output = f"{output}\n\n---\n(retry)\n{output2}"
+            files_after = walk_workspace(workspace)
+            if still_has_scaffold(files_after):
+                output = (
+                    f"{output}\n\n---\n"
+                    "Warning: scaffold template was not replaced. The model "
+                    "described changes without successfully editing files. "
+                    "Try again or switch to GPT-4o."
+                )
     except Exception as exc:  # noqa: BLE001 — HTTP boundary
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
