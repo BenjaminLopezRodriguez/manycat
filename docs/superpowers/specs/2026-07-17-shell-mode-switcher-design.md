@@ -30,7 +30,8 @@ The top control is the natural place to switch modes; the rail should fully chan
 - Separate App Router trees (`/workspace/...`) — query params on `/` for this pass  
 - Visual color “themes” per mode  
 - Server-side persistence of shell preference  
-- Replacing signed-out landing feature rail with mode-specific marketing
+- Replacing signed-out landing feature rail with mode-specific marketing  
+- Flag *system* — a single env var is sufficient for v1 (no LaunchDarkly / remote config / per-user gates)
 
 ## Approach (chosen)
 
@@ -60,6 +61,25 @@ Rejected alternatives:
 
 **Slug migration (Dev):** today’s in-memory `feed` → `projects`, `chats` → `workflows`. Internal workflow chat open state stays client-only (not in the URL for v1).
 
+### Mode availability
+
+Modes are gated at the **registry** level so disabled modes never appear as empty rooms.
+
+| Piece | Behavior |
+|-------|----------|
+| Env | `NEXT_PUBLIC_ENABLED_MODES` — comma-separated mode ids (e.g. `dev` or `dev,workspace,research`) |
+| Default | Unset or empty → `dev` only |
+| `dev` | Always enabled — if omitted from the env list, still force-include |
+| Registry | `MODES` / `MODE_NAV` are **computed** from the full catalog filtered by the enabled set |
+
+Disabled modes must be absent from:
+
+1. The mode menu (radios)  
+2. The URL parser / coerce path (unknown or disabled `mode` → enabled default: `dev` + `projects`)  
+3. Boot and localStorage restore (stored mode that is now disabled → coerce to `dev` + `projects`; do not surface a disabled mode from `lastViewByMode`)
+
+Stub panes for Workspace / Research only ship when those modes are enabled. With the default (`dev` only), the hybrid menu may show a single mode (or still open for account actions only — implementation may hide the Mode radio section when fewer than two modes are enabled).
+
 ## Top control (hybrid)
 
 **Trigger:** mode label + chevron; optional small avatar/initials; status bubble unchanged beside it.
@@ -67,7 +87,8 @@ Rejected alternatives:
 **Menu order:**
 
 1. Section: Mode  
-2. Radio: Dev agents · Workspace · Chat + Research  
+2. Radio: only **enabled** modes (Dev agents · Workspace · Chat + Research when all on)  
+
 3. Separator  
 4. Account: signed-in provider line / Connect GitHub / Sign out — or Google/GitHub sign-in when signed out  
 
@@ -77,8 +98,8 @@ Rejected alternatives:
 
 | Piece | Behavior |
 |-------|----------|
-| `mode` | `dev` \| `workspace` \| `research` |
-| `view` | Mode-specific slug; invalid combo → that mode’s home |
+| `mode` | Enabled subset of `dev` \| `workspace` \| `research` (see Mode availability) |
+| `view` | Mode-specific slug; invalid combo or disabled mode → that mode’s home, or `dev`/`projects` if mode disabled |
 | Mode switch | Write URL with new `mode` + last remembered `view` for that mode, else home. `push` only when mode **actually changes**, and dedupe so the previous history entry is not the same mode (rapid toggling must not stack every toggle). |
 | Rail switch | Update `view` only; `replace` to avoid history spam |
 | Persistence | `localStorage`: `manycat.shell.mode`, `manycat.shell.lastViewByMode` (single JSON blob) |
@@ -107,7 +128,7 @@ Extract unless extraction is clearly worse:
 
 | Module | Responsibility |
 |--------|----------------|
-| `MODE_NAV` / `MODES` config | Mode ids, labels, homes, rail items + icons — pure data, no React |
+| `MODE_NAV` / `MODES` config | Full catalog + `MODES` computed from `NEXT_PUBLIC_ENABLED_MODES`; labels, homes, rail items + icons — pure data, no React |
 | `ShellModeMenu` | Mode radios + account actions (evolves today’s `AccountMenu`) |
 | URL-sync helper | Parse, coerce, shallow `setShell({ mode?, view? })`, popstate, localStorage read/write with schema validation |
 
@@ -127,8 +148,9 @@ Update `docs/chat-shell-nav.md` after implementation to describe mode shell inst
 
 - Unit: URL parse/coerce; last-view restore when switching modes; localStorage schema failure → defaults  
 - Unit (force-Dev sequence): Research → import forces Dev → simulate refresh with `mode=dev` in URL and `mode=research` still in localStorage → boot lands Dev; Research last-view unchanged until revisited  
+- Unit (flag off): with Research disabled, `?mode=research` coerces to `dev`/`projects`; localStorage restore of a disabled mode coerces to default  
 - Unit: mode toggle history dedupe (push only on real mode change; no stack explosion)  
-- Manual: desktop dropdown + mobile drawer; deep link `/?mode=research&view=sources`; refresh keeps mode; create/import lands in Dev; mode switch away and back does not wipe open Dev workflow thread  
+- Manual: desktop dropdown + mobile drawer; deep link `/?mode=research&view=sources` (only when Research enabled); refresh keeps mode; create/import lands in Dev; mode switch away and back does not wipe open Dev workflow thread  
 
 ## Success criteria
 
@@ -137,6 +159,6 @@ Update `docs/chat-shell-nav.md` after implementation to describe mode shell inst
 3. URL reflects mode + view; refresh and share work.  
 4. Last view per mode is restored on return.  
 5. Dev product paths (projects, workflows, deployments) still work.  
-6. Workspace and Chat + Research are navigable stubs ready for later product work.  
+6. Workspace and Chat + Research are navigable stubs when enabled; disabled modes never appear in menu, URL, or restore.  
 7. Mode switch does not remount or reset Dev workflow thread state.  
 8. Mode/view URL updates do not trigger App Router RSC refetches (shallow sync).
