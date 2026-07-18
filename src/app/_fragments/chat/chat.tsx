@@ -30,13 +30,6 @@ import {
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Marker, MarkerContent } from "@/components/ui/marker";
 import {
@@ -74,6 +67,9 @@ import Projects, {
 } from "./projects";
 import DeploymentsPanel from "./deployments-panel";
 import SectionScaffold from "./section-scaffold";
+import { MODES } from "./shell-modes";
+import { ShellModeMenu } from "./shell-mode-menu";
+import { useShellUrl } from "./use-shell-url";
 import Workspace from "./workspace";
 
 type View = "feed" | "chats" | "deployments" | "agents" | "integrations";
@@ -192,6 +188,8 @@ export default function Chat() {
   const accountLabel =
     session?.login ?? session?.user?.name ?? session?.user?.email ?? "Account";
   const accountInitials = accountLabel.slice(0, 2).toUpperCase();
+  const { mode, setMode } = useShellUrl();
+  const modes = MODES;
   const [creatingFromPrompt, setCreatingFromPrompt] = React.useState(false);
   const [aiModel, setAiModel] = React.useState<ModelId>("auto");
   const [aiEffort, setAiEffort] = React.useState<EffortId>("high");
@@ -765,14 +763,17 @@ export default function Chat() {
       <nav className="bg-sidebar-primary text-sidebar-primary-foreground hidden w-56 shrink-0 flex-col gap-1 px-3 py-4 md:flex">
         <div className="mb-3 flex items-center gap-2 px-1">
           <StatusBubble badges={bubbleBadges} />
-            <AccountMenu
-              signedIn={signedIn}
-              label={accountLabel}
-              image={session?.user?.image}
-              initials={accountInitials}
-              provider={session?.provider}
-              hasGitHub={Boolean(session?.hasGitHub)}
-            />
+          <ShellModeMenu
+            modes={modes}
+            mode={mode}
+            onModeChange={setMode}
+            signedIn={signedIn}
+            label={accountLabel}
+            image={session?.user?.image}
+            initials={accountInitials}
+            provider={session?.provider}
+            hasGitHub={Boolean(session?.hasGitHub)}
+          />
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto">
@@ -1502,103 +1503,6 @@ export default function Chat() {
         onImportError={handleImportError}
       />
     </div>
-  );
-}
-
-function AccountMenu({
-  signedIn,
-  label,
-  image,
-  initials,
-  provider,
-  hasGitHub,
-}: {
-  signedIn: boolean;
-  label: string;
-  image?: string | null;
-  initials: string;
-  provider?: "github" | "google" | "dev" | null;
-  hasGitHub?: boolean;
-}) {
-  const providerLabel =
-    provider === "google"
-      ? "Google"
-      : provider === "github"
-        ? "GitHub"
-        : provider === "dev"
-          ? "local"
-          : "account";
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        className={cn(
-          "hover:bg-sidebar-primary-foreground/10 flex min-w-0 flex-1 items-center gap-1.5 rounded-xl px-2 py-1.5 text-left transition-colors",
-          "outline-none focus-visible:ring-2 focus-visible:ring-sidebar-primary-foreground/30",
-        )}
-      >
-        <Avatar className="size-6">
-          {image ? <AvatarImage src={image} alt="" /> : null}
-          <AvatarFallback className="bg-sidebar-primary-foreground/15 text-[10px] font-semibold">
-            {signedIn ? initials : "MC"}
-          </AvatarFallback>
-        </Avatar>
-        <span className="min-w-0 flex-1 truncate text-sm font-semibold">
-          {signedIn ? label : "Sign in"}
-        </span>
-        <HugeiconsIcon
-          icon={ArrowDown01Icon}
-          size={14}
-          className="text-sidebar-primary-foreground/60 shrink-0"
-        />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="min-w-48">
-        {signedIn ? (
-          <>
-            <div className="text-muted-foreground px-3 py-2 text-xs">
-              Signed in with {providerLabel}
-            </div>
-            {!hasGitHub ? (
-              <>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={() => {
-                    void signIn("github", { callbackUrl: "/" });
-                  }}
-                >
-                  Connect GitHub
-                </DropdownMenuItem>
-              </>
-            ) : null}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => {
-                void signOut({ callbackUrl: "/signin" });
-              }}
-            >
-              Sign out
-            </DropdownMenuItem>
-          </>
-        ) : (
-          <>
-            <DropdownMenuItem
-              onClick={() => {
-                void signIn("google", { callbackUrl: "/" });
-              }}
-            >
-              Continue with Google
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => {
-                void signIn("github", { callbackUrl: "/" });
-              }}
-            >
-              Continue with GitHub
-            </DropdownMenuItem>
-          </>
-        )}
-      </DropdownMenuContent>
-    </DropdownMenu>
   );
 }
 
