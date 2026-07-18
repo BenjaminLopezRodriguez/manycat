@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Add01Icon,
@@ -13,7 +14,6 @@ import {
   BubbleChatIcon,
   Cancel01Icon,
   CheckmarkCircle02Icon,
-  CreditCardIcon,
   Edit01Icon,
   GitBranchIcon,
   HelpCircleIcon,
@@ -45,6 +45,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { wrapNextScaffoldBootstrapPrompt } from "@/lib/bootstrap-prompt";
 import { dedupeId, slugify } from "@/lib/slug";
 import { cn } from "@/lib/utils";
+import { getFeaturedUpdate, updateHref } from "@/content/updates";
 import { api } from "@/trpc/react";
 import { useSession } from "next-auth/react";
 import { applyWorkspacePatch, useAgent, type AgentEvent } from "./agent-sim";
@@ -200,6 +201,10 @@ export default function Chat() {
   const activeIdRef = React.useRef(activeId);
   activeIdRef.current = activeId;
   const sessionsQuery = api.workflow.listSessions.useQuery(undefined, {
+    enabled: signedIn,
+    staleTime: 30_000,
+  });
+  const budgetQuery = api.project.budget.useQuery(undefined, {
     enabled: signedIn,
     staleTime: 30_000,
   });
@@ -943,18 +948,22 @@ export default function Chat() {
               ))}
 
               <div className="bg-sidebar-primary-foreground/10 mx-2 my-2 h-px" />
-              <RailButton label="Usage">
-                <HugeiconsIcon icon={CreditCardIcon} size={20} />
-              </RailButton>
-              <RailButton label="Settings">
-                <HugeiconsIcon icon={Settings01Icon} size={20} />
-              </RailButton>
               <RailButton label="Docs">
                 <HugeiconsIcon icon={HelpCircleIcon} size={20} />
               </RailButton>
             </>
           )}
         </div>
+
+        {signedIn || mode !== "dev" ? (
+          <div className="mt-auto flex shrink-0 flex-col gap-1.5 pt-3">
+            <UpdatesPromoCard />
+            <UsageProgressBar budget={budgetQuery.data} />
+            <RailButton label="Settings">
+              <HugeiconsIcon icon={Settings01Icon} size={20} />
+            </RailButton>
+          </div>
+        ) : null}
       </nav>
 
       <main className="flex min-h-0 min-w-0 flex-1">
@@ -1574,22 +1583,20 @@ export default function Chat() {
 
                 <div className="bg-border my-2 h-px" />
                 <MobileMenuItem
-                  label="Usage"
+                  label="Docs"
                   onClick={() => setNavMenuOpen(false)}
                 >
-                  <HugeiconsIcon icon={CreditCardIcon} size={20} />
+                  <HugeiconsIcon icon={HelpCircleIcon} size={20} />
                 </MobileMenuItem>
+                <div className="bg-sidebar-primary text-sidebar-primary-foreground mt-3 flex flex-col gap-1.5 rounded-2xl p-2">
+                  <UpdatesPromoCard />
+                  <UsageProgressBar budget={budgetQuery.data} />
+                </div>
                 <MobileMenuItem
                   label="Settings"
                   onClick={() => setNavMenuOpen(false)}
                 >
                   <HugeiconsIcon icon={Settings01Icon} size={20} />
-                </MobileMenuItem>
-                <MobileMenuItem
-                  label="Docs"
-                  onClick={() => setNavMenuOpen(false)}
-                >
-                  <HugeiconsIcon icon={HelpCircleIcon} size={20} />
                 </MobileMenuItem>
               </>
             )}
@@ -1744,6 +1751,121 @@ function RailButton({
         </span>
       ) : null}
     </button>
+  );
+}
+
+function formatRailCents(cents: number | null | undefined) {
+  if (cents == null) return "∞";
+  return `$${(cents / 100).toFixed(0)}`;
+}
+
+function UsageProgressBar({
+  budget,
+}: {
+  budget?: {
+    plan: string;
+    usedCents: number;
+    ceilingCents: number | null;
+    remainingCents: number | null;
+  };
+}) {
+  const used = budget?.usedCents ?? 0;
+  const ceiling = budget?.ceilingCents;
+  const pct =
+    ceiling != null && ceiling > 0
+      ? Math.min(100, Math.round((used / ceiling) * 100))
+      : budget
+        ? 0
+        : 42;
+  const label =
+    ceiling != null
+      ? `${formatRailCents(used)} / ${formatRailCents(ceiling)}`
+      : budget
+        ? `${formatRailCents(used)} metered`
+        : "Usage";
+
+  return (
+    <button
+      type="button"
+      aria-label={`Usage ${pct}%`}
+      className="hover:bg-sidebar-primary-foreground/10 flex w-full flex-col gap-1.5 rounded-xl px-3 py-2.5 text-left transition-colors"
+    >
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-sidebar-primary-foreground/60 text-xs font-medium">
+          Usage
+        </span>
+        <span className="text-sidebar-primary-foreground/40 text-[11px] tabular-nums">
+          {label}
+        </span>
+      </div>
+      <div
+        className="bg-sidebar-primary-foreground/10 h-1.5 w-full overflow-hidden rounded-full"
+        role="progressbar"
+        aria-valuenow={pct}
+        aria-valuemin={0}
+        aria-valuemax={100}
+      >
+        <div
+          className="bg-sidebar-primary-foreground/55 h-full rounded-full transition-[width] duration-500 ease-out"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+    </button>
+  );
+}
+
+function UpdatesPromoCard() {
+  const update = getFeaturedUpdate();
+  if (!update) return null;
+
+  const href = updateHref(update);
+  const kindLabel = update.kind === "download" ? "Download" : "Update";
+
+  return (
+    <Link
+      href={href}
+      aria-label={`${kindLabel}: ${update.title}`}
+      className="group relative flex min-h-[7.5rem] w-full flex-col justify-between overflow-hidden rounded-2xl px-3 py-3 transition-[transform,filter] duration-300 hover:brightness-110"
+    >
+      <div
+        aria-hidden
+        className="absolute inset-0"
+        style={{
+          background:
+            "linear-gradient(155deg, #f6e7b8 0%, #e8c77a 48%, #d9a84e 100%)",
+        }}
+      />
+      <div
+        aria-hidden
+        className="absolute inset-0 opacity-[0.28] mix-blend-overlay"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
+          backgroundSize: "120px 120px",
+        }}
+      />
+      <div
+        aria-hidden
+        className="absolute -top-8 -right-6 size-24 rounded-full bg-white/40 blur-2xl transition-transform duration-500 group-hover:translate-x-1 group-hover:-translate-y-1"
+      />
+      <div className="relative flex items-center justify-between gap-2">
+        <span className="text-[10px] font-semibold tracking-[0.14em] text-[#5c4318]/70 uppercase">
+          {update.eyebrow}
+        </span>
+        <HugeiconsIcon
+          icon={ArrowUpRight01Icon}
+          size={14}
+          className="text-[#5c4318]/50 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+        />
+      </div>
+      <div className="relative mt-auto space-y-1">
+        <p className="text-base font-semibold tracking-tight text-[#3d2c0f]">
+          {update.title}
+        </p>
+        <p className="text-[11px] leading-snug text-[#5c4318]/75">
+          {update.blurb}
+        </p>
+      </div>
+    </Link>
   );
 }
 

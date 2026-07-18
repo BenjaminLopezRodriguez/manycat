@@ -19,6 +19,7 @@ import {
   projectNameFromPrompt,
   scaffoldFromPrompt,
 } from "@/server/content/scaffold";
+import { structurePrompt } from "@/server/ai/structure-prompt";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "@/server/api/trpc";
 import { db } from "@/server/db";
 import { projectChanges, projects } from "@/server/db/schema";
@@ -528,11 +529,16 @@ export const workflowRouter = createTRPCRouter({
       };
       events.push({ kind: "upsert-status", message: statusMsg });
 
+      // Expand the raw ask into a structured spec before handing it to the
+      // codegen model (Modal-hosted coder) — the user still only ever sees
+      // their original message in the chat transcript.
+      const structuredPrompt = await structurePrompt(input.prompt);
+
       const agentRes = await fetch(`${env.AGENT_HARNESS_URL}/run`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          prompt: input.prompt,
+          prompt: structuredPrompt,
           workflow_id: input.workflowId,
           mode: "default",
           model: input.model,

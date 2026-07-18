@@ -13,6 +13,11 @@ export const env = createEnv({
       .default("development"),
     AGENT_HARNESS_URL: z.string().url().optional(),
     SANDBOX_ORCHESTRATOR_URL: z.string().url().optional(),
+    // Used by src/server/ai/structure-prompt.ts to expand raw prompts before
+    // handing off to the agent-harness codegen model. Not the same key as
+    // agent-harness's own OPENAI_API_KEY (Modal routing) — same value works
+    // for both, but this one only needs to be real for the structuring call.
+    OPENAI_API_KEY: z.string().min(1).optional(),
     // TODO: single-user v1 — this token deploys under one Vercel account for everyone.
     // Per-project tokens are required before multi-user.
     VERCEL_TOKEN: z.string().optional(),
@@ -59,6 +64,7 @@ export const env = createEnv({
     NODE_ENV: process.env.NODE_ENV,
     AGENT_HARNESS_URL: process.env.AGENT_HARNESS_URL,
     SANDBOX_ORCHESTRATOR_URL: process.env.SANDBOX_ORCHESTRATOR_URL,
+    OPENAI_API_KEY: process.env.OPENAI_API_KEY,
     VERCEL_TOKEN: process.env.VERCEL_TOKEN,
     RAILWAY_API_TOKEN: process.env.RAILWAY_API_TOKEN,
     RAILWAY_WORKLOAD_PROJECT_ID: process.env.RAILWAY_WORKLOAD_PROJECT_ID,
