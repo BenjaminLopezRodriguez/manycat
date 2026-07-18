@@ -31,8 +31,8 @@ type MessageListProps = {
 };
 
 function fileName(path: string) {
-  const parts = path.split("/");
-  return parts[parts.length - 1] || path;
+  const parts = path.split("/").filter(Boolean);
+  return parts.at(-1) ?? path;
 }
 
 /** Build a short unified-diff preview centered on the first change */
@@ -191,12 +191,11 @@ function workingLabel(msg: AgentStatusMsg) {
     return `${msg.action} ${msg.path ? fileName(msg.path) : ""}`.trim();
   }
   // Legacy status lines from older runs — keep the chip short
-  const pathMatch = msg.text.match(
-    /\b([\w.-]+\.(?:tsx?|jsx?|css|json|md))\b/i,
-  );
+  const pathMatch = /\b([\w.-]+\.(?:tsx?|jsx?|css|json|md))\b/i.exec(msg.text);
   if (pathMatch) {
-    const verb = msg.text.split(/\s+/)[0]?.toLowerCase() ?? "working";
-    return `${verb.replace(/[^a-z]/g, "") || "working"} ${pathMatch[1]}`;
+    const rawVerb = msg.text.split(/\s+/)[0]?.toLowerCase() ?? "working";
+    const verb = rawVerb.replace(/[^a-z]/g, "");
+    return `${verb.length > 0 ? verb : "working"} ${pathMatch[1]}`;
   }
   if (/sandbox/i.test(msg.text)) return "working sandbox";
   return msg.text.replace(/…$/, "").slice(0, 36);
@@ -212,7 +211,8 @@ function WorkingCard({
   onToggle: () => void;
 }) {
   const label = workingLabel(msg);
-  const detail = msg.thinking?.trim() || msg.text;
+  const thinking = msg.thinking?.trim();
+  const detail = thinking && thinking.length > 0 ? thinking : msg.text;
   const canExpand = Boolean(detail);
 
   return (
