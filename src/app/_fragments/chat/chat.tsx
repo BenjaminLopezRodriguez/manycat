@@ -147,7 +147,7 @@ export default function Chat() {
   const [activeId, setActiveId] = React.useState<string | null>(
     initialWorkflows[0]?.id ?? null,
   );
-  const [chatOpen, setChatOpen] = React.useState(false);
+  const [, setChatOpen] = React.useState(false);
   const [diffsOpen, setDiffsOpen] = React.useState(false);
   const [workspaceOpen, setWorkspaceOpen] = React.useState(false);
   const [diffSnapPoint, setDiffSnapPoint] = React.useState<number | string>(
@@ -156,7 +156,7 @@ export default function Chat() {
   const [activePath, setActivePath] = React.useState<string | null>(null);
   const [activeDiff, setActiveDiff] = React.useState<DiffMsg | null>(null);
   const [draft, setDraft] = React.useState("");
-  const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
+  const [, setPreviewUrl] = React.useState<string | null>(null);
   const [importOpen, setImportOpen] = React.useState(false);
   const [integrationsOpen, setIntegrationsOpen] = React.useState(false);
   const [navMenuOpen, setNavMenuOpen] = React.useState(false);
@@ -1066,7 +1066,7 @@ export default function Chat() {
   const showWorkflowList = signedIn && mode === "dev";
   const createWorks = workflows.filter((w) => w.repo === "create");
   const activeCreateWork: CreateWork | null = React.useMemo(() => {
-    if (mode !== "create" || !active || active.repo !== "create") return null;
+    if (mode !== "create" || active?.repo !== "create") return null;
     const imageMsgs = active.messages.filter(
       (m): m is ImageMsg => m.type === "image",
     );
