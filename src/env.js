@@ -47,6 +47,7 @@ export const env = createEnv({
    */
   client: {
     NEXT_PUBLIC_SANDBOX_ENABLED: z.string().optional(),
+    NEXT_PUBLIC_ENABLED_MODES: z.string().optional(),
   },
 
   /**
@@ -78,6 +79,7 @@ export const env = createEnv({
     NEON_SHARED_DATABASE_URL: process.env.NEON_SHARED_DATABASE_URL,
     APP_DB_ENCRYPTION_KEY: process.env.APP_DB_ENCRYPTION_KEY,
     NEXT_PUBLIC_SANDBOX_ENABLED: process.env.NEXT_PUBLIC_SANDBOX_ENABLED,
+    NEXT_PUBLIC_ENABLED_MODES: process.env.NEXT_PUBLIC_ENABLED_MODES,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially
