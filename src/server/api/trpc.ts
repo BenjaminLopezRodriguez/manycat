@@ -11,6 +11,7 @@ import superjson from "superjson";
 import { ZodError } from "zod";
 
 import { auth } from "@/auth";
+import { BudgetExceededError } from "@/server/billing/budget";
 import { db } from "@/server/db";
 
 /**
@@ -44,12 +45,16 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
 const t = initTRPC.context<typeof createTRPCContext>().create({
   transformer: superjson,
   errorFormatter({ shape, error }) {
+    const budgetExceeded =
+      error.cause instanceof BudgetExceededError ||
+      /budget exceeded/i.test(shape.message);
     return {
       ...shape,
       data: {
         ...shape.data,
         zodError:
           error.cause instanceof ZodError ? error.cause.flatten() : null,
+        budgetExceeded,
       },
     };
   },

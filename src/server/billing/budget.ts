@@ -14,6 +14,8 @@ export const SUB_CEILING_CENTS = 3000;
 export const ESTIMATED_DEPLOY_CENTS = 25;
 /** Conservative estimate for sandbox create. */
 export const ESTIMATED_SANDBOX_CENTS = 15;
+/** Conservative estimate for a single Create / Modal image generation. */
+export const ESTIMATED_IMAGE_CENTS = 10;
 
 export function ceilingForPlan(plan: BillingPlan): number | null {
   switch (plan) {

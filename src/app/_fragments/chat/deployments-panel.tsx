@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   ArrowUpRight01Icon,
@@ -8,6 +9,7 @@ import {
 } from "@hugeicons/core-free-icons";
 
 import { Button } from "@/components/ui/button";
+import { isBudgetExhausted } from "@/lib/billing";
 import { api } from "@/trpc/react";
 import type { Project } from "./data";
 
@@ -45,6 +47,7 @@ export default function DeploymentsPanel({
   const [error, setError] = React.useState<string | null>(null);
 
   const budget = budgetQuery.data;
+  const exhausted = isBudgetExhausted(budget);
   const deployable = React.useMemo(() => {
     const fromDb = dbProjects.data ?? [];
     if (fromDb.length > 0) {
@@ -75,6 +78,10 @@ export default function DeploymentsPanel({
   }, [dbProjects.data, projects]);
 
   async function runRailway(projectId: string, githubRepo: string | null) {
+    if (exhausted) {
+      setError("Compute budget exceeded. Subscribe to continue deploying.");
+      return;
+    }
     setError(null);
     setRunningId(projectId);
     const startedAt = new Date().toISOString();
@@ -143,6 +150,22 @@ export default function DeploymentsPanel({
         {error ? (
           <p className="text-destructive text-sm" role="alert">
             {error}
+            {/budget exceeded/i.test(error) ? (
+              <>
+                {" "}
+                <Link href="/billing" className="underline underline-offset-2">
+                  View billing
+                </Link>
+              </>
+            ) : null}
+          </p>
+        ) : null}
+        {exhausted && !error ? (
+          <p className="text-destructive text-sm" role="alert">
+            Usage limit reached.{" "}
+            <Link href="/billing" className="underline underline-offset-2">
+              Subscribe to keep deploying
+            </Link>
           </p>
         ) : null}
 
@@ -204,14 +227,16 @@ export default function DeploymentsPanel({
                     type="button"
                     size="sm"
                     className="shrink-0 gap-1.5"
-                    disabled={busy || !canRun || runMutation.isPending}
+                    disabled={
+                      busy || !canRun || exhausted || runMutation.isPending
+                    }
                     onClick={() => {
                       if (!canRun) return;
                       void runRailway(p.id, userRepo);
                     }}
                   >
                     <HugeiconsIcon icon={CloudUploadIcon} size={14} />
-                    {busy ? "Deploying…" : "Run on Railway"}
+                    {busy ? "Deploying…" : exhausted ? "Limit reached" : "Run on Railway"}
                   </Button>
                 </li>
               );

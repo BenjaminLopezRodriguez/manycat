@@ -13,10 +13,11 @@ import {
   BudgetExceededError,
   ensureAccount,
   ESTIMATED_DEPLOY_CENTS,
+  type BillingPlan,
 } from "@/server/billing/budget";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import { db } from "@/server/db";
-import { projects } from "@/server/db/schema";
+import { accounts, projects } from "@/server/db/schema";
 import type { ContentFile } from "@/server/content/store";
 import { hardenWorkspaceForRailway } from "@/server/content/scaffold-next";
 import { ensureMirroredRepo } from "@/server/github/mirror";
@@ -184,6 +185,20 @@ export const projectRouter = createTRPCRouter({
     const account = await ensureAccount(ctx.accountId);
     return budgetSummary(account);
   }),
+
+  /** Upgrade to a paying plan (Stripe checkout TBD — sets plan immediately). */
+  setPlan: protectedProcedure
+    .input(z.object({ plan: z.enum(["sub", "metered"]) }))
+    .mutation(async ({ ctx, input }) => {
+      await ensureAccount(ctx.accountId);
+      const plan: BillingPlan = input.plan;
+      await db
+        .update(accounts)
+        .set({ billingPlan: plan })
+        .where(eq(accounts.id, ctx.accountId));
+      const account = await ensureAccount(ctx.accountId);
+      return budgetSummary(account);
+    }),
 
   upsertFromImport: protectedProcedure
     .input(

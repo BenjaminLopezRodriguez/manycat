@@ -42,11 +42,16 @@ import {
 } from "@/components/ui/drawer";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { wrapNextScaffoldBootstrapPrompt } from "@/lib/bootstrap-prompt";
+import {
+  isBudgetExceededError,
+  isBudgetExhausted,
+} from "@/lib/billing";
 import { dedupeId, slugify } from "@/lib/slug";
 import { cn } from "@/lib/utils";
 import { getFeaturedUpdate, updateHref } from "@/content/updates";
 import { api } from "@/trpc/react";
 import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { applyWorkspacePatch, useAgent, type AgentEvent } from "./agent-sim";
 import type { EffortId, ModelId } from "@/lib/ai-models";
 import {
@@ -59,6 +64,7 @@ import {
   type Project,
   type TextMsg,
   type Workflow,
+  type WorkflowStatus,
 } from "./data";
 import ImportRepoDialog from "./import-repo";
 import IntegrationsSheet from "./integrations-sheet";
@@ -70,8 +76,10 @@ import Projects, {
 } from "./projects";
 import DeploymentsPanel from "./deployments-panel";
 import SectionScaffold from "./section-scaffold";
+import SettingsSheet from "./settings-sheet";
 import { getModes, type ShellView } from "./shell-modes";
 import { ShellModeDrawerBody, ShellModeMenu } from "./shell-mode-menu";
+import UpgradeLimitDialog from "./upgrade-limit-dialog";
 import { useShellUrl } from "./use-shell-url";
 import { WorkflowChatMenu } from "./workflow-chat-menu";
 import Workspace from "./workspace";
@@ -120,7 +128,8 @@ function isMsg(value: unknown): value is Workflow["messages"][number] {
     m.type === "agent-status" ||
     m.type === "diff" ||
     m.type === "approval" ||
-    m.type === "milestone"
+    m.type === "milestone" ||
+    m.type === "image"
   );
 }
 
@@ -137,6 +146,7 @@ const EMPTY_WORKFLOW: Workflow = {
 
 export default function Chat() {
   const isMobile = useIsMobile();
+  const router = useRouter();
   const { mode, view, setMode, setView, forceDevWorkflows } = useShellUrl();
   const modes = React.useMemo(() => getModes(), []);
   const modeDef = modes.find((m) => m.id === mode) ?? modes[0]!;
@@ -159,6 +169,8 @@ export default function Chat() {
   const [, setPreviewUrl] = React.useState<string | null>(null);
   const [importOpen, setImportOpen] = React.useState(false);
   const [integrationsOpen, setIntegrationsOpen] = React.useState(false);
+  const [settingsOpen, setSettingsOpen] = React.useState(false);
+  const [upgradeLimitOpen, setUpgradeLimitOpen] = React.useState(false);
   const [navMenuOpen, setNavMenuOpen] = React.useState(false);
   const [accountDrawerOpen, setAccountDrawerOpen] = React.useState(false);
   const [toolsOpen, setToolsOpen] = React.useState(() =>
@@ -191,16 +203,34 @@ export default function Chat() {
     enabled: signedIn,
     staleTime: 30_000,
   });
+  const budgetExhausted = isBudgetExhausted(budgetQuery.data);
+  const openUpgradeLimit = React.useCallback(() => {
+    setUpgradeLimitOpen(true);
+    void utils.project.budget.invalidate();
+  }, [utils.project.budget]);
+  // Popup when usage crosses the ceiling during this session (not on cold load).
+  const wasBudgetExhausted = React.useRef<boolean | null>(null);
+  React.useEffect(() => {
+    if (!budgetQuery.isSuccess) return;
+    if (
+      budgetExhausted &&
+      wasBudgetExhausted.current === false
+    ) {
+      setUpgradeLimitOpen(true);
+    }
+    wasBudgetExhausted.current = budgetExhausted;
+  }, [budgetExhausted, budgetQuery.isSuccess]);
+  const persistSession = api.workflow.persistSession.useMutation();
+  const renameSession = api.workflow.renameSession.useMutation();
+  const deleteSession = api.workflow.deleteSession.useMutation();
   const [sessionsHydrated, setSessionsHydrated] = React.useState(false);
 
   React.useEffect(() => {
     if (!signedIn || !sessionsQuery.data || sessionsHydrated) return;
     const restored: Workflow[] = sessionsQuery.data.map((s) => {
       const name = s.name || s.id;
-      const repo =
-        s.contentBackend === "virtual"
-          ? "virtual"
-          : (s.githubRepo ?? "virtual");
+      // githubRepo holds owner/repo OR shell markers (create|research|workspace).
+      const repo = s.githubRepo ?? "virtual";
       const rawStatus = s.status ?? "idle";
       // Refresh mid-run has no attached stream — don't leave a permanent live chip.
       const orphanedWorking = rawStatus === "working";
@@ -212,9 +242,13 @@ export default function Chat() {
         name,
         initials: name.slice(0, 2).toUpperCase() || "AP",
         avatarClass:
-          repo === "virtual"
-            ? "bg-sky-200 text-sky-900"
-            : "bg-emerald-200 text-emerald-900",
+          repo === "create"
+            ? "bg-violet-200 text-violet-900"
+            : repo === "virtual" ||
+                repo === "research" ||
+                repo === "workspace"
+              ? "bg-sky-200 text-sky-900"
+              : "bg-emerald-200 text-emerald-900",
         repo,
         status: orphanedWorking ? "idle" : rawStatus,
         messages: orphanedWorking
@@ -582,6 +616,10 @@ export default function Chat() {
   }
 
   function handleImportFromComposer(repoFullName?: string) {
+    if (budgetExhausted) {
+      openUpgradeLimit();
+      return;
+    }
     if (!repoFullName) {
       setImportOpen(true);
       return;
@@ -600,13 +638,20 @@ export default function Chat() {
         onSuccess: (data) => {
           void handleImportSuccess(data);
         },
-        onError: (err) => handleImportError(workflowId, err.message),
+        onError: (err) => {
+          if (isBudgetExceededError(err)) openUpgradeLimit();
+          handleImportError(workflowId, err.message);
+        },
       },
     );
   }
 
   /** research/workspace/create modes route to their own harness, not the coding one. */
   async function handleModeHarness(mode: "research" | "workspace" | "create", promptText: string) {
+    if (mode === "create" && budgetExhausted) {
+      openUpgradeLimit();
+      return;
+    }
     setCreatingFromPrompt(true);
     const existing = active?.repo === mode ? active : null;
     const id = existing?.id ?? `${mode}-${Date.now()}`;
@@ -656,16 +701,44 @@ export default function Chat() {
       );
     };
 
+    const persistTurn = (messages: Msg[], status: WorkflowStatus = "idle") => {
+      void persistSession
+        .mutateAsync({
+          workflowId: id,
+          mode,
+          name: (existing?.name ?? promptText).slice(0, 256),
+          status,
+          messages,
+        })
+        .catch((err) => {
+          console.warn(
+            "[persistSession]",
+            err instanceof Error ? err.message : err,
+          );
+        });
+    };
+
+    // Ensure the shell project row exists before the async harness returns.
+    persistTurn([userMsg], "working");
+
     try {
       if (mode === "create") {
-        const { image } = await runImage.mutateAsync({ prompt: promptText });
-        appendReply({
+        const imageId = `img-${nextMsgId + 1}`;
+        const { image, s3Key } = await runImage.mutateAsync({
+          prompt: promptText,
+          chatId: id,
+          imageId,
+        });
+        const imageMsg: ImageMsg = {
           id: nextMsgId + 1,
           type: "image",
           prompt: promptText,
           src: image,
+          s3Key,
           time: nowTime(),
-        });
+        };
+        appendReply(imageMsg);
+        persistTurn([imageMsg], "idle");
       } else {
         const history: { role: "user" | "assistant"; content: string }[] = (
           existing?.messages ?? []
@@ -676,25 +749,31 @@ export default function Chat() {
             content: m.text,
           }));
         const { reply } = await runChat.mutateAsync({ mode, prompt: promptText, history });
-        appendReply({
+        const replyMsg: Msg = {
           id: nextMsgId + 1,
           type: "text",
           from: "agent",
           text: reply,
           time: nowTime(),
-        });
+        };
+        appendReply(replyMsg);
+        persistTurn([replyMsg], "idle");
       }
     } catch (err) {
+      if (isBudgetExceededError(err)) openUpgradeLimit();
       const message = err instanceof Error ? err.message : String(err);
-      appendReply({
+      const failMsg: Msg = {
         id: nextMsgId + 1,
         type: "text",
         from: "agent",
         text: `Couldn't get a response: ${message}`,
         time: nowTime(),
-      });
+      };
+      appendReply(failMsg);
+      persistTurn([failMsg], "idle");
     } finally {
       setCreatingFromPrompt(false);
+      void budgetQuery.refetch();
     }
   }
 
@@ -707,6 +786,11 @@ export default function Chat() {
 
     if (mode === "research" || mode === "workspace" || mode === "create") {
       return handleModeHarness(mode, promptText);
+    }
+
+    if (budgetExhausted) {
+      openUpgradeLimit();
+      return;
     }
 
     setCreatingFromPrompt(true);
@@ -852,6 +936,7 @@ export default function Chat() {
         });
       }
     } catch (err) {
+      if (isBudgetExceededError(err)) openUpgradeLimit();
       const message = err instanceof Error ? err.message : String(err);
       setWorkflows((prev) =>
         prev.map((w) =>
@@ -881,6 +966,7 @@ export default function Chat() {
       );
     } finally {
       setCreatingFromPrompt(false);
+      void budgetQuery.refetch();
     }
   }
 
@@ -907,6 +993,20 @@ export default function Chat() {
       ];
     });
     setActiveId(work.id);
+    void persistSession
+      .mutateAsync({
+        workflowId: work.id,
+        mode: "create",
+        name: work.title.slice(0, 256),
+        status: "working",
+        messages: [],
+      })
+      .catch((err) => {
+        console.warn(
+          "[persistSession] create start",
+          err instanceof Error ? err.message : err,
+        );
+      });
   }
 
   function handleCreateWorkImages(
@@ -914,25 +1014,43 @@ export default function Chat() {
     revisionId: string,
     images: CreateWorkImage[],
   ) {
+    const work = workflows.find((w) => w.id === workId);
+    if (!work || images.length === 0) return;
+    const startId = (work.messages.at(-1)?.id ?? 0) + 1;
+    const imageMsgs: ImageMsg[] = images.map((img, i) => ({
+      id: startId + i,
+      type: "image",
+      prompt: work.name,
+      src: img.src,
+      s3Key: img.s3Key,
+      revisionId,
+      time: nowTime(),
+    }));
     setWorkflows((prev) =>
-      prev.map((w) => {
-        if (w.id !== workId) return w;
-        const startId = (w.messages.at(-1)?.id ?? 0) + 1;
-        const imageMsgs: ImageMsg[] = images.map((img, i) => ({
-          id: startId + i,
-          type: "image",
-          prompt: w.name,
-          src: img.src,
-          revisionId,
-          time: nowTime(),
-        }));
-        return {
-          ...w,
-          status: "idle" as const,
-          messages: [...w.messages, ...imageMsgs],
-        };
-      }),
+      prev.map((w) =>
+        w.id !== workId
+          ? w
+          : {
+              ...w,
+              status: "idle" as const,
+              messages: [...w.messages, ...imageMsgs],
+            },
+      ),
     );
+    void persistSession
+      .mutateAsync({
+        workflowId: workId,
+        mode: "create",
+        name: work.name.slice(0, 256),
+        status: "idle",
+        messages: imageMsgs,
+      })
+      .catch((err) => {
+        console.warn(
+          "[persistSession] create images",
+          err instanceof Error ? err.message : err,
+        );
+      });
   }
 
   function openCreateWork(id: string) {
@@ -949,6 +1067,14 @@ export default function Chat() {
         w.id === activeId ? { ...w, name: nextName, initials } : w,
       ),
     );
+    void renameSession
+      .mutateAsync({ workflowId: activeId, name: nextName.slice(0, 256) })
+      .catch((err) => {
+        console.warn(
+          "[renameSession]",
+          err instanceof Error ? err.message : err,
+        );
+      });
   }
 
   function deleteActiveChat() {
@@ -965,6 +1091,12 @@ export default function Chat() {
     setActiveId(null);
     setChatOpen(false);
     switchView(wasCreate ? "new" : "projects");
+    void deleteSession.mutateAsync({ workflowId: id }).catch((err) => {
+      console.warn(
+        "[deleteSession]",
+        err instanceof Error ? err.message : err,
+      );
+    });
   }
 
   // Signed-out Dev keeps the Projects landing; Work/New reuse the same composer.
@@ -1078,7 +1210,7 @@ export default function Chat() {
         order.push(rid);
         byRev.set(rid, []);
       }
-      byRev.get(rid)!.push({ id: String(m.id), src: m.src });
+      byRev.get(rid)!.push({ id: String(m.id), src: m.src, s3Key: m.s3Key });
     }
     return {
       id: active.id,
@@ -1234,12 +1366,15 @@ export default function Chat() {
           {signedIn || mode !== "dev" ? (
             <>
               <UpdatesPromoCard />
-              <UsageProgressBar budget={budgetQuery.data} />
+              <UsageProgressBar
+                budget={budgetQuery.data}
+                onClick={() => router.push("/billing")}
+              />
             </>
           ) : null}
           <ThemeRailButton />
           {signedIn || mode !== "dev" ? (
-            <RailButton label="Settings">
+            <RailButton label="Settings" onClick={() => setSettingsOpen(true)}>
               <HugeiconsIcon icon={Settings01Icon} size={20} />
             </RailButton>
           ) : null}
@@ -1278,6 +1413,8 @@ export default function Chat() {
             onCreateWorkImages={handleCreateWorkImages}
             onRenameCreateWork={renameActiveChat}
             onDeleteCreateWork={deleteActiveChat}
+            budgetExhausted={budgetExhausted}
+            onUpgradeNeeded={openUpgradeLimit}
           />
         ) : mode === "dev" && view === "project-list" ? (
           <ProjectListPanel projects={projects} />
@@ -1880,7 +2017,13 @@ export default function Chat() {
 
                 <div className="bg-sidebar text-sidebar-foreground mt-3 flex flex-col gap-1.5 rounded-2xl p-2">
                   <UpdatesPromoCard />
-                  <UsageProgressBar budget={budgetQuery.data} />
+                  <UsageProgressBar
+                    budget={budgetQuery.data}
+                    onClick={() => {
+                      setNavMenuOpen(false);
+                      router.push("/billing");
+                    }}
+                  />
                 </div>
                 <div className="bg-border my-2 h-px" />
                 <ThemeDrawerSection
@@ -1888,7 +2031,10 @@ export default function Chat() {
                 />
                 <MobileMenuItem
                   label="Settings"
-                  onClick={() => setNavMenuOpen(false)}
+                  onClick={() => {
+                    setNavMenuOpen(false);
+                    setSettingsOpen(true);
+                  }}
                 >
                   <HugeiconsIcon icon={Settings01Icon} size={20} />
                 </MobileMenuItem>
@@ -1905,6 +2051,18 @@ export default function Chat() {
         onImportStart={handleImportStart}
         onImportSuccess={handleImportSuccess}
         onImportError={handleImportError}
+      />
+
+      <SettingsSheet
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
+        budget={budgetQuery.data}
+      />
+
+      <UpgradeLimitDialog
+        open={upgradeLimitOpen}
+        onOpenChange={setUpgradeLimitOpen}
+        budget={budgetQuery.data}
       />
 
       <IntegrationsSheet
@@ -2283,6 +2441,7 @@ function formatRailCents(cents: number | null | undefined) {
 
 function UsageProgressBar({
   budget,
+  onClick,
 }: {
   budget?: {
     plan: string;
@@ -2290,9 +2449,11 @@ function UsageProgressBar({
     ceilingCents: number | null;
     remainingCents: number | null;
   };
+  onClick?: () => void;
 }) {
   const used = budget?.usedCents ?? 0;
   const ceiling = budget?.ceilingCents;
+  const exhausted = isBudgetExhausted(budget);
   const pct =
     ceiling != null && ceiling > 0
       ? Math.min(100, Math.round((used / ceiling) * 100))
@@ -2310,13 +2471,21 @@ function UsageProgressBar({
     <button
       type="button"
       aria-label={`Usage ${pct}%`}
+      onClick={onClick}
       className="hover:bg-sidebar-foreground/10 flex w-full flex-col gap-1.5 rounded-xl px-3 py-2.5 text-left transition-colors"
     >
       <div className="flex items-center justify-between gap-2">
         <span className="text-sidebar-foreground/60 text-xs font-medium">
           Usage
         </span>
-        <span className="text-sidebar-foreground/40 text-[11px] tabular-nums">
+        <span
+          className={cn(
+            "text-[11px] tabular-nums",
+            exhausted
+              ? "text-destructive"
+              : "text-sidebar-foreground/40",
+          )}
+        >
           {label}
         </span>
       </div>
@@ -2328,7 +2497,10 @@ function UsageProgressBar({
         aria-valuemax={100}
       >
         <div
-          className="bg-sidebar-foreground/55 h-full rounded-full transition-[width] duration-500 ease-out"
+          className={cn(
+            "h-full rounded-full transition-[width] duration-500 ease-out",
+            exhausted ? "bg-destructive" : "bg-sidebar-foreground/55",
+          )}
           style={{ width: `${pct}%` }}
         />
       </div>

@@ -58,8 +58,10 @@ export type MilestoneMsg = MsgBase & {
 export type ImageMsg = MsgBase & {
   type: "image";
   prompt: string;
-  /** data: URL — Modal image harness returns base64 PNG directly. */
+  /** Signed S3 URL (preferred) or data: URL fallback from the image harness. */
   src: string;
+  /** Private object key — used to re-sign `src` on session hydrate. */
+  s3Key?: string;
   /** Groups candidates from one generate into a Create revision. */
   revisionId?: string;
 };

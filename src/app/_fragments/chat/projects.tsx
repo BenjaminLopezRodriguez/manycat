@@ -149,6 +149,8 @@ type ProjectsProps = {
   ) => void;
   onRenameCreateWork?: (name: string) => void;
   onDeleteCreateWork?: () => void;
+  budgetExhausted?: boolean;
+  onUpgradeNeeded?: () => void;
 };
 
 export default function Projects({
@@ -167,6 +169,8 @@ export default function Projects({
   onCreateWorkImages,
   onRenameCreateWork,
   onDeleteCreateWork,
+  budgetExhausted = false,
+  onUpgradeNeeded,
 }: ProjectsProps) {
   const { status } = useSession();
   const signedIn = status === "authenticated";
@@ -242,6 +246,8 @@ export default function Projects({
         onWorkImages={onCreateWorkImages ?? (() => undefined)}
         onRenameWork={onRenameCreateWork}
         onDeleteWork={onDeleteCreateWork}
+        budgetExhausted={budgetExhausted}
+        onUpgradeNeeded={onUpgradeNeeded}
       />
     );
   }

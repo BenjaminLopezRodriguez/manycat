@@ -2,6 +2,7 @@ import { z } from "zod";
 import { and, eq } from "drizzle-orm";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { TRPCError } from "@trpc/server";
 
 import { env } from "@/env";
 import type { Msg, WorkflowStatus } from "@/app/_fragments/chat/data";
@@ -11,6 +12,7 @@ import {
   assertCanSpend,
   BudgetExceededError,
   ensureAccount,
+  ESTIMATED_IMAGE_CENTS,
   ESTIMATED_SANDBOX_CENTS,
 } from "@/server/billing/budget";
 import {
@@ -23,15 +25,26 @@ import { structurePrompt } from "@/server/ai/structure-prompt";
 import { runChatCompletion, type ChatMessage } from "@/server/ai/modal-chat";
 import { runImageGeneration } from "@/server/ai/modal-image";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "@/server/api/trpc";
+
+function throwBudgetExceeded(err: BudgetExceededError): never {
+  throw new TRPCError({
+    code: "FORBIDDEN",
+    message: err.message,
+    cause: err,
+  });
+}
 import { db } from "@/server/db";
 import { projectChanges, projects } from "@/server/db/schema";
 import {
   appendWorkflowMessages,
+  deletePersistedSession,
+  ensureShellProject,
   listPersistedSessions,
   replaceWorkspaceFiles,
   setProjectStatus,
   setWorkflowMessages,
 } from "@/server/workflow/persist";
+import { isS3Configured, putCreateImage } from "@/server/s3/create-images";
 
 export type AgentEventPayload =
   | { kind: "status"; status: WorkflowStatus }
@@ -180,7 +193,7 @@ export const workflowRouter = createTRPCRouter({
       try {
         await assertCanSpend(ctx.accountId, ESTIMATED_SANDBOX_CENTS);
       } catch (err) {
-        if (err instanceof BudgetExceededError) throw err;
+        if (err instanceof BudgetExceededError) throwBudgetExceeded(err);
         throw err;
       }
 
@@ -275,7 +288,7 @@ export const workflowRouter = createTRPCRouter({
       try {
         await assertCanSpend(ctx.accountId, ESTIMATED_SANDBOX_CENTS);
       } catch (err) {
-        if (err instanceof BudgetExceededError) throw err;
+        if (err instanceof BudgetExceededError) throwBudgetExceeded(err);
         throw err;
       }
 
@@ -424,6 +437,80 @@ export const workflowRouter = createTRPCRouter({
   listSessions: protectedProcedure.query(async ({ ctx }) => {
     return listPersistedSessions(ctx.accountId);
   }),
+
+  /**
+   * Persist Create / research / workspace shell turns (messages + project row).
+   * Dev Build projects use createFromPrompt / runAgent instead.
+   */
+  persistSession: protectedProcedure
+    .input(
+      z.object({
+        workflowId: z.string().min(1).max(64),
+        mode: z.enum(["create", "research", "workspace"]),
+        name: z.string().min(1).max(256),
+        status: z
+          .enum(["idle", "working", "needs-review", "done"])
+          .default("idle"),
+        messages: z
+          .array(
+            z
+              .object({
+                id: z.number(),
+                type: z.string(),
+              })
+              .passthrough(),
+          )
+          .max(50),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      await ensureAccount(ctx.accountId);
+      await ensureShellProject({
+        accountId: ctx.accountId,
+        workflowId: input.workflowId,
+        mode: input.mode,
+        name: input.name,
+        status: input.status,
+      });
+      if (input.messages.length > 0) {
+        await appendWorkflowMessages({
+          accountId: ctx.accountId,
+          workflowId: input.workflowId,
+          messages: input.messages,
+        });
+      }
+      return { ok: true as const };
+    }),
+
+  renameSession: protectedProcedure
+    .input(
+      z.object({
+        workflowId: z.string().min(1).max(64),
+        name: z.string().min(1).max(256),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      await db
+        .update(projects)
+        .set({ name: input.name })
+        .where(
+          and(
+            eq(projects.accountId, ctx.accountId),
+            eq(projects.id, input.workflowId),
+          ),
+        );
+      return { ok: true as const };
+    }),
+
+  deleteSession: protectedProcedure
+    .input(z.object({ workflowId: z.string().min(1).max(64) }))
+    .mutation(async ({ ctx, input }) => {
+      await deletePersistedSession({
+        accountId: ctx.accountId,
+        workflowId: input.workflowId,
+      });
+      return { ok: true as const };
+    }),
 
   getSandboxFiles: publicProcedure
     .input(z.object({ workflowId: z.string().min(1) }))
@@ -684,9 +771,41 @@ export const workflowRouter = createTRPCRouter({
 
   /** Image harness — Modal-hosted FLUX.1-schnell for "create" shell mode. */
   runImage: protectedProcedure
-    .input(z.object({ prompt: z.string().min(1) }))
-    .mutation(async ({ input }) => {
-      const image = await runImageGeneration(input.prompt);
-      return { image };
+    .input(
+      z.object({
+        prompt: z.string().min(1),
+        /** When set with imageId, upload PNG to private S3 and return a signed URL. */
+        chatId: z.string().min(1).max(64).optional(),
+        imageId: z.string().min(1).max(128).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      await ensureAccount(ctx.accountId);
+      try {
+        await assertCanSpend(ctx.accountId, ESTIMATED_IMAGE_CENTS);
+      } catch (err) {
+        if (err instanceof BudgetExceededError) throwBudgetExceeded(err);
+        throw err;
+      }
+
+      const dataUrl = await runImageGeneration(input.prompt);
+      await addUsage(ctx.accountId, ESTIMATED_IMAGE_CENTS);
+
+      if (input.chatId && input.imageId) {
+        if (!isS3Configured()) {
+          throw new Error(
+            "S3 is not configured — set S3_BUCKET, S3_REGION, S3_ACCESS_KEY_ID, and S3_SECRET_ACCESS_KEY to persist Create images",
+          );
+        }
+        const { key, url } = await putCreateImage({
+          accountId: ctx.accountId,
+          chatId: input.chatId,
+          imageId: input.imageId,
+          dataUrl,
+        });
+        return { image: url, s3Key: key };
+      }
+
+      return { image: dataUrl };
     }),
 });

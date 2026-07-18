@@ -7,6 +7,7 @@ import {
   workflowMessages,
   workspaceFiles,
 } from "@/server/db/schema";
+import { isS3Configured, signCreateImageUrl } from "@/server/s3/create-images";
 
 export type PersistedMsg = Record<string, unknown> & {
   id: number;
@@ -129,6 +130,18 @@ export async function setProjectStatus(opts: {
     );
 }
 
+async function refreshImagePayload(payload: PersistedMsg): Promise<PersistedMsg> {
+  if (payload.type !== "image") return payload;
+  const key = typeof payload.s3Key === "string" ? payload.s3Key : null;
+  if (!key || !isS3Configured()) return payload;
+  try {
+    const src = await signCreateImageUrl(key);
+    return { ...payload, src };
+  } catch {
+    return payload;
+  }
+}
+
 export async function listPersistedSessions(accountId: string) {
   const projectRows = await db
     .select({
@@ -171,6 +184,18 @@ export async function listPersistedSessions(accountId: string) {
     messagesByWf.set(row.workflowId, list);
   }
 
+  // Re-sign private Create image URLs so refresh still renders.
+  if (isS3Configured()) {
+    await Promise.all(
+      [...messagesByWf.entries()].map(async ([wfId, msgs]) => {
+        messagesByWf.set(
+          wfId,
+          await Promise.all(msgs.map((m) => refreshImagePayload(m))),
+        );
+      }),
+    );
+  }
+
   const filesByWf = new Map<string, { path: string; contents: string }[]>();
   for (const row of fileRows) {
     const list = filesByWf.get(row.workflowId) ?? [];
@@ -187,6 +212,50 @@ export async function listPersistedSessions(accountId: string) {
     messages: messagesByWf.get(p.id) ?? [],
     files: filesByWf.get(p.id) ?? [],
   }));
+}
+
+/** Upsert a Create / research / workspace shell session (control-plane row). */
+export async function ensureShellProject(opts: {
+  accountId: string;
+  workflowId: string;
+  mode: "create" | "research" | "workspace";
+  name: string;
+  status?: "idle" | "working" | "needs-review" | "done";
+}) {
+  const status = opts.status ?? "idle";
+  await db
+    .insert(projects)
+    .values({
+      id: opts.workflowId,
+      accountId: opts.accountId,
+      name: opts.name.slice(0, 256),
+      githubRepo: opts.mode,
+      contentBackend: "virtual",
+      status,
+    })
+    .onConflictDoUpdate({
+      target: [projects.accountId, projects.id],
+      set: {
+        name: opts.name.slice(0, 256),
+        githubRepo: opts.mode,
+        contentBackend: "virtual",
+        status,
+      },
+    });
+}
+
+export async function deletePersistedSession(opts: {
+  accountId: string;
+  workflowId: string;
+}) {
+  await db
+    .delete(projects)
+    .where(
+      and(
+        eq(projects.accountId, opts.accountId),
+        eq(projects.id, opts.workflowId),
+      ),
+    );
 }
 
 /** Ensure status column exists for older DBs that only ran partial migrations. */

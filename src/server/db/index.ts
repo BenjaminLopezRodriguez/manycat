@@ -12,7 +12,13 @@ const globalForDb = globalThis as unknown as {
   conn: postgres.Sql | undefined;
 };
 
-const conn = globalForDb.conn ?? postgres(env.DATABASE_URL);
+/** `prepare: false` is required for Neon's pooled (PgBouncer) endpoint. */
+const conn =
+  globalForDb.conn ??
+  postgres(env.DATABASE_URL, {
+    prepare: false,
+    max: env.NODE_ENV === "production" ? 10 : 5,
+  });
 if (env.NODE_ENV !== "production") globalForDb.conn = conn;
 
 export const db = drizzle(conn, { schema });

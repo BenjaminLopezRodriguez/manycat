@@ -32,6 +32,7 @@ import {
   type ImageCandidateCount,
   type ImageModelId,
 } from "@/lib/ai-models";
+import { isBudgetExceededError } from "@/lib/billing";
 import { cn } from "@/lib/utils";
 import { api } from "@/trpc/react";
 import { WorkflowChatMenu } from "./workflow-chat-menu";
@@ -45,6 +46,7 @@ const CREATE_SUGGESTIONS = [
 export type CreateWorkImage = {
   id: string;
   src: string;
+  s3Key?: string;
 };
 
 export type CreateRevision = {
@@ -68,6 +70,9 @@ type CreateStudioProps = {
   ) => void;
   onRenameWork?: (name: string) => void;
   onDeleteWork?: () => void;
+  /** When true, block generate until the user subscribes. */
+  budgetExhausted?: boolean;
+  onUpgradeNeeded?: () => void;
 };
 
 type Slot =
@@ -88,7 +93,10 @@ export default function CreateStudio({
   onWorkImages,
   onRenameWork,
   onDeleteWork,
+  budgetExhausted = false,
+  onUpgradeNeeded,
 }: CreateStudioProps) {
+  const utils = api.useUtils();
   const runImage = api.workflow.runImage.useMutation();
   const [draft, setDraft] = React.useState("");
   const [imageModel, setImageModel] = React.useState<ImageModelId>("auto");
@@ -210,6 +218,11 @@ export default function CreateStudio({
   }, [activeWork, generating]);
 
   async function generate(prompt: string) {
+    if (budgetExhausted) {
+      onUpgradeNeeded?.();
+      return;
+    }
+
     const title = prompt.slice(0, 48);
     const workId = workIdRef.current ?? `create-${Date.now()}`;
     const isNew = !workIdRef.current;
@@ -234,30 +247,58 @@ export default function CreateStudio({
       return next;
     });
 
+    let hitBudget = false;
     const results = await Promise.all(
       pending.map(async (slot) => {
         try {
-          const { image } = await runImage.mutateAsync({ prompt });
-          return { key: slot.key, status: "done" as const, src: image };
-        } catch {
+          const { image, s3Key } = await runImage.mutateAsync({
+            prompt,
+            chatId: workId,
+            imageId: slot.key,
+          });
+          return {
+            key: slot.key,
+            status: "done" as const,
+            src: image,
+            s3Key,
+          };
+        } catch (err) {
+          if (isBudgetExceededError(err)) hitBudget = true;
           return { key: slot.key, status: "error" as const };
         }
       }),
     );
+    if (hitBudget) onUpgradeNeeded?.();
+    void utils.project.budget.invalidate();
 
     setRevisions((prev) =>
       prev.map((rev) =>
-        rev.id === revisionId ? { ...rev, slots: results } : rev,
+        rev.id === revisionId
+          ? {
+              ...rev,
+              slots: results.map((r) =>
+                r.status === "done"
+                  ? { key: r.key, status: "done" as const, src: r.src }
+                  : { key: r.key, status: "error" as const },
+              ),
+            }
+          : rev,
       ),
     );
     setGenerating(false);
 
     const done = results
       .filter(
-        (r): r is { key: string; status: "done"; src: string } =>
-          r.status === "done",
+        (
+          r,
+        ): r is {
+          key: string;
+          status: "done";
+          src: string;
+          s3Key?: string;
+        } => r.status === "done",
       )
-      .map((r) => ({ id: r.key, src: r.src }));
+      .map((r) => ({ id: r.key, src: r.src, s3Key: r.s3Key }));
     if (done.length > 0) {
       onWorkImages(workId, revisionId, done);
     }
@@ -265,6 +306,10 @@ export default function CreateStudio({
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (budgetExhausted) {
+      onUpgradeNeeded?.();
+      return;
+    }
     const prompt = draft.trim();
     if (!prompt || generating) return;
     void generate(prompt);
@@ -353,15 +398,21 @@ export default function CreateStudio({
                   }
                 }}
                 placeholder={
-                  editRef
-                    ? "Describe edits to this image…"
-                    : studio
-                      ? "Describe a revision…"
-                      : "Describe an image to generate…"
+                  budgetExhausted
+                    ? "Subscribe to keep generating…"
+                    : editRef
+                      ? "Describe edits to this image…"
+                      : studio
+                        ? "Describe a revision…"
+                        : "Describe an image to generate…"
                 }
                 rows={2}
                 className="placeholder:text-muted-foreground min-h-16 w-full resize-none bg-transparent px-4 pt-4 pb-2 text-base outline-none md:text-sm"
                 aria-label="Image prompt"
+                disabled={budgetExhausted}
+                onFocus={() => {
+                  if (budgetExhausted) onUpgradeNeeded?.();
+                }}
               />
               <div className="flex items-center justify-between gap-2 px-2 pb-1">
                 <div className="flex min-w-0 flex-1 items-center gap-1.5">
@@ -370,6 +421,15 @@ export default function CreateStudio({
                       src={editRef.src}
                       onRemove={() => setEditRef(null)}
                     />
+                  ) : null}
+                  {budgetExhausted ? (
+                    <button
+                      type="button"
+                      onClick={() => onUpgradeNeeded?.()}
+                      className="text-destructive text-xs font-medium underline-offset-2 hover:underline"
+                    >
+                      Usage limit reached — upgrade
+                    </button>
                   ) : null}
                 </div>
                 <div className="flex shrink-0 items-center gap-1">
@@ -386,7 +446,7 @@ export default function CreateStudio({
                     size="icon"
                     className="size-8 shrink-0 rounded-full bg-slate-300 text-black hover:bg-slate-300/80"
                     aria-label="Generate image"
-                    disabled={generating || !draft.trim()}
+                    disabled={budgetExhausted || generating || !draft.trim()}
                   >
                     <HugeiconsIcon
                       icon={SentIcon}
@@ -413,8 +473,15 @@ export default function CreateStudio({
                 <li key={suggestion}>
                   <button
                     type="button"
-                    className="text-muted-foreground hover:text-foreground w-full py-2 text-left text-sm transition-colors"
-                    onClick={() => setDraft(suggestion)}
+                    className="text-muted-foreground hover:text-foreground w-full py-2 text-left text-sm transition-colors disabled:opacity-50"
+                    disabled={budgetExhausted}
+                    onClick={() => {
+                      if (budgetExhausted) {
+                        onUpgradeNeeded?.();
+                        return;
+                      }
+                      setDraft(suggestion);
+                    }}
                   >
                     {suggestion}
                   </button>
