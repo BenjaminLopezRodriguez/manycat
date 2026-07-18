@@ -26,8 +26,6 @@ export function isBudgetExceededError(err: unknown): boolean {
   const data = "data" in err ? (err as { data?: { budgetExceeded?: boolean } }).data : undefined;
   if (data?.budgetExceeded) return true;
   const message =
-    "message" in err && typeof (err as { message: unknown }).message === "string"
-      ? (err as { message: string }).message
-      : "";
+    "message" in err && typeof err.message === "string" ? err.message : "";
   return /budget exceeded/i.test(message);
 }
