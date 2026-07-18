@@ -23,6 +23,21 @@ import {
   type ShellState,
 } from "./shell-url";
 
+function readLocationShell(enabled: ModeId[]): {
+  state: ShellState;
+  last: LastViewByMode;
+} {
+  const lastViewRaw = window.localStorage.getItem(STORAGE_LAST_VIEW_KEY);
+  const last = readLastViewByMode(lastViewRaw);
+  const state = resolveBootState({
+    search: window.location.search,
+    storageMode: window.localStorage.getItem(STORAGE_MODE_KEY),
+    lastViewRaw,
+    enabled,
+  });
+  return { state, last };
+}
+
 export function useShellUrl(): {
   mode: ModeId;
   view: ShellView;
@@ -38,28 +53,48 @@ export function useShellUrl(): {
     [],
   );
 
-  const [state, setState] = React.useState<ShellState>(() => {
-    if (typeof window === "undefined") {
-      return { ...DEFAULT_SHELL };
-    }
-    return resolveBootState({
-      search: window.location.search,
-      storageMode: window.localStorage.getItem(STORAGE_MODE_KEY),
-      lastViewRaw: window.localStorage.getItem(STORAGE_LAST_VIEW_KEY),
-      enabled,
-    });
-  });
+  // Hydration-safe: identical DEFAULT_SHELL on server and first client paint.
+  // Real URL/localStorage boot runs in the mount effect below.
+  const [state, setState] = React.useState<ShellState>(() => ({
+    ...DEFAULT_SHELL,
+  }));
 
-  const lastRef = React.useRef<LastViewByMode>(
-    typeof window === "undefined"
-      ? {}
-      : readLastViewByMode(window.localStorage.getItem(STORAGE_LAST_VIEW_KEY)),
-  );
-  const prevRef = React.useRef<ShellState>(state);
+  const lastRef = React.useRef<LastViewByMode>({});
+  const prevRef = React.useRef<ShellState>({ ...DEFAULT_SHELL });
+  /** Boot wrote URL/storage; sync must wait until React state catches up. */
+  const pendingBootRef = React.useRef<ShellState | null>(null);
 
-  // Write URL + localStorage when shell state settles.
-  // Skip history only when the URL already mirrors state (e.g. popstate).
+  // Mount boot + popstate. Always resolve from window (never in useState init).
   React.useEffect(() => {
+    const { state: boot, last } = readLocationShell(enabled);
+    lastRef.current = last;
+    applyShellToUrl(boot, "replace");
+    lastRef.current = persistShell(window.localStorage, boot, lastRef.current);
+    prevRef.current = boot;
+    pendingBootRef.current = boot;
+    setState(boot);
+
+    function onPopState() {
+      const { state: next, last: nextLast } = readLocationShell(enabled);
+      lastRef.current = nextLast;
+      setState(next);
+    }
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [enabled]);
+
+  // Write URL + localStorage when shell state settles after boot.
+  // Skip while pending boot so first-paint DEFAULT_SHELL cannot clobber deep links.
+  React.useEffect(() => {
+    const pending = pendingBootRef.current;
+    if (pending !== null) {
+      if (state.mode === pending.mode && state.view === pending.view) {
+        pendingBootRef.current = null;
+        prevRef.current = state;
+      }
+      return;
+    }
+
     const prev = prevRef.current;
     if (window.location.search !== buildShellSearch(state)) {
       applyShellToUrl(state, historyAction(prev, state));
@@ -71,20 +106,6 @@ export function useShellUrl(): {
     );
     prevRef.current = state;
   }, [state]);
-
-  React.useEffect(() => {
-    function onPopState() {
-      const next = resolveBootState({
-        search: window.location.search,
-        storageMode: window.localStorage.getItem(STORAGE_MODE_KEY),
-        lastViewRaw: window.localStorage.getItem(STORAGE_LAST_VIEW_KEY),
-        enabled,
-      });
-      setState(next);
-    }
-    window.addEventListener("popstate", onPopState);
-    return () => window.removeEventListener("popstate", onPopState);
-  }, [enabled]);
 
   function setMode(mode: ModeId) {
     setState((prev) => {
