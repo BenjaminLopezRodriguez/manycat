@@ -628,28 +628,43 @@ export default function Chat() {
   /** research/workspace/create modes route to their own harness, not the coding one. */
   async function handleModeHarness(mode: "research" | "workspace" | "create", promptText: string) {
     setCreatingFromPrompt(true);
-    const id = `${mode}-${Date.now()}`;
+    const existing = active?.repo === mode ? active : null;
+    const id = existing?.id ?? `${mode}-${Date.now()}`;
+    const nextMsgId = (existing?.messages.at(-1)?.id ?? 0) + 1;
     const userMsg: Msg = {
-      id: 1,
+      id: nextMsgId,
       type: "text",
       from: "me",
       text: promptText,
       time: nowTime(),
     };
-    setWorkflows((prev) => [
-      ...prev,
-      {
-        id,
-        name: promptText.slice(0, 32),
-        initials: promptText.slice(0, 2).toUpperCase() || "AI",
-        avatarClass: "bg-sky-200 text-sky-900",
-        repo: mode,
-        status: "working",
-        messages: [userMsg],
-        workspace: [],
-      },
-    ]);
-    openWorkflow(id);
+
+    if (existing) {
+      setWorkflows((prev) =>
+        prev.map((w) =>
+          w.id === id
+            ? { ...w, status: "working", messages: [...w.messages, userMsg] }
+            : w,
+        ),
+      );
+    } else {
+      setWorkflows((prev) => [
+        ...prev,
+        {
+          id,
+          name: promptText.slice(0, 32),
+          initials: promptText.slice(0, 2).toUpperCase() || "AI",
+          avatarClass: "bg-sky-200 text-sky-900",
+          repo: mode,
+          status: "working",
+          messages: [userMsg],
+          workspace: [],
+        },
+      ]);
+      // Stay in this mode's own chrome — do NOT call openWorkflow(), which
+      // forces mode="dev"/view="workflows" (that's the dev Build panel).
+      setActiveId(id);
+    }
 
     const appendReply = (reply: Msg) => {
       setWorkflows((prev) =>
@@ -665,16 +680,24 @@ export default function Chat() {
       if (mode === "create") {
         const { image } = await runImage.mutateAsync({ prompt: promptText });
         appendReply({
-          id: 2,
+          id: nextMsgId + 1,
           type: "image",
           prompt: promptText,
           src: image,
           time: nowTime(),
         });
       } else {
-        const { reply } = await runChat.mutateAsync({ mode, prompt: promptText });
+        const history: { role: "user" | "assistant"; content: string }[] = (
+          existing?.messages ?? []
+        )
+          .filter((m): m is TextMsg => m.type === "text")
+          .map((m) => ({
+            role: m.from === "me" ? "user" : "assistant",
+            content: m.text,
+          }));
+        const { reply } = await runChat.mutateAsync({ mode, prompt: promptText, history });
         appendReply({
-          id: 2,
+          id: nextMsgId + 1,
           type: "text",
           from: "agent",
           text: reply,
@@ -684,7 +707,7 @@ export default function Chat() {
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       appendReply({
-        id: 2,
+        id: nextMsgId + 1,
         type: "text",
         from: "agent",
         text: `Couldn't get a response: ${message}`,
@@ -897,6 +920,11 @@ export default function Chat() {
     showWorkspaceWork ||
     showResearchNew ||
     showCreateNew;
+  const activeModeThread =
+    (mode === "research" || mode === "workspace" || mode === "create") &&
+    active?.repo === mode
+      ? active
+      : null;
   const composerSurface =
     mode === "workspace"
       ? "workspace"
@@ -1045,7 +1073,19 @@ export default function Chat() {
       </nav>
 
       <main className="flex min-h-0 min-w-0 flex-1">
-        {showHomeComposer ? (
+        {showHomeComposer && activeModeThread ? (
+          <ModeThreadView
+            mode={activeModeThread.repo as "research" | "workspace" | "create"}
+            active={activeModeThread}
+            sending={creatingFromPrompt}
+            onSend={(text) =>
+              void handleModeHarness(
+                activeModeThread.repo as "research" | "workspace" | "create",
+                text,
+              )
+            }
+          />
+        ) : showHomeComposer ? (
           <Projects
             surface={composerSurface}
             onImport={handleImportFromComposer}
@@ -1790,6 +1830,85 @@ function FeatureRailButton({
         </span>
       </span>
     </button>
+  );
+}
+
+const MODE_THREAD_TITLE: Record<"research" | "workspace" | "create", string> = {
+  research: "Chat",
+  workspace: "Work",
+  create: "Create",
+};
+
+/** Chat/Create/Work conversation — stays in its own mode chrome (no dev split-view, no diffs/sandbox). */
+function ModeThreadView({
+  mode,
+  active,
+  sending,
+  onSend,
+}: {
+  mode: "research" | "workspace" | "create";
+  active: Workflow;
+  sending: boolean;
+  onSend: (text: string) => void;
+}) {
+  const [text, setText] = React.useState("");
+  const bottomRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    bottomRef.current?.scrollIntoView({ block: "end" });
+  }, [active.messages.length]);
+
+  return (
+    <section className="flex min-w-0 flex-1 flex-col">
+      <header className="flex h-16 shrink-0 items-center gap-3 border-b px-4">
+        <Avatar className="size-10">
+          <AvatarFallback className={active.avatarClass}>
+            {active.initials}
+          </AvatarFallback>
+        </Avatar>
+        <div className="min-w-0 flex-1 truncate font-medium">
+          {MODE_THREAD_TITLE[mode]} · {active.name}
+        </div>
+      </header>
+
+      <div className="bg-muted/20 flex-1 overflow-y-auto px-4 py-4 md:px-6">
+        <div className="mx-auto flex max-w-3xl flex-col gap-3">
+          <MessageList
+            messages={active.messages}
+            isWorking={sending}
+            onOpenDiff={() => undefined}
+            onApprove={() => undefined}
+            onRequestChanges={() => undefined}
+          />
+          <div ref={bottomRef} />
+        </div>
+      </div>
+
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          const trimmed = text.trim();
+          if (!trimmed || sending) return;
+          setText("");
+          onSend(trimmed);
+        }}
+        className="border-t p-3 md:p-4"
+      >
+        <div className="mx-auto flex max-w-3xl items-center gap-2">
+          <Input
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder={
+              mode === "create" ? "Describe an image…" : "Message…"
+            }
+            className="text-base md:text-sm"
+          />
+          <Button type="submit" disabled={sending || !text.trim()}>
+            Send
+          </Button>
+        </div>
+      </form>
+    </section>
   );
 }
 
