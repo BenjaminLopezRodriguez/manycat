@@ -311,8 +311,13 @@ def run_tool_loop(
                 content = _invoke_tool(tool, args)
                 if name in MUTATING_TOOLS and not content.startswith("Error:"):
                     mutated = True
-                if name in VERIFY_TOOLS and not content.startswith("Error:"):
+                if name in VERIFY_TOOLS and not str(content).startswith("Error:"):
                     called.add(name)
+                    # browser_check with skipped:true still counts as attempted.
+                    if name == VERIFY_BROWSER and '"skipped": true' in str(
+                        content
+                    ).replace(" ", ""):
+                        called.add(VERIFY_BROWSER)
             messages.append(
                 ToolMessage(content=content, tool_call_id=call_id, name=name)
             )

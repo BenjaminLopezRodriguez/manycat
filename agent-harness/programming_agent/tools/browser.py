@@ -103,9 +103,20 @@ def make_browser_tools(ctx: ToolContext) -> list[StructuredTool]:
     ) -> str:
         target = _agent_reachable_url((url or ctx.preview_url or "").strip())
         if not target:
-            return (
-                "Error: no URL. Pass url= or ensure the job was started with a "
-                "sandbox preview_url."
+            # Workspace-only sandboxes (no Docker) have no live preview.
+            # Do not ask the user for a URL — report skipped and continue via files/logs.
+            return json.dumps(
+                {
+                    "skipped": True,
+                    "reason": "no_preview_url",
+                    "message": (
+                        "Sandbox has no live preview URL (workspace-only / Docker "
+                        "unavailable). Skip asking the user. Read app/page.tsx, "
+                        "call read_app_logs if useful, then report_to_evaluator with "
+                        "file evidence and note preview was unavailable."
+                    ),
+                },
+                indent=2,
             )
 
         try:

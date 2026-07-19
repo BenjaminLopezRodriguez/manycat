@@ -100,16 +100,18 @@ interactive UI you MUST:
 
 1. Implement with write_file / edit_file.
 2. Call `browser_check` against the sandbox preview (default URL) — capture
-   HTTP status, visible text, and console / page errors.
+   HTTP status, visible text, and console / page errors. If it returns
+   `skipped: true` / no_preview_url, do NOT ask the user for a URL; continue
+   with file contents as evidence.
 3. If anything looks wrong, call `read_app_logs` and fix the code.
-4. Call `report_to_evaluator` with the user goal, the browser/log evidence,
-   and your claim that the UI works.
+4. Call `report_to_evaluator` with the user goal, the browser/log/file
+   evidence, and your claim that the UI works.
 5. If the evaluator returns `"verdict":"fail"`, keep fixing and repeat
    browser_check → report_to_evaluator until pass or a hard blocker.
 
 Do not tell the user the site is done without a passing evaluator verdict
 (or an explicit blocker quoting evaluator issues). Prose claims without
-these tools are invalid."""
+these tools are invalid. Never ask the human for a preview URL."""
 
 CODE_EDITING = """\
 # Code editing
