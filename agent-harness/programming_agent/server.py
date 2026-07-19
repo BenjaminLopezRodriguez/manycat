@@ -9,8 +9,13 @@ from pydantic import BaseModel, Field
 
 from programming_agent.config import AgentConfig
 from programming_agent.harness import ProgrammingAgentHarness
+from programming_agent.jobs import AgentJob, create_job, get_job, start_background
+from programming_agent.prompts.assembler import SessionContext, assemble_system_prompt, load_project_rules
 from programming_agent.prompts.sections import AgentMode
 from programming_agent.scaffold_fallback import apply_scaffold_fallback
+from programming_agent.tool_loop import run_tool_loop
+from programming_agent.tools import ToolContext, build_tools
+from programming_agent.tools.filesystem import make_filesystem_tools
 
 app = FastAPI(title="Programming Agent Harness", version="0.1.0")
 
@@ -39,6 +44,10 @@ class RunRequest(BaseModel):
         default=None,
         description="Seed workspace from orchestrator / Manycat before running",
     )
+    preview_url: Optional[str] = Field(
+        default=None,
+        description="Sandbox preview URL for browser_check (Playwright)",
+    )
 
 
 class RunResponse(BaseModel):
@@ -48,6 +57,24 @@ class RunResponse(BaseModel):
     model: str
     effort: str
     files: list[WorkspaceFile] = Field(default_factory=list)
+
+
+class JobCreateResponse(BaseModel):
+    job_id: str
+    workflow_id: str
+    status: str
+
+
+class JobStatusResponse(BaseModel):
+    job_id: str
+    workflow_id: str
+    status: str
+    output: str = ""
+    error: Optional[str] = None
+    usage: dict[str, int] = Field(default_factory=dict)
+    files: list[WorkspaceFile] = Field(default_factory=list)
+    model: Optional[str] = None
+    effort: Optional[str] = None
 
 
 def workspace_for(workflow_id: str) -> Path:
@@ -94,7 +121,12 @@ def walk_workspace(root: Path) -> list[WorkspaceFile]:
     return out
 
 
-def build_user_prompt(prompt: str, files: list[WorkspaceFile]) -> str:
+def build_user_prompt(
+    prompt: str,
+    files: list[WorkspaceFile],
+    *,
+    preview_url: Optional[str] = None,
+) -> str:
     file_count = len(files)
     if file_count <= 0:
         return (
@@ -122,13 +154,23 @@ def build_user_prompt(prompt: str, files: list[WorkspaceFile]) -> str:
             "working UI for the user request (use 'use client' if needed).\n\n"
         )
 
+    preview_line = (
+        f"Sandbox preview URL (use with browser_check): {preview_url}\n"
+        if preview_url
+        else ""
+    )
+
     return (
         f"{scaffold_hint}"
+        f"{preview_line}"
         "You are editing an existing project already present in the workspace. "
         "Apply the user's request by calling tools (glob/read_file/edit_file/write_file). "
         "Do not claim there is no project or no design task. "
         "Do not answer with JSON tool stubs in prose — invoke tools, then summarize. "
-        "Replace scaffold placeholders (e.g. 'Scaffolded by Manycat') with a real working UI.\n\n"
+        "Replace scaffold placeholders (e.g. 'Scaffolded by Manycat') with a real working UI.\n"
+        "For any website/UI request: after edits, call browser_check, use "
+        "read_app_logs if needed, then report_to_evaluator — do not finish without "
+        "a pass verdict.\n\n"
         f"Workspace file tree ({file_count} files):\n{tree}"
         f"{body}\n\n"
         f"User request:\n{prompt}"
@@ -234,8 +276,15 @@ def run_agent(body: RunRequest) -> RunResponse:
     )
     harness = ProgrammingAgentHarness(config)
     mode = AgentMode(body.mode)
-    prompt = build_user_prompt(body.prompt, seeded)
+    prompt = build_user_prompt(
+        body.prompt, seeded, preview_url=body.preview_url
+    )
     had_scaffold = still_has_scaffold(seeded)
+    harness.ctx = ToolContext(
+        workspace,
+        preview_url=body.preview_url,
+        workflow_id=body.workflow_id,
+    )
 
     try:
         output = harness.run(prompt, mode=mode)
@@ -265,3 +314,177 @@ def run_agent(body: RunRequest) -> RunResponse:
         effort=effort,
         files=walk_workspace(workspace),
     )
+
+
+def _execute_job(job: AgentJob, body: RunRequest) -> None:
+    workspace = workspace_for(body.workflow_id)
+    if body.files:
+        seed_workspace(workspace, body.files)
+
+    seeded = walk_workspace(workspace)
+    effort = body.effort or "high"
+    config = AgentConfig.from_request(
+        model=body.model,
+        effort=effort,
+        workspace_root=workspace,
+    )
+    mode = AgentMode(body.mode)
+    prompt = build_user_prompt(
+        body.prompt, seeded, preview_url=body.preview_url
+    )
+    had_scaffold = still_has_scaffold(seeded)
+
+    job.status = "running"
+    setattr(job, "model", config.model)
+    setattr(job, "effort", effort)
+    setattr(job, "workspace", workspace)
+
+    def on_usage(usage) -> None:
+        job.usage.prompt_tokens = usage.prompt_tokens
+        job.usage.completion_tokens = usage.completion_tokens
+
+    try:
+        ctx = ToolContext(
+            workspace,
+            preview_url=body.preview_url,
+            workflow_id=body.workflow_id,
+        )
+        harness = ProgrammingAgentHarness(config)
+        harness.ctx = ctx
+
+        def explore(description: str, thoroughness: str) -> str:
+            return harness._run_explore(description, thoroughness)
+
+        rules = load_project_rules(config.project_rules_path)
+        system = assemble_system_prompt(
+            SessionContext(
+                workspace_root=workspace,
+                mode=mode,
+                project_rules=rules,
+            )
+        )
+        tools = (
+            build_tools(ctx, explore)
+            if mode == AgentMode.DEFAULT
+            else make_filesystem_tools(ctx)
+        )
+        prefer_write = (
+            mode == AgentMode.DEFAULT
+            and ("Scaffolded by Manycat" in prompt or "write_file" in prompt)
+        )
+        result = run_tool_loop(
+            model=harness._init_model(),
+            tools=tools,
+            system=system,
+            user_message=prompt,
+            max_turns=config.max_turns,
+            force_tools_until_mutate=mode == AgentMode.DEFAULT,
+            prefer_write_file=prefer_write,
+            should_cancel=job.is_cancelled,
+            on_usage=on_usage,
+        )
+        output = result.output
+        job.usage = result.usage
+
+        if result.cancelled or job.is_cancelled():
+            job.status = "cancelled"
+            job.output = output or "Run cancelled."
+            return
+
+        files_after = walk_workspace(workspace)
+        if (
+            had_scaffold
+            and still_has_scaffold(files_after)
+            and mode == AgentMode.DEFAULT
+            and not job.is_cancelled()
+        ):
+            retry = f"{RETRY_PROMPT}\n\nOriginal user request:\n{body.prompt}"
+            result2 = run_tool_loop(
+                model=harness._init_model(),
+                tools=tools,
+                system=system,
+                user_message=retry,
+                max_turns=min(config.max_turns, 16),
+                force_tools_until_mutate=True,
+                prefer_write_file=True,
+                should_cancel=job.is_cancelled,
+                on_usage=on_usage,
+            )
+            job.usage.prompt_tokens = (
+                result.usage.prompt_tokens + result2.usage.prompt_tokens
+            )
+            job.usage.completion_tokens = (
+                result.usage.completion_tokens + result2.usage.completion_tokens
+            )
+            output = f"{output}\n\n---\n(retry)\n{result2.output}"
+            if result2.cancelled or job.is_cancelled():
+                job.status = "cancelled"
+                job.output = output
+                return
+            files_after = walk_workspace(workspace)
+            if still_has_scaffold(files_after):
+                note = apply_scaffold_fallback(workspace, body.prompt)
+                output = f"{output}\n\n---\n{note}"
+
+        job.output = output
+        job.status = "done"
+    except Exception as exc:  # noqa: BLE001
+        job.status = "failed"
+        job.error = str(exc)
+        job.output = job.output or str(exc)
+
+
+@app.post("/jobs", response_model=JobCreateResponse)
+def create_agent_job(body: RunRequest) -> JobCreateResponse:
+    """Start an agent run in the background; poll GET /jobs/{id} for status."""
+    # Ensure workspace id is valid before accepting the job.
+    workspace_for(body.workflow_id)
+    job = create_job(body.workflow_id)
+    start_background(lambda: _execute_job(job, body))
+    return JobCreateResponse(
+        job_id=job.id,
+        workflow_id=body.workflow_id,
+        status=job.status,
+    )
+
+
+@app.get("/jobs/{job_id}", response_model=JobStatusResponse)
+def get_agent_job(job_id: str) -> JobStatusResponse:
+    job = get_job(job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="job not found")
+    workspace = getattr(job, "workspace", None)
+    files: list[WorkspaceFile] = []
+    if workspace is not None and job.status in (
+        "running",
+        "done",
+        "cancelled",
+        "failed",
+    ):
+        try:
+            files = walk_workspace(workspace)
+        except OSError:
+            files = []
+    return JobStatusResponse(
+        job_id=job.id,
+        workflow_id=job.workflow_id,
+        status=job.status,
+        output=job.output,
+        error=job.error,
+        usage=job.usage.as_dict(),
+        files=files,
+        model=getattr(job, "model", None),
+        effort=getattr(job, "effort", None),
+    )
+
+
+@app.post("/jobs/{job_id}/cancel")
+def cancel_agent_job(job_id: str) -> dict[str, str]:
+    job = get_job(job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="job not found")
+    job.request_cancel()
+    if job.status in ("queued", "running"):
+        # Soft-cancel; worker flips to cancelled between turns.
+        pass
+    return {"job_id": job.id, "status": "cancel_requested"}

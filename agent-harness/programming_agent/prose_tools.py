@@ -23,6 +23,9 @@ KNOWN_TOOLS = frozenset(
         "glob",
         "grep",
         "bash",
+        "browser_check",
+        "read_app_logs",
+        "report_to_evaluator",
         "todo_write",
         "task",
     }

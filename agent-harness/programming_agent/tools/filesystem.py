@@ -13,8 +13,18 @@ from pydantic import BaseModel, Field
 
 
 class ToolContext:
-    def __init__(self, workspace_root: Path) -> None:
+    def __init__(
+        self,
+        workspace_root: Path,
+        *,
+        preview_url: Optional[str] = None,
+        workflow_id: Optional[str] = None,
+    ) -> None:
         self.workspace_root = workspace_root.resolve()
+        self.preview_url = preview_url or os.getenv("PREVIEW_URL")
+        self.workflow_id = workflow_id
+        self.orchestrator_url = os.getenv("SANDBOX_ORCHESTRATOR_URL")
+        self.eval_url = os.getenv("MODAL_EVAL_URL") or os.getenv("EVAL_BASE_URL")
 
     def resolve(self, path: str) -> Path:
         candidate = Path(path)

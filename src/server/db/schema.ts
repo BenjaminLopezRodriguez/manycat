@@ -69,6 +69,17 @@ export const projects = createTable(
       .$type<"idle" | "working" | "needs-review" | "done">()
       .notNull()
       .default("idle"),
+    /** Background agent-harness job id (survives page leave). */
+    agentJobId: d.varchar({ length: 64 }),
+    /** Outcome of the last finished/cancelled agent run. */
+    lastRunOutcome: d
+      .varchar({ length: 16 })
+      .$type<"ok" | "failed" | "budget" | null>(),
+    /** Unread rail badge — set when a background run finishes. */
+    unread: d.integer().notNull().default(0),
+    /** Tokens already billed for the in-flight agent job (incremental). */
+    agentBilledPromptTokens: d.integer().notNull().default(0),
+    agentBilledCompletionTokens: d.integer().notNull().default(0),
     createdAt: d
       .timestamp({ withTimezone: true })
       .$defaultFn(() => /* @__PURE__ */ new Date())

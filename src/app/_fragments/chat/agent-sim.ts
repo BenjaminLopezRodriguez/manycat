@@ -30,6 +30,8 @@ type UseAgentOptions = {
   onEvent: (event: AgentEvent) => void;
   onPreviewUrl?: (url: string) => void;
   onContentRootHash?: (hash: string) => void;
+  /** Fired when a background harness job is accepted. */
+  onJobStarted?: (jobId: string) => void;
   model?: ModelId;
   effort?: EffortId;
 };
@@ -256,6 +258,7 @@ function useRemoteAgent({
   onEvent,
   onPreviewUrl,
   onContentRootHash,
+  onJobStarted,
   model = "auto",
   effort = "high",
 }: UseAgentOptions): AgentControls {
@@ -265,6 +268,8 @@ function useRemoteAgent({
   onPreviewUrlRef.current = onPreviewUrl;
   const onContentRootHashRef = React.useRef(onContentRootHash);
   onContentRootHashRef.current = onContentRootHash;
+  const onJobStartedRef = React.useRef(onJobStarted);
+  onJobStartedRef.current = onJobStarted;
 
   const stopRequestedRef = React.useRef(false);
   const [isStopping, setIsStopping] = React.useState(false);
@@ -285,10 +290,14 @@ function useRemoteAgent({
     onEventRef.current({ kind: "status", status: "idle" });
   }, []);
 
+  const cancelJobMutation = api.workflow.cancelAgentJob.useMutation();
+
   const runMutation = api.workflow.runAgent.useMutation({
     onSuccess: (data) => {
       if (stopRequestedRef.current) {
-        // Discard late events — applying them after Stop would race the next run.
+        if (data.jobId) {
+          cancelJobMutation.mutate({ workflowId: workflow.id });
+        }
         finishStopped();
         return;
       }
@@ -298,8 +307,8 @@ function useRemoteAgent({
       if (data.previewUrl && onPreviewUrlRef.current) {
         onPreviewUrlRef.current(data.previewUrl);
       }
-      if (data.contentRootHash && onContentRootHashRef.current) {
-        onContentRootHashRef.current(data.contentRootHash);
+      if (data.jobId && onJobStartedRef.current) {
+        onJobStartedRef.current(data.jobId);
       }
     },
     onError: (err) => {
@@ -327,7 +336,7 @@ function useRemoteAgent({
       stopRequestedRef.current = false;
       setIsStopping(false);
 
-      // Optimistic working state so Stop is available for the whole round-trip.
+      // Optimistic working state — harness job outlives this request.
       let idCursor = nextId(workflow.messages);
       if (!opts?.omitUserMessage) {
         onEventRef.current({
@@ -350,7 +359,8 @@ function useRemoteAgent({
           text: "Working…",
           action: "working",
           path: "sandbox",
-          thinking: "Waiting on the agent harness…",
+          thinking:
+            "Agent job started — safe to leave this page; we'll ping when it's done.",
           streaming: true,
           time: nowTime(),
         },
@@ -359,7 +369,6 @@ function useRemoteAgent({
       runMutation.mutate({
         workflowId: workflow.id,
         prompt: userText,
-        // Server will also emit user/status — messageIdStart continues after optimistic ids
         messageIdStart: idCursor,
         model,
         effort,
@@ -367,7 +376,7 @@ function useRemoteAgent({
           path: f.path,
           contents: f.contents,
         })),
-        omitUserMessage: true, // already appended optimistically when needed
+        omitUserMessage: true,
       });
     },
     [runMutation, workflow.id, workflow.messages, workflow.workspace, model, effort],
@@ -411,16 +420,9 @@ function useRemoteAgent({
   }, []);
 
   const cancel = React.useCallback(() => {
-    if (!runMutation.isPending) {
-      // Nothing in flight — safe to idle immediately (e.g. stuck UI state).
-      stopRequestedRef.current = false;
-      setIsStopping(false);
-      onEventRef.current({ kind: "status", status: "idle" });
-      return;
-    }
-    // Honest Stop: do not fake idle while the harness request is still open.
     stopRequestedRef.current = true;
     setIsStopping(true);
+    cancelJobMutation.mutate({ workflowId: workflow.id });
     onEventRef.current({
       kind: "upsert-status",
       message: {
@@ -428,13 +430,16 @@ function useRemoteAgent({
         type: "agent-status",
         text: "Stopping…",
         action: "stopping",
-        thinking:
-          "Waiting for the in-flight run to finish. Send stays locked until then — the sandbox may still be mutating.",
+        thinking: "Cancelling the background agent job…",
         streaming: true,
         time: nowTime(),
       },
     });
-  }, [runMutation.isPending]);
+    // Reconcile will land cancelled/failed; clear local stopping shortly.
+    window.setTimeout(() => {
+      if (stopRequestedRef.current) finishStopped();
+    }, 1500);
+  }, [cancelJobMutation, workflow.id, finishStopped]);
 
   return {
     run,
@@ -442,7 +447,8 @@ function useRemoteAgent({
     requestChanges,
     cancel,
     isStopping,
-    isRunPending: runMutation.isPending,
+    // Pending only while start request is open — background job uses status=working.
+    isRunPending: runMutation.isPending || workflow.status === "working",
   };
 }
 

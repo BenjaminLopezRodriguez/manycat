@@ -47,8 +47,17 @@ services:
       OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       WORKSPACE_ROOT: /workspace
+      SANDBOX_ORCHESTRATOR_URL: http://orchestrator:8080
+      MODAL_EVAL_URL: ${MODAL_EVAL_URL:-}
+      EVAL_MODEL_NAME: ${EVAL_MODEL_NAME:-eval}
+      # Preview URLs use PREVIEW_HOST=localhost for the browser; rewrite for Playwright in this container.
+      PREVIEW_URL_HOST_REWRITE: host.docker.internal
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./.sandbox-workspaces:/workspace
+    depends_on:
+      - orchestrator
 
   sandbox-image:
     build:

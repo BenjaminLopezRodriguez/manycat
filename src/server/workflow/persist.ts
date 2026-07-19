@@ -149,6 +149,63 @@ export async function setProjectStatus(opts: {
     );
 }
 
+export type LastRunOutcome = "ok" | "failed" | "budget" | null;
+
+export async function setProjectAgentRun(opts: {
+  accountId: string;
+  workflowId: string;
+  agentJobId?: string | null;
+  lastRunOutcome?: LastRunOutcome;
+  unread?: number;
+  status?: "idle" | "working" | "needs-review" | "done";
+  agentBilledPromptTokens?: number;
+  agentBilledCompletionTokens?: number;
+  clearBilledTokens?: boolean;
+}) {
+  const patch: Record<string, unknown> = {};
+  if (opts.agentJobId !== undefined) patch.agentJobId = opts.agentJobId;
+  if (opts.lastRunOutcome !== undefined)
+    patch.lastRunOutcome = opts.lastRunOutcome;
+  if (opts.unread !== undefined) patch.unread = opts.unread;
+  if (opts.status !== undefined) patch.status = opts.status;
+  if (opts.clearBilledTokens) {
+    patch.agentBilledPromptTokens = 0;
+    patch.agentBilledCompletionTokens = 0;
+  } else {
+    if (opts.agentBilledPromptTokens !== undefined) {
+      patch.agentBilledPromptTokens = opts.agentBilledPromptTokens;
+    }
+    if (opts.agentBilledCompletionTokens !== undefined) {
+      patch.agentBilledCompletionTokens = opts.agentBilledCompletionTokens;
+    }
+  }
+  if (Object.keys(patch).length === 0) return;
+  await db
+    .update(projects)
+    .set(patch)
+    .where(
+      and(
+        eq(projects.accountId, opts.accountId),
+        eq(projects.id, opts.workflowId),
+      ),
+    );
+}
+
+export async function clearProjectUnread(opts: {
+  accountId: string;
+  workflowId: string;
+}) {
+  await db
+    .update(projects)
+    .set({ unread: 0 })
+    .where(
+      and(
+        eq(projects.accountId, opts.accountId),
+        eq(projects.id, opts.workflowId),
+      ),
+    );
+}
+
 export async function setProjectContentRoot(opts: {
   accountId: string;
   workflowId: string;
@@ -185,6 +242,9 @@ export async function listPersistedSessions(accountId: string) {
       githubRepo: projects.githubRepo,
       contentBackend: projects.contentBackend,
       status: projects.status,
+      agentJobId: projects.agentJobId,
+      lastRunOutcome: projects.lastRunOutcome,
+      unread: projects.unread,
       createdAt: projects.createdAt,
     })
     .from(projects)
@@ -244,6 +304,9 @@ export async function listPersistedSessions(accountId: string) {
     githubRepo: p.githubRepo,
     contentBackend: p.contentBackend,
     status: p.status ?? "idle",
+    agentJobId: p.agentJobId ?? null,
+    lastRunOutcome: p.lastRunOutcome ?? null,
+    unread: p.unread ?? 0,
     messages: messagesByWf.get(p.id) ?? [],
     files: filesByWf.get(p.id) ?? [],
   }));
@@ -297,5 +360,20 @@ export async function deletePersistedSession(opts: {
 export async function ensurePersistenceSchema() {
   await db.execute(sql`
     ALTER TABLE "manycat_project" ADD COLUMN IF NOT EXISTS "status" varchar(32) NOT NULL DEFAULT 'idle'
+  `);
+  await db.execute(sql`
+    ALTER TABLE "manycat_project" ADD COLUMN IF NOT EXISTS "agentJobId" varchar(64)
+  `);
+  await db.execute(sql`
+    ALTER TABLE "manycat_project" ADD COLUMN IF NOT EXISTS "lastRunOutcome" varchar(16)
+  `);
+  await db.execute(sql`
+    ALTER TABLE "manycat_project" ADD COLUMN IF NOT EXISTS "unread" integer NOT NULL DEFAULT 0
+  `);
+  await db.execute(sql`
+    ALTER TABLE "manycat_project" ADD COLUMN IF NOT EXISTS "agentBilledPromptTokens" integer NOT NULL DEFAULT 0
+  `);
+  await db.execute(sql`
+    ALTER TABLE "manycat_project" ADD COLUMN IF NOT EXISTS "agentBilledCompletionTokens" integer NOT NULL DEFAULT 0
   `);
 }

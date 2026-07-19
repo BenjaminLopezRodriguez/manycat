@@ -77,6 +77,8 @@ export type ImageMsg = MsgBase & {
 export type Msg =
   TextMsg | AgentStatusMsg | DiffMsg | ApprovalMsg | MilestoneMsg | ImageMsg;
 
+export type LastRunOutcome = "ok" | "failed" | "budget" | null;
+
 export type Workflow = {
   id: string;
   name: string;
@@ -85,6 +87,10 @@ export type Workflow = {
   repo: string;
   status: WorkflowStatus;
   unread?: number;
+  /** Background harness job — present while status is working. */
+  agentJobId?: string | null;
+  /** Last finished run outcome for rail error/update dots. */
+  lastRunOutcome?: LastRunOutcome;
   messages: Msg[];
   workspace: WorkspaceFile[];
 };

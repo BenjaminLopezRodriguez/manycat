@@ -114,7 +114,7 @@ class ProgrammingAgentHarness:
                 max_turns=min(self.config.max_turns, 16),
                 force_tools_until_mutate=False,
                 prefer_write_file=False,
-            )
+            ).output
 
         tools = build_tools(self.ctx, self._run_explore)
         # Force tool calls until write/edit succeeds — critical for vLLM/Qwen.
@@ -127,7 +127,7 @@ class ProgrammingAgentHarness:
             max_turns=self.config.max_turns,
             force_tools_until_mutate=True,
             prefer_write_file=prefer_write,
-        )
+        ).output
 
     def stream(self, user_message: str):
         # Streaming still uses a one-shot run for now (compat with CLI).

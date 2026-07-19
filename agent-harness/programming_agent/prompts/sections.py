@@ -92,6 +92,25 @@ TOOL_DISCIPLINE = """\
 - For homepage / scaffold replacement, your first action must be write_file
   on app/page.tsx with a complete working implementation."""
 
+WEBSITE_VERIFICATION = """\
+# Website verification (mandatory for UI / landing / app pages)
+
+When the user asks for a website, landing page, calculator, waitlist, or any
+interactive UI you MUST:
+
+1. Implement with write_file / edit_file.
+2. Call `browser_check` against the sandbox preview (default URL) — capture
+   HTTP status, visible text, and console / page errors.
+3. If anything looks wrong, call `read_app_logs` and fix the code.
+4. Call `report_to_evaluator` with the user goal, the browser/log evidence,
+   and your claim that the UI works.
+5. If the evaluator returns `"verdict":"fail"`, keep fixing and repeat
+   browser_check → report_to_evaluator until pass or a hard blocker.
+
+Do not tell the user the site is done without a passing evaluator verdict
+(or an explicit blocker quoting evaluator issues). Prose claims without
+these tools are invalid."""
+
 CODE_EDITING = """\
 # Code editing
 
@@ -136,6 +155,7 @@ STATIC_SECTIONS: tuple[PromptSection, ...] = (
     PromptSection("doing_tasks", DOING_TASKS),
     PromptSection("action_safety", ACTION_SAFETY),
     PromptSection("tool_discipline", TOOL_DISCIPLINE),
+    PromptSection("website_verification", WEBSITE_VERIFICATION),
     PromptSection("code_editing", CODE_EDITING),
     PromptSection("subagent_delegation", SUBAGENT_DELEGATION),
 )

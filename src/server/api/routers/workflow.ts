@@ -12,8 +12,11 @@ import {
   assertCanSpend,
   BudgetExceededError,
   ensureAccount,
+  ESTIMATED_AGENT_TURN_CENTS,
   ESTIMATED_IMAGE_CENTS,
   ESTIMATED_SANDBOX_CENTS,
+  isOverBudget,
+  tokensToCents,
 } from "@/server/billing/budget";
 import {
   changeId,
@@ -38,13 +41,15 @@ import { db } from "@/server/db";
 import { projectChanges, projects } from "@/server/db/schema";
 import {
   appendWorkflowMessages,
+  clearProjectUnread,
   deletePersistedSession,
+  ensurePersistenceSchema,
   ensureShellProject,
   listPersistedSessions,
   listWorkspaceFiles,
   replaceWorkspaceFiles,
+  setProjectAgentRun,
   setProjectContentRoot,
-  setProjectStatus,
   setWorkflowMessages,
 } from "@/server/workflow/persist";
 import { isS3Configured, putCreateImage } from "@/server/s3/create-images";
@@ -469,6 +474,7 @@ export const workflowRouter = createTRPCRouter({
 
   /** Hydrate chats + workspace files after refresh. */
   listSessions: protectedProcedure.query(async ({ ctx }) => {
+    await ensurePersistenceSchema();
     return listPersistedSessions(ctx.accountId);
   }),
 
@@ -589,11 +595,12 @@ export const workflowRouter = createTRPCRouter({
         throw new Error("Agent infrastructure is not configured");
       }
 
-      await setProjectStatus({
-        accountId: ctx.accountId,
-        workflowId: input.workflowId,
-        status: "working",
-      });
+      try {
+        await assertCanSpend(ctx.accountId, ESTIMATED_AGENT_TURN_CENTS);
+      } catch (err) {
+        if (err instanceof BudgetExceededError) throwBudgetExceeded(err);
+        throw err;
+      }
 
       let previewUrl: string | undefined;
       let orchestratorUp = false;
@@ -670,7 +677,7 @@ export const workflowRouter = createTRPCRouter({
         path: "page.tsx",
         thinking: orchestratorUp
           ? workspaceFiles.length > 0
-            ? `Synced ${workspaceFiles.length} files into the sandbox and starting the agent loop.`
+            ? `Synced ${workspaceFiles.length} files — agent continues if you leave this page.`
             : "Sandbox workspace is empty — agent may need to scaffold files first."
           : "Sandbox orchestrator offline — using persisted workspace files; preview URL may be unavailable.",
         streaming: true,
@@ -678,7 +685,7 @@ export const workflowRouter = createTRPCRouter({
       };
       events.push({ kind: "upsert-status", message: statusMsg });
 
-      const failRun = async (text: string) => {
+      const failStart = async (text: string) => {
         const failMsg = {
           id: ++id,
           type: "text" as const,
@@ -696,37 +703,31 @@ export const workflowRouter = createTRPCRouter({
             ? [statusMsg, failMsg]
             : [userMsg, statusMsg, failMsg],
         });
-        await setProjectStatus({
+        await setProjectAgentRun({
           accountId: ctx.accountId,
           workflowId: input.workflowId,
           status: "idle",
+          agentJobId: null,
+          lastRunOutcome: "failed",
+          unread: 1,
+          clearBilledTokens: true,
         });
-        return { events, previewUrl, contentRootHash: undefined as string | undefined };
+        return {
+          accepted: false as const,
+          jobId: null as string | null,
+          events,
+          previewUrl,
+          contentRootHash: undefined as string | undefined,
+        };
       };
 
-      // Structure the user ask only. Harness `build_user_prompt` already
-      // instructs write_file / scaffold replacement — do not wrap again
-      // (double "User request:" confuses small Modal/Qwen models).
       const userFacing = input.prompt;
       const structured = await structurePrompt(userFacing);
       const harnessPrompt = structured;
 
-      const beforeTree = buildTree(workspaceFiles).tree;
-      const [projectTip] = await db
-        .select({ contentRootHash: projects.contentRootHash })
-        .from(projects)
-        .where(
-          and(
-            eq(projects.accountId, ctx.accountId),
-            eq(projects.id, input.workflowId),
-          ),
-        )
-        .limit(1);
-      const parentCommitSha = projectTip?.contentRootHash ?? null;
-
-      let agentRes: Response;
+      let jobRes: Response;
       try {
-        agentRes = await fetch(`${env.AGENT_HARNESS_URL}/run`, {
+        jobRes = await fetch(`${env.AGENT_HARNESS_URL}/jobs`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -736,45 +737,333 @@ export const workflowRouter = createTRPCRouter({
             model: input.model,
             effort: input.effort,
             files: workspaceFiles,
+            preview_url: previewUrl,
           }),
         });
       } catch (err) {
-        return failRun(
+        return failStart(
           fetchErrorMessage(err, "Agent harness", env.AGENT_HARNESS_URL),
         );
       }
 
-      if (!agentRes.ok) {
-        const err = await agentRes.text();
-        return failRun(`Agent failed: ${err}`);
+      if (!jobRes.ok) {
+        const err = await jobRes.text();
+        return failStart(`Agent failed to start: ${err}`);
       }
 
-      const agentBody = (await agentRes.json()) as {
-        output: string;
+      const jobBody = (await jobRes.json()) as { job_id: string };
+      await setProjectAgentRun({
+        accountId: ctx.accountId,
+        workflowId: input.workflowId,
+        status: "working",
+        agentJobId: jobBody.job_id,
+        lastRunOutcome: null,
+        unread: 0,
+        clearBilledTokens: true,
+      });
+
+      await appendWorkflowMessages({
+        accountId: ctx.accountId,
+        workflowId: input.workflowId,
+        messages: input.omitUserMessage
+          ? [statusMsg]
+          : [userMsg, statusMsg],
+      });
+
+      // Reserve the turn estimate up front; reconcile bills token deltas later.
+      await addUsage(ctx.accountId, ESTIMATED_AGENT_TURN_CENTS);
+
+      return {
+        accepted: true as const,
+        jobId: jobBody.job_id,
+        events,
+        previewUrl,
+        contentRootHash: undefined as string | undefined,
+      };
+    }),
+
+  /**
+   * Poll a background harness job: bill token deltas, cancel on budget
+   * exceed (stash working-diff), or finalize when done/failed.
+   */
+  reconcileRun: protectedProcedure
+    .input(z.object({ workflowId: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      if (!isInfraEnabled()) {
+        throw new Error("Agent infrastructure is not configured");
+      }
+
+      const [row] = await db
+        .select({
+          status: projects.status,
+          agentJobId: projects.agentJobId,
+          contentRootHash: projects.contentRootHash,
+          agentBilledPromptTokens: projects.agentBilledPromptTokens,
+          agentBilledCompletionTokens: projects.agentBilledCompletionTokens,
+          name: projects.name,
+        })
+        .from(projects)
+        .where(
+          and(
+            eq(projects.accountId, ctx.accountId),
+            eq(projects.id, input.workflowId),
+          ),
+        )
+        .limit(1);
+
+      if (!row) {
+        return {
+          outcome: "missing" as const,
+          events: [] as AgentEventPayload[],
+        };
+      }
+
+      if (row.status !== "working" || !row.agentJobId) {
+        const outcome = row.status === "needs-review" ? "ok" : "idle";
+        return {
+          outcome,
+          events: [] as AgentEventPayload[],
+          status: row.status,
+        };
+      }
+
+      let jobRes: Response;
+      try {
+        jobRes = await fetch(
+          `${env.AGENT_HARNESS_URL}/jobs/${encodeURIComponent(row.agentJobId)}`,
+        );
+      } catch (err) {
+        return {
+          outcome: "working" as const,
+          events: [] as AgentEventPayload[],
+          error: fetchErrorMessage(err, "Agent harness", env.AGENT_HARNESS_URL),
+        };
+      }
+
+      if (jobRes.status === 404) {
+        await setProjectAgentRun({
+          accountId: ctx.accountId,
+          workflowId: input.workflowId,
+          status: "idle",
+          agentJobId: null,
+          lastRunOutcome: "failed",
+          unread: 1,
+          clearBilledTokens: true,
+        });
+        const msg = {
+          id: Date.now(),
+          type: "text" as const,
+          from: "agent" as const,
+          text: "Previous agent job was lost (harness restarted). Send a message to continue.",
+          time: nowTime(),
+        };
+        await appendWorkflowMessages({
+          accountId: ctx.accountId,
+          workflowId: input.workflowId,
+          messages: [msg],
+        });
+        return {
+          outcome: "failed" as const,
+          events: [
+            { kind: "append" as const, message: msg },
+            { kind: "status" as const, status: "idle" as const },
+            { kind: "done" as const },
+          ],
+        };
+      }
+
+      if (!jobRes.ok) {
+        return {
+          outcome: "working" as const,
+          events: [] as AgentEventPayload[],
+          error: await jobRes.text(),
+        };
+      }
+
+      const job = (await jobRes.json()) as {
+        status: string;
+        output?: string;
+        error?: string;
+        usage?: { prompt_tokens?: number; completion_tokens?: number };
         files?: { path: string; contents: string }[];
       };
 
-      const nextFiles =
-        agentBody.files && agentBody.files.length > 0
-          ? agentBody.files
-          : workspaceFiles;
+      const promptTokens = job.usage?.prompt_tokens ?? 0;
+      const completionTokens = job.usage?.completion_tokens ?? 0;
+      const billedPrompt = row.agentBilledPromptTokens ?? 0;
+      const billedCompletion = row.agentBilledCompletionTokens ?? 0;
+      const deltaPrompt = Math.max(0, promptTokens - billedPrompt);
+      const deltaCompletion = Math.max(0, completionTokens - billedCompletion);
+      const deltaCents = tokensToCents(deltaPrompt, deltaCompletion);
+      if (deltaCents > 0) {
+        await addUsage(ctx.accountId, deltaCents);
+        await setProjectAgentRun({
+          accountId: ctx.accountId,
+          workflowId: input.workflowId,
+          agentBilledPromptTokens: promptTokens,
+          agentBilledCompletionTokens: completionTokens,
+        });
+      }
 
-      if (agentBody.files && agentBody.files.length > 0) {
+      const overBudget = await isOverBudget(ctx.accountId);
+      if (overBudget && (job.status === "queued" || job.status === "running")) {
+        await fetch(
+          `${env.AGENT_HARNESS_URL}/jobs/${encodeURIComponent(row.agentJobId)}/cancel`,
+          { method: "POST" },
+        ).catch(() => null);
+
+        // Re-fetch after cancel for latest partial files.
+        let files = job.files ?? [];
+        try {
+          const again = await fetch(
+            `${env.AGENT_HARNESS_URL}/jobs/${encodeURIComponent(row.agentJobId)}`,
+          );
+          if (again.ok) {
+            const body = (await again.json()) as {
+              files?: { path: string; contents: string }[];
+              output?: string;
+            };
+            if (body.files?.length) files = body.files;
+            if (body.output) job.output = body.output;
+          }
+        } catch {
+          /* keep prior files */
+        }
+
+        if (files.length > 0) {
+          await replaceWorkspaceFiles({
+            accountId: ctx.accountId,
+            workflowId: input.workflowId,
+            files,
+          });
+          await orchestratorFetch(
+            `/sandboxes/${encodeURIComponent(input.workflowId)}/files`,
+            {
+              method: "PUT",
+              body: JSON.stringify({ files }),
+            },
+          ).catch(() => null);
+        }
+
+        const beforeTree = buildTree(
+          await listWorkspaceFiles({
+            accountId: ctx.accountId,
+            workflowId: input.workflowId,
+          }),
+        ).tree;
+        const snapshot = await putBuildSnapshot({
+          accountId: ctx.accountId,
+          buildId: input.workflowId,
+          files:
+            files.length > 0
+              ? files
+              : await listWorkspaceFiles({
+                  accountId: ctx.accountId,
+                  workflowId: input.workflowId,
+                }),
+          branch: "main",
+          prompt: "budget-stop",
+          thoughts: "Stopped — compute budget exceeded.",
+          parentCommitSha: row.contentRootHash ?? null,
+          parentTreeEntries: beforeTree.entries,
+        });
+        await setProjectContentRoot({
+          accountId: ctx.accountId,
+          workflowId: input.workflowId,
+          contentRootHash: snapshot.commitSha,
+        });
+        await db.insert(projectChanges).values({
+          id: snapshot.intentId || changeId(),
+          accountId: ctx.accountId,
+          workflowId: input.workflowId,
+          parentId: snapshot.parentCommitSha,
+          treeHash: snapshot.commitSha,
+          diff: JSON.stringify({
+            kind: "working-diff",
+            reason: "budget",
+            treeSha: snapshot.treeSha,
+            changedPaths: snapshot.changedPaths,
+          }),
+          prompt: "budget-stop",
+          templateId: null,
+        });
+
+        const agentText = {
+          id: Date.now(),
+          type: "text" as const,
+          from: "agent" as const,
+          text:
+            "Stopped — compute budget exceeded. Partial changes were saved as a working diff. Upgrade to continue.",
+          time: nowTime(),
+        };
+        await appendWorkflowMessages({
+          accountId: ctx.accountId,
+          workflowId: input.workflowId,
+          messages: [agentText],
+        });
+        await setProjectAgentRun({
+          accountId: ctx.accountId,
+          workflowId: input.workflowId,
+          status: "idle",
+          agentJobId: null,
+          lastRunOutcome: "budget",
+          unread: 1,
+          clearBilledTokens: true,
+        });
+
+        const events: AgentEventPayload[] = [];
+        for (const file of files) {
+          events.push({
+            kind: "patch-workspace",
+            path: file.path,
+            contents: file.contents,
+            edited: true,
+          });
+        }
+        events.push({ kind: "append", message: agentText });
+        events.push({ kind: "status", status: "idle" });
+        events.push({ kind: "done" });
+
+        return {
+          outcome: "budget" as const,
+          events,
+          contentRootHash: snapshot.commitSha,
+        };
+      }
+
+      if (job.status === "queued" || job.status === "running") {
+        const events: AgentEventPayload[] = [];
+        if (job.files?.length) {
+          for (const file of job.files) {
+            events.push({
+              kind: "patch-workspace",
+              path: file.path,
+              contents: file.contents,
+              edited: true,
+            });
+          }
+        }
+        return { outcome: "working" as const, events };
+      }
+
+      const files = job.files ?? [];
+      const events: AgentEventPayload[] = [];
+      let id = Date.now();
+
+      if (files.length > 0) {
+        await replaceWorkspaceFiles({
+          accountId: ctx.accountId,
+          workflowId: input.workflowId,
+          files,
+        });
         await orchestratorFetch(
           `/sandboxes/${encodeURIComponent(input.workflowId)}/files`,
           {
             method: "PUT",
-            body: JSON.stringify({ files: agentBody.files }),
+            body: JSON.stringify({ files }),
           },
         ).catch(() => null);
-
-        await replaceWorkspaceFiles({
-          accountId: ctx.accountId,
-          workflowId: input.workflowId,
-          files: agentBody.files,
-        });
-
-        for (const file of agentBody.files) {
+        for (const file of files) {
           events.push({
             kind: "patch-workspace",
             path: file.path,
@@ -784,10 +1073,18 @@ export const workflowRouter = createTRPCRouter({
         }
       }
 
-      // Optional thought pattern: lines marked with "Thinking:" in agent prose.
-      const thoughtMatch = /(?:^|\n)Thinking:\s*([\s\S]{0,2000}?)(?:\n\n|$)/i.exec(
-        agentBody.output,
-      );
+      const nextFiles =
+        files.length > 0
+          ? files
+          : await listWorkspaceFiles({
+              accountId: ctx.accountId,
+              workflowId: input.workflowId,
+            });
+      const beforeTree = buildTree(nextFiles).tree;
+      const thoughtMatch =
+        /(?:^|\n)Thinking:\s*([\s\S]{0,2000}?)(?:\n\n|$)/i.exec(
+          job.output ?? "",
+        );
       const thoughts = thoughtMatch?.[1]?.trim() ?? null;
 
       const snapshot = await putBuildSnapshot({
@@ -795,18 +1092,20 @@ export const workflowRouter = createTRPCRouter({
         buildId: input.workflowId,
         files: nextFiles,
         branch: "main",
-        prompt: userFacing,
+        prompt: row.name,
         thoughts,
-        parentCommitSha,
+        parentCommitSha: row.contentRootHash ?? null,
         parentTreeEntries: beforeTree.entries,
       });
-
       await setProjectContentRoot({
         accountId: ctx.accountId,
         workflowId: input.workflowId,
         contentRootHash: snapshot.commitSha,
       });
 
+      const isFail =
+        job.status === "failed" ||
+        job.status === "cancelled";
       await db.insert(projectChanges).values({
         id: snapshot.intentId || changeId(),
         accountId: ctx.accountId,
@@ -814,20 +1113,57 @@ export const workflowRouter = createTRPCRouter({
         parentId: snapshot.parentCommitSha,
         treeHash: snapshot.commitSha,
         diff: JSON.stringify({
+          kind: isFail && job.status === "cancelled" ? "working-diff" : "agent-run",
+          reason: job.status,
           treeSha: snapshot.treeSha,
           changedPaths: snapshot.changedPaths,
           thoughts,
           persistedToS3: snapshot.persistedToS3,
         }),
-        prompt: userFacing,
+        prompt: row.name,
         templateId: null,
       });
+
+      if (isFail) {
+        const agentText = {
+          id: ++id,
+          type: "text" as const,
+          from: "agent" as const,
+          text:
+            job.status === "cancelled"
+              ? (job.output ?? "Run cancelled. Partial changes were saved.")
+              : `Agent failed: ${job.error ?? job.output ?? "unknown error"}`,
+          time: nowTime(),
+        };
+        events.push({ kind: "append", message: agentText });
+        events.push({ kind: "status", status: "idle" });
+        events.push({ kind: "done" });
+        await appendWorkflowMessages({
+          accountId: ctx.accountId,
+          workflowId: input.workflowId,
+          messages: [agentText],
+        });
+        await setProjectAgentRun({
+          accountId: ctx.accountId,
+          workflowId: input.workflowId,
+          status: "idle",
+          agentJobId: null,
+          lastRunOutcome: "failed",
+          unread: 1,
+          clearBilledTokens: true,
+        });
+        return {
+          outcome: "failed" as const,
+          events,
+          contentRootHash: snapshot.commitSha,
+        };
+      }
 
       const agentText = {
         id: ++id,
         type: "text" as const,
         from: "agent" as const,
-        text: agentBody.output,
+        text: job.output ?? "Updated workspace files.",
         time: nowTime(),
       };
       const approvalMsg = {
@@ -845,21 +1181,55 @@ export const workflowRouter = createTRPCRouter({
       await appendWorkflowMessages({
         accountId: ctx.accountId,
         workflowId: input.workflowId,
-        messages: input.omitUserMessage
-          ? [statusMsg, agentText, approvalMsg]
-          : [userMsg, statusMsg, agentText, approvalMsg],
+        messages: [agentText, approvalMsg],
       });
-      await setProjectStatus({
+      await setProjectAgentRun({
         accountId: ctx.accountId,
         workflowId: input.workflowId,
         status: "needs-review",
+        agentJobId: null,
+        lastRunOutcome: "ok",
+        unread: 1,
+        clearBilledTokens: true,
       });
 
       return {
+        outcome: "ok" as const,
         events,
-        previewUrl,
         contentRootHash: snapshot.commitSha,
       };
+    }),
+
+  clearUnread: protectedProcedure
+    .input(z.object({ workflowId: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      await clearProjectUnread({
+        accountId: ctx.accountId,
+        workflowId: input.workflowId,
+      });
+      return { ok: true as const };
+    }),
+
+  cancelAgentJob: protectedProcedure
+    .input(z.object({ workflowId: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      const [row] = await db
+        .select({ agentJobId: projects.agentJobId })
+        .from(projects)
+        .where(
+          and(
+            eq(projects.accountId, ctx.accountId),
+            eq(projects.id, input.workflowId),
+          ),
+        )
+        .limit(1);
+      if (row?.agentJobId && env.AGENT_HARNESS_URL) {
+        await fetch(
+          `${env.AGENT_HARNESS_URL}/jobs/${encodeURIComponent(row.agentJobId)}/cancel`,
+          { method: "POST" },
+        ).catch(() => null);
+      }
+      return { ok: true as const };
     }),
 
   /**

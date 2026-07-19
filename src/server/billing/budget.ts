@@ -16,6 +16,29 @@ export const ESTIMATED_DEPLOY_CENTS = 25;
 export const ESTIMATED_SANDBOX_CENTS = 15;
 /** Conservative estimate for a single Create / Modal image generation. */
 export const ESTIMATED_IMAGE_CENTS = 10;
+/** Pre-flight reserve for starting a Build agent turn (Modal/vLLM). */
+export const ESTIMATED_AGENT_TURN_CENTS = 25;
+
+/**
+ * Rough open-weight coder pricing → cents.
+ * ~$0.20 / 1M prompt tokens, ~$0.60 / 1M completion tokens (≈ Modal L4 burn).
+ */
+export function tokensToCents(promptTokens: number, completionTokens: number): number {
+  const prompt = Math.max(0, promptTokens);
+  const completion = Math.max(0, completionTokens);
+  // ($/1M tokens) * tokens * 100 cents → divide by 10_000
+  return Math.max(0, Math.ceil((prompt * 0.2 + completion * 0.6) / 10_000));
+}
+
+/** True when free/sub ceiling is already exhausted (no remaining cents). */
+export async function isOverBudget(accountId: string): Promise<boolean> {
+  const account = await ensureAccount(accountId);
+  const remaining = remainingBudgetCents(
+    account.billingPlan,
+    account.computeUsedCents,
+  );
+  return remaining !== null && remaining <= 0;
+}
 
 export function ceilingForPlan(plan: BillingPlan): number | null {
   switch (plan) {

@@ -503,6 +503,58 @@ app.post("/sandboxes/:id/exec", async (req, res) => {
   }
 });
 
+/** Tail container logs for the Build agent (`read_app_logs` tool). */
+app.get("/sandboxes/:id/logs", async (req, res) => {
+  const id = safeId(req.params.id);
+  const record = sandboxes.get(id);
+  if (!record) {
+    res.status(404).json({ error: "Sandbox not found" });
+    return;
+  }
+  if (record.mode === "workspace-only" || !record.containerId) {
+    res.status(503).json({
+      error: "Sandbox is workspace-only (no Docker container); logs unavailable",
+    });
+    return;
+  }
+  const lines = Math.min(
+    400,
+    Math.max(10, Number(req.query.lines) > 0 ? Number(req.query.lines) : 80),
+  );
+  try {
+    const container = docker.getContainer(record.containerId);
+    const stream = await container.logs({
+      stdout: true,
+      stderr: true,
+      tail: lines,
+      timestamps: true,
+    });
+    const buf = Buffer.isBuffer(stream)
+      ? stream
+      : Buffer.from(String(stream), "utf8");
+    // Docker multiplexed stream: 8-byte header + payload per frame.
+    const chunks = [];
+    let offset = 0;
+    while (offset + 8 <= buf.length) {
+      const size = buf.readUInt32BE(offset + 4);
+      offset += 8;
+      if (size < 0 || offset + size > buf.length) break;
+      chunks.push(buf.subarray(offset, offset + size));
+      offset += size;
+    }
+    const demuxed =
+      chunks.length > 0 ? Buffer.concat(chunks).toString("utf8") : buf.toString("utf8");
+    const cleaned = demuxed
+      .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, "")
+      .slice(-14_000);
+    res.json({ workflowId: id, output: cleaned });
+  } catch (err) {
+    res.status(500).json({
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+});
+
 app.get("/sandboxes/:id", async (req, res) => {
   const id = safeId(req.params.id);
   const record = sandboxes.get(id);

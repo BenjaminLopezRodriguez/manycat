@@ -56,6 +56,7 @@ import { getFeaturedUpdate, updateHref } from "@/content/updates";
 import { api } from "@/trpc/react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { applyWorkspacePatch, useAgent, type AgentEvent } from "./agent-sim";
 import type { EffortId, ModelId } from "@/lib/ai-models";
 import {
@@ -64,6 +65,7 @@ import {
   type ApprovalMsg,
   type DiffMsg,
   type ImageMsg,
+  type LastRunOutcome,
   type Msg,
   type Project,
   type TextMsg,
@@ -211,10 +213,15 @@ export default function Chat() {
   api.workflow.isEnabled.useQuery();
   const activeIdRef = React.useRef(activeId);
   activeIdRef.current = activeId;
+  const anyWorking = workflows.some((w) => w.status === "working");
   const sessionsQuery = api.workflow.listSessions.useQuery(undefined, {
     enabled: signedIn,
-    staleTime: 30_000,
+    staleTime: anyWorking ? 0 : 30_000,
+    refetchInterval: anyWorking ? 3000 : false,
   });
+  const reconcileRun = api.workflow.reconcileRun.useMutation();
+  const clearUnreadMut = api.workflow.clearUnread.useMutation();
+  const reconcileInFlight = React.useRef(new Set<string>());
   const budgetQuery = api.project.budget.useQuery(undefined, {
     enabled: signedIn,
     staleTime: 30_000,
@@ -247,12 +254,14 @@ export default function Chat() {
       const name = s.name || s.id;
       // githubRepo holds owner/repo OR shell markers (create|research|workspace).
       const repo = s.githubRepo ?? "virtual";
-      const rawStatus = s.status ?? "idle";
-      // Refresh mid-run has no attached stream — don't leave a permanent live chip.
-      const orphanedWorking = rawStatus === "working";
+      const rawStatus: WorkflowStatus = s.status ?? "idle";
+      const agentJobId = s.agentJobId ?? null;
+      // Only orphan if status says working but no background job to poll.
+      const orphanedWorking = rawStatus === "working" && !agentJobId;
       const baseMessages = (s.messages ?? [])
         .filter(isMsg)
         .filter((m) => m.type !== "agent-status");
+      const lastRunOutcome: LastRunOutcome = s.lastRunOutcome ?? null;
       return {
         id: s.id,
         name,
@@ -267,6 +276,9 @@ export default function Chat() {
               : "bg-emerald-200 text-emerald-900",
         repo,
         status: orphanedWorking ? "idle" : rawStatus,
+        agentJobId,
+        lastRunOutcome,
+        unread: s.unread ?? 0,
         messages: orphanedWorking
           ? [
               ...baseMessages,
@@ -327,6 +339,34 @@ export default function Chat() {
       setActiveId(null);
     }
   }, [signedIn]);
+
+  // Soft-sync status/unread from listSessions while background jobs run.
+  React.useEffect(() => {
+    if (!sessionsHydrated || !sessionsQuery.data) return;
+    setWorkflows((prev) => {
+      let changed = false;
+      const next = prev.map((w) => {
+        const s = sessionsQuery.data.find((row) => row.id === w.id);
+        if (!s) return w;
+        const status: WorkflowStatus = s.status ?? w.status;
+        const unread = s.unread ?? w.unread ?? 0;
+        const lastRunOutcome: LastRunOutcome =
+          s.lastRunOutcome ?? w.lastRunOutcome ?? null;
+        const agentJobId = s.agentJobId ?? w.agentJobId ?? null;
+        if (
+          status === w.status &&
+          unread === (w.unread ?? 0) &&
+          lastRunOutcome === (w.lastRunOutcome ?? null) &&
+          agentJobId === (w.agentJobId ?? null)
+        ) {
+          return w;
+        }
+        changed = true;
+        return { ...w, status, unread, lastRunOutcome, agentJobId };
+      });
+      return changed ? next : prev;
+    });
+  }, [sessionsQuery.data, sessionsHydrated]);
 
   React.useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -506,6 +546,87 @@ export default function Chat() {
   const handleAgentEventRef = React.useRef(handleAgentEvent);
   handleAgentEventRef.current = handleAgentEvent;
 
+  // Poll harness jobs → apply patches / finish / budget stop.
+  React.useEffect(() => {
+    if (!signedIn) return;
+    const workingIds = workflows
+      .filter((w) => w.status === "working" && w.agentJobId)
+      .map((w) => w.id);
+    if (workingIds.length === 0) return;
+
+    let cancelled = false;
+    const tick = () => {
+      for (const workflowId of workingIds) {
+        if (reconcileInFlight.current.has(workflowId)) continue;
+        reconcileInFlight.current.add(workflowId);
+        void reconcileRun
+          .mutateAsync({ workflowId })
+          .then((data) => {
+            if (cancelled) return;
+            for (const event of data.events ?? []) {
+              handleAgentEventRef.current(event);
+            }
+            if (data.contentRootHash) setContentRootHash(data.contentRootHash);
+            if (data.outcome === "budget") {
+              toast.error("Compute budget exceeded — upgrade to continue", {
+                action: {
+                  label: "Upgrade",
+                  onClick: () => openUpgradeLimit(),
+                },
+              });
+              openUpgradeLimit();
+              void budgetQuery.refetch();
+            } else if (data.outcome === "failed") {
+              toast.error("Agent run failed");
+            } else if (data.outcome === "ok") {
+              toast.success("Build finished — ready for review");
+            }
+            if (data.outcome !== "working") {
+              setWorkflows((prev) =>
+                prev.map((w) =>
+                  w.id === workflowId
+                    ? {
+                        ...w,
+                        agentJobId: null,
+                        lastRunOutcome:
+                          data.outcome === "ok"
+                            ? "ok"
+                            : data.outcome === "budget"
+                              ? "budget"
+                              : data.outcome === "failed"
+                                ? "failed"
+                                : w.lastRunOutcome,
+                        unread:
+                          data.outcome === "ok" ||
+                          data.outcome === "failed" ||
+                          data.outcome === "budget"
+                            ? 1
+                            : w.unread,
+                      }
+                    : w,
+                ),
+              );
+              void sessionsQuery.refetch();
+            }
+          })
+          .catch(() => {
+            /* next poll */
+          })
+          .finally(() => {
+            reconcileInFlight.current.delete(workflowId);
+          });
+      }
+    };
+
+    tick();
+    const id = window.setInterval(tick, 3000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- poll on working set changes
+  }, [signedIn, anyWorking, workflows.map((w) => `${w.id}:${w.agentJobId}`).join("|")]);
+
   // Create-from-prompt still owns a separate mutation — Stop must cover it too.
   const createRunStopRef = React.useRef(false);
   const [createRunStopping, setCreateRunStopping] = React.useState(false);
@@ -527,7 +648,7 @@ export default function Chat() {
   }, []);
 
   const runAgentMutation = api.workflow.runAgent.useMutation({
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
       if (createRunStopRef.current) {
         finishCreateRunStopped();
         return;
@@ -536,13 +657,28 @@ export default function Chat() {
         handleAgentEventRef.current(event);
       }
       if (data.previewUrl) setPreviewUrl(data.previewUrl);
-      if (data.contentRootHash) setContentRootHash(data.contentRootHash);
+      if (data.jobId) {
+        const wfId = variables.workflowId;
+        setWorkflows((prev) =>
+          prev.map((w) =>
+            w.id === wfId
+              ? {
+                  ...w,
+                  status: "working",
+                  agentJobId: data.jobId,
+                  lastRunOutcome: null,
+                }
+              : w,
+          ),
+        );
+      }
     },
     onError: (err) => {
       if (createRunStopRef.current) {
         finishCreateRunStopped();
         return;
       }
+      if (isBudgetExceededError(err)) openUpgradeLimit();
       handleAgentEventRef.current({
         kind: "append",
         message: {
@@ -562,6 +698,22 @@ export default function Chat() {
     onEvent: handleAgentEvent,
     onPreviewUrl: setPreviewUrl,
     onContentRootHash: setContentRootHash,
+    onJobStarted: (jobId) => {
+      const id = activeIdRef.current;
+      if (!id) return;
+      setWorkflows((prev) =>
+        prev.map((w) =>
+          w.id === id
+            ? {
+                ...w,
+                status: "working",
+                agentJobId: jobId,
+                lastRunOutcome: null,
+              }
+            : w,
+        ),
+      );
+    },
     model: aiModel,
     effort: aiEffort,
   });
@@ -572,8 +724,18 @@ export default function Chat() {
     setChatOpen(true);
     setPreviewOpen(false);
     setWorkflows((prev) =>
-      prev.map((w) => (w.id === id ? { ...w, unread: 0 } : w)),
+      prev.map((w) =>
+        w.id === id
+          ? {
+              ...w,
+              unread: 0,
+              lastRunOutcome:
+                w.lastRunOutcome === "ok" ? null : w.lastRunOutcome,
+            }
+          : w,
+      ),
     );
+    if (signedIn) clearUnreadMut.mutate({ workflowId: id });
 
     if (opts?.openDiff) {
       const wf = workflows.find((w) => w.id === id);
@@ -1207,6 +1369,19 @@ export default function Chat() {
     setActiveId(id);
     setView(mode === "workspace" ? "work" : "new");
     setChatOpen(false);
+    setWorkflows((prev) =>
+      prev.map((w) =>
+        w.id === id
+          ? {
+              ...w,
+              unread: 0,
+              lastRunOutcome:
+                w.lastRunOutcome === "ok" ? null : w.lastRunOutcome,
+            }
+          : w,
+      ),
+    );
+    if (signedIn) clearUnreadMut.mutate({ workflowId: id });
   }
 
   function renameActiveChat(nextName: string) {
@@ -1456,7 +1631,7 @@ export default function Chat() {
                           ? view === "workflows" && w.id === activeId
                           : view === homeView && w.id === activeId
                       }
-                      badge={w.unread && w.unread > 0 ? w.unread : undefined}
+                      indicator={sessionRailIndicator(w)}
                       onClick={() =>
                         mode === "dev"
                           ? openWorkflow(w.id)
@@ -2090,7 +2265,7 @@ export default function Chat() {
                             ? view === "workflows" && w.id === activeId
                             : view === homeView && w.id === activeId
                         }
-                        badge={w.unread && w.unread > 0 ? w.unread : undefined}
+                        indicator={sessionRailIndicator(w)}
                         onClick={() => {
                           if (mode === "dev") openWorkflow(w.id);
                           else openModeSession(w.id);
@@ -2676,10 +2851,56 @@ function ToolsRailGroup({
   );
 }
 
+type RailIndicator = "working" | "update" | "error";
+
+function sessionRailIndicator(w: Workflow): RailIndicator | undefined {
+  if (w.status === "working") return "working";
+  if (w.lastRunOutcome === "failed" || w.lastRunOutcome === "budget") {
+    return "error";
+  }
+  if (
+    w.status === "needs-review" ||
+    (w.unread != null && w.unread > 0) ||
+    w.lastRunOutcome === "ok"
+  ) {
+    return "update";
+  }
+  return undefined;
+}
+
+function RailSessionMark({ indicator }: { indicator?: RailIndicator }) {
+  if (indicator === "working") {
+    return (
+      <span
+        className="border-sidebar-foreground/30 size-3.5 shrink-0 animate-spin rounded-full border-2 border-r-transparent"
+        aria-label="Working"
+      />
+    );
+  }
+  if (indicator === "update") {
+    return (
+      <span
+        className="size-2 shrink-0 rounded-full bg-sky-500"
+        aria-label="Update ready"
+      />
+    );
+  }
+  if (indicator === "error") {
+    return (
+      <span
+        className="size-2 shrink-0 rounded-full bg-red-500"
+        aria-label="Run failed"
+      />
+    );
+  }
+  return null;
+}
+
 function RailButton({
   label,
   active,
   badge,
+  indicator,
   indented,
   onClick,
   children,
@@ -2687,6 +2908,7 @@ function RailButton({
   label: string;
   active?: boolean;
   badge?: number;
+  indicator?: RailIndicator;
   indented?: boolean;
   onClick?: () => void;
   children?: React.ReactNode;
@@ -2710,6 +2932,12 @@ function RailButton({
         <span className="relative flex size-5 shrink-0 items-center justify-center overflow-visible">
           {children}
         </span>
+      ) : indicator ? (
+        <span className="flex size-5 shrink-0 items-center justify-center">
+          <RailSessionMark indicator={indicator} />
+        </span>
+      ) : indented ? (
+        <span className="size-5 shrink-0" />
       ) : null}
       <span className="min-w-0 flex-1 truncate text-left">{label}</span>
       {badge != null ? (
@@ -2892,12 +3120,14 @@ function MobileMenuItem({
   label,
   active,
   badge,
+  indicator,
   onClick,
   children,
 }: {
   label: string;
   active?: boolean;
   badge?: number;
+  indicator?: RailIndicator;
   onClick: () => void;
   children?: React.ReactNode;
 }) {
@@ -2917,6 +3147,10 @@ function MobileMenuItem({
       {children != null ? (
         <span className="flex size-5 shrink-0 items-center justify-center">
           {children}
+        </span>
+      ) : indicator ? (
+        <span className="flex size-5 shrink-0 items-center justify-center">
+          <RailSessionMark indicator={indicator} />
         </span>
       ) : null}
       <span className="min-w-0 flex-1 truncate">{label}</span>

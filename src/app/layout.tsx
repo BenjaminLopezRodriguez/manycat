@@ -5,6 +5,7 @@ import { DM_Sans, Figtree } from "next/font/google";
 
 import { AuthSessionProvider } from "@/components/auth-session-provider";
 import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "@/components/ui/sonner";
 import { TRPCReactProvider } from "@/trpc/react";
 import { cn } from "@/lib/utils";
 
@@ -50,7 +51,10 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <AuthSessionProvider>
-            <TRPCReactProvider>{children}</TRPCReactProvider>
+            <TRPCReactProvider>
+              {children}
+              <Toaster />
+            </TRPCReactProvider>
           </AuthSessionProvider>
         </ThemeProvider>
       </body>

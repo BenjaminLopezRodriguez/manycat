@@ -20,6 +20,33 @@ modal secret create huggingface HF_TOKEN=hf_...
 
 Then add `secrets=[modal.Secret.from_name("huggingface")]` to `@app.function` in `serve_coder.py` and redeploy.
 
+## Evaluator (website QA)
+
+Separate Modal app the Build agent must call via `report_to_evaluator` after
+`browser_check` / `read_app_logs`:
+
+```bash
+modal deploy infra/modal/serve_eval.py
+```
+
+Wire on **agent-harness** (Railway / Compose), not Vercel:
+
+```bash
+MODAL_EVAL_URL=https://benjaminlopezrodriguez--openweight-eval-serve.modal.run/v1
+EVAL_MODEL_NAME=eval
+SANDBOX_ORCHESTRATOR_URL=https://your-orchestrator…   # for read_app_logs
+```
+
+Deployed evaluator endpoint (this workspace):
+
+`https://benjaminlopezrodriguez--openweight-eval-serve.modal.run/v1`
+
+Smoke (cold start can take several minutes on first request):
+
+```bash
+curl "$MODAL_EVAL_URL/models"
+```
+
 ## Effort (agent → Modal)
 
 The Manycat UI Effort slider (`low` | `medium` | `high` | `max`) is sent on every `/run` call. The harness maps it to:
