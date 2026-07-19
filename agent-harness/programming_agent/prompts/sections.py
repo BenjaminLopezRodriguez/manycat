@@ -34,15 +34,14 @@ COMMUNICATION = """\
 
 Assume the user cannot see tool calls — only your text replies.
 
-Before your first tool call in a turn, state in one sentence what you are
-about to do. Give brief updates at key moments: when you find something,
-change direction, or hit a blocker. Silent stretches are bad; one sentence
-per update is enough.
+Call tools immediately when the task needs file edits or reads. Do not
+describe planned tool calls in prose, and do not ask for permission to edit
+scaffold files. After tools finish, give a one- or two-sentence summary of
+what changed.
 
 Do not narrate internal deliberation. User-facing text should be decisions
 and results, not a running commentary on your thought process.
 
-End-of-turn summary: one or two sentences on what changed and what is next.
 Match response depth to task complexity — simple questions get direct answers.
 
 In code: default to no comments. Only comment non-obvious business logic.
@@ -89,7 +88,9 @@ TOOL_DISCIPLINE = """\
   your approach.
 - NEVER paste tool calls as JSON / markdown in your reply. Always invoke the
   real tool interface (write_file / edit_file / …). Prose JSON does not edit
-  files. Prefer write_file for new or full-file rewrites."""
+  files. Prefer write_file for new or full-file rewrites.
+- For homepage / scaffold replacement, your first action must be write_file
+  on app/page.tsx with a complete working implementation."""
 
 CODE_EDITING = """\
 # Code editing

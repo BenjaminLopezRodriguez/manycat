@@ -42,7 +42,9 @@ import CreateStudio, {
   type CreateWork,
   type CreateWorkImage,
 } from "./create-studio";
+import type { Msg } from "./data";
 import ImportRepoDialog from "./import-repo";
+import MessageList from "./message-list";
 
 const ATTACH_OPTIONS = [
   { id: "import", label: "Import repo", icon: GitBranchIcon },
@@ -72,13 +74,13 @@ const PROMPT_SUGGESTIONS = [
   "Scaffold a Stripe checkout for a SaaS plan",
 ] as const;
 
-const WORKSPACE_SUGGESTIONS = [
+export const WORKSPACE_SUGGESTIONS = [
   "Summarize unread Gmail and draft replies",
   "When a Zapier form submits, create a Notion task",
   "Sync calendar holds into a weekly digest",
 ] as const;
 
-const RESEARCH_SUGGESTIONS = [
+export const RESEARCH_SUGGESTIONS = [
   "Compare the top open-source vector databases",
   "Brief me on recent Next.js App Router changes",
   "Find sources on agent memory architectures",
@@ -151,6 +153,8 @@ type ProjectsProps = {
   onDeleteCreateWork?: () => void;
   budgetExhausted?: boolean;
   onUpgradeNeeded?: () => void;
+  /** Build bootstrap thread — morphs composer to bottom while scaffold starts. */
+  bootThread?: { name: string; messages: Msg[] } | null;
 };
 
 export default function Projects({
@@ -171,6 +175,7 @@ export default function Projects({
   onDeleteCreateWork,
   budgetExhausted = false,
   onUpgradeNeeded,
+  bootThread = null,
 }: ProjectsProps) {
   const { status } = useSession();
   const signedIn = status === "authenticated";
@@ -321,16 +326,44 @@ export default function Projects({
     );
   }
 
-  return (
-    <div className="bg-background flex flex-1 flex-col overflow-y-auto">
-      <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col items-center justify-center gap-6 px-8 py-8 md:px-10">
-        <header className="flex max-w-xl flex-col items-center gap-2 text-center">
-          <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
-            {headline}
-          </h1>
-        </header>
+  const studio = Boolean(bootThread) || creating;
 
-        <div className="flex w-full flex-col gap-2">
+  return (
+    <div className="bg-background flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div
+        className={cn(
+          "mx-auto flex w-full max-w-3xl min-h-0 flex-1 flex-col px-8 transition-[justify-content,gap,padding] duration-500 ease-out md:px-10",
+          studio
+            ? "justify-end gap-4 overflow-hidden pt-6 pb-6"
+            : "items-center justify-center gap-6 py-8",
+        )}
+      >
+        {studio && bootThread ? (
+          <div className="min-h-0 w-full flex-1 overflow-y-auto">
+            <div className="mx-auto flex max-w-3xl flex-col gap-3 py-2">
+              <MessageList
+                messages={bootThread.messages}
+                isWorking={creating}
+                onOpenDiff={() => undefined}
+                onApprove={() => undefined}
+                onRequestChanges={() => undefined}
+              />
+            </div>
+          </div>
+        ) : (
+          <header className="flex max-w-xl flex-col items-center gap-2 text-center">
+            <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
+              {headline}
+            </h1>
+          </header>
+        )}
+
+        <div
+          className={cn(
+            "flex w-full flex-col gap-2",
+            studio && "relative z-10 shrink-0",
+          )}
+        >
           <form
             onSubmit={submit}
             className={cn(
@@ -347,18 +380,23 @@ export default function Projects({
                   e.currentTarget.form?.requestSubmit();
                 }
               }}
-              placeholder={placeholder}
+              placeholder={
+                studio ? "Message…" : placeholder
+              }
               rows={2}
               className="placeholder:text-muted-foreground min-h-16 w-full resize-none bg-transparent px-4 pt-4 pb-2 text-base outline-none md:text-sm"
               aria-label={placeholder}
+              disabled={creating}
             />
             <div className="flex items-center justify-between gap-2 px-2 pb-1">
               <div className="flex min-w-0 flex-1 items-center gap-1.5">
-                <AttachMenu
-                  attachments={attachments}
-                  onAttachmentsChange={setAttachments}
-                  onImportRepo={() => setAttachRepoOpen(true)}
-                />
+                {!studio ? (
+                  <AttachMenu
+                    attachments={attachments}
+                    onAttachmentsChange={setAttachments}
+                    onImportRepo={() => setAttachRepoOpen(true)}
+                  />
+                ) : null}
               </div>
               <div className="flex shrink-0 items-center gap-1">
                 <ModelPicker
@@ -372,7 +410,7 @@ export default function Projects({
                   size="icon"
                   className="size-8 shrink-0 rounded-full bg-slate-300 text-black hover:bg-slate-300/80"
                   aria-label={submitLabel}
-                  disabled={creating}
+                  disabled={creating || (studio && !draft.trim())}
                 >
                   <HugeiconsIcon
                     icon={SentIcon}
@@ -391,9 +429,7 @@ export default function Projects({
             onAttach={attachRepo}
           />
 
-          {creating ? (
-            <p className="text-muted-foreground text-sm">Spawning workspace…</p>
-          ) : (
+          {!studio ? (
             <ul className="divide-border flex w-full flex-col divide-y">
               {suggestions.map((suggestion) => (
                 <li key={suggestion}>
@@ -407,7 +443,7 @@ export default function Projects({
                 </li>
               ))}
             </ul>
-          )}
+          ) : null}
         </div>
       </div>
     </div>
@@ -570,7 +606,7 @@ function AttachmentChip({
   );
 }
 
-function EffortSlider({
+export function EffortSlider({
   value,
   onChange,
 }: {

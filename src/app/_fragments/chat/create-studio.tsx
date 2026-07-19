@@ -35,6 +35,7 @@ import {
 import { isBudgetExceededError } from "@/lib/billing";
 import { cn } from "@/lib/utils";
 import { api } from "@/trpc/react";
+import { ChatThreadHeader } from "./chat-thread-header";
 import { WorkflowChatMenu } from "./workflow-chat-menu";
 
 const CREATE_SUGGESTIONS = [
@@ -324,18 +325,17 @@ export default function CreateStudio({
   return (
     <div className="bg-background relative flex min-h-0 flex-1 flex-col overflow-hidden">
       {studio && activeWork && onRenameWork && onDeleteWork ? (
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex justify-end p-3 md:p-4">
-          <div className="pointer-events-auto">
-            <div className="bg-background/90 flex items-center gap-0.5 rounded-full p-1 shadow-md ring-1 ring-black/5 backdrop-blur-sm dark:ring-white/10">
-              <WorkflowChatMenu
-                workflowId={activeWork.id}
-                name={activeWork.title}
-                onRename={onRenameWork}
-                onDelete={onDeleteWork}
-              />
-            </div>
-          </div>
-        </div>
+        <ChatThreadHeader
+          title={activeWork.title}
+          actions={
+            <WorkflowChatMenu
+              workflowId={activeWork.id}
+              name={activeWork.title}
+              onRename={onRenameWork}
+              onDelete={onDeleteWork}
+            />
+          }
+        />
       ) : null}
 
       <div

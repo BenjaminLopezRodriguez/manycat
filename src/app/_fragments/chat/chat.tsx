@@ -9,6 +9,7 @@ import {
   ArrowUp01Icon,
   ArrowUpRight01Icon,
   BotIcon,
+  BrowserIcon,
   BubbleChatIcon,
   Cancel01Icon,
   CheckmarkCircle02Icon,
@@ -28,7 +29,6 @@ import {
 
 import { ManycatLogo } from "@/components/manycat-logo";
 import { ThemeDrawerSection, ThemeRailButton } from "@/components/theme-toggle";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Marker, MarkerContent } from "@/components/ui/marker";
@@ -40,8 +40,12 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { wrapNextScaffoldBootstrapPrompt } from "@/lib/bootstrap-prompt";
 import {
   isBudgetExceededError,
   isBudgetExhausted,
@@ -71,7 +75,10 @@ import IntegrationsSheet from "./integrations-sheet";
 import MessageList, { InlineDiffEditor } from "./message-list";
 import type { CreateWork, CreateWorkImage } from "./create-studio";
 import Projects, {
+  EffortSlider,
   LANDING_FEATURES,
+  RESEARCH_SUGGESTIONS,
+  WORKSPACE_SUGGESTIONS,
   type LandingFeatureId,
 } from "./projects";
 import DeploymentsPanel from "./deployments-panel";
@@ -79,8 +86,11 @@ import SectionScaffold from "./section-scaffold";
 import SettingsSheet from "./settings-sheet";
 import { getModes, type ShellView } from "./shell-modes";
 import { ShellModeDrawerBody, ShellModeMenu } from "./shell-mode-menu";
+import { typewriterReveal } from "./typewriter";
 import UpgradeLimitDialog from "./upgrade-limit-dialog";
 import { useShellUrl } from "./use-shell-url";
+import { BuildPreviewDrawer } from "./build-preview-drawer";
+import { ChatThreadHeader } from "./chat-thread-header";
 import { WorkflowChatMenu } from "./workflow-chat-menu";
 import Workspace from "./workspace";
 
@@ -166,7 +176,13 @@ export default function Chat() {
   const [activePath, setActivePath] = React.useState<string | null>(null);
   const [activeDiff, setActiveDiff] = React.useState<DiffMsg | null>(null);
   const [draft, setDraft] = React.useState("");
-  const [, setPreviewUrl] = React.useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
+  const [previewOpen, setPreviewOpen] = React.useState(false);
+  const [contentRootHash, setContentRootHash] = React.useState<string | null>(
+    null,
+  );
+  /** Bumps on every workspace patch so Preview iframe remounts optimistically. */
+  const [previewEpoch, setPreviewEpoch] = React.useState(0);
   const [importOpen, setImportOpen] = React.useState(false);
   const [integrationsOpen, setIntegrationsOpen] = React.useState(false);
   const [settingsOpen, setSettingsOpen] = React.useState(false);
@@ -344,6 +360,7 @@ export default function Chat() {
     setActivePath(first);
     setActiveDiff(null);
     setPreviewUrl(null);
+    setPreviewEpoch(0);
   }, [activeId]); // eslint-disable-line react-hooks/exhaustive-deps -- reset path when switching workflows
 
   React.useEffect(() => {
@@ -351,6 +368,56 @@ export default function Chat() {
       bottomRef.current?.scrollIntoView({ behavior: "smooth" });
     }
   }, [active?.messages.length, activeId, mode, view]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const patchAgentText = React.useCallback(
+    (
+      workflowId: string,
+      messageId: number,
+      text: string,
+      streaming: boolean,
+      extras?: Partial<TextMsg>,
+    ) => {
+      setWorkflows((prev) =>
+        prev.map((w) =>
+          w.id !== workflowId
+            ? w
+            : {
+                ...w,
+                messages: w.messages.map((m) =>
+                  m.id === messageId && m.type === "text"
+                    ? { ...m, ...extras, text, streaming }
+                    : m,
+                ),
+              },
+        ),
+      );
+    },
+    [],
+  );
+
+  const streamInAgentText = React.useCallback(
+    async (
+      workflowId: string,
+      message: TextMsg,
+      opts?: { finalizeStatus?: WorkflowStatus },
+    ) => {
+      const full = message.text;
+      await typewriterReveal(full, (partial) => {
+        patchAgentText(workflowId, message.id, partial, true);
+      });
+      patchAgentText(workflowId, message.id, full, false, {
+        sources: message.sources,
+      });
+      if (opts?.finalizeStatus) {
+        setWorkflows((prev) =>
+          prev.map((w) =>
+            w.id === workflowId ? { ...w, status: opts.finalizeStatus! } : w,
+          ),
+        );
+      }
+    },
+    [patchAgentText],
+  );
 
   const handleAgentEvent = React.useCallback((event: AgentEvent) => {
     setWorkflows((prev) =>
@@ -367,8 +434,26 @@ export default function Chat() {
                   ? w.messages
                   : w.messages.filter((m) => m.type !== "agent-status"),
             };
-          case "append":
-            return { ...w, messages: [...w.messages, event.message] };
+          case "append": {
+            const msg = event.message;
+            if (
+              msg.type === "text" &&
+              msg.from === "agent" &&
+              msg.text.length > 0
+            ) {
+              const placeholder: TextMsg = {
+                ...msg,
+                text: "",
+                streaming: true,
+              };
+              const workflowId = w.id;
+              queueMicrotask(() => {
+                void streamInAgentText(workflowId, msg);
+              });
+              return { ...w, messages: [...w.messages, placeholder] };
+            }
+            return { ...w, messages: [...w.messages, msg] };
+          }
           case "upsert-status": {
             // One live status row per run — replace any prior agent-status
             const withoutStatus = w.messages.filter(
@@ -406,8 +491,17 @@ export default function Chat() {
 
     if (event.kind === "patch-workspace") {
       setActivePath(event.path);
+      setPreviewEpoch((n) => n + 1);
+      // Show preview as soon as files land so users see the UI without a manual open.
+      if (
+        event.path === "app/page.tsx" ||
+        event.path === "app/page.jsx" ||
+        event.path.endsWith("/page.tsx")
+      ) {
+        setPreviewOpen(true);
+      }
     }
-  }, []);
+  }, [streamInAgentText]);
 
   const handleAgentEventRef = React.useRef(handleAgentEvent);
   handleAgentEventRef.current = handleAgentEvent;
@@ -442,6 +536,7 @@ export default function Chat() {
         handleAgentEventRef.current(event);
       }
       if (data.previewUrl) setPreviewUrl(data.previewUrl);
+      if (data.contentRootHash) setContentRootHash(data.contentRootHash);
     },
     onError: (err) => {
       if (createRunStopRef.current) {
@@ -466,6 +561,7 @@ export default function Chat() {
     workflow: active ?? EMPTY_WORKFLOW,
     onEvent: handleAgentEvent,
     onPreviewUrl: setPreviewUrl,
+    onContentRootHash: setContentRootHash,
     model: aiModel,
     effort: aiEffort,
   });
@@ -474,6 +570,7 @@ export default function Chat() {
     forceDevWorkflows();
     setActiveId(id);
     setChatOpen(true);
+    setPreviewOpen(false);
     setWorkflows((prev) =>
       prev.map((w) => (w.id === id ? { ...w, unread: 0 } : w)),
     );
@@ -647,7 +744,11 @@ export default function Chat() {
   }
 
   /** research/workspace/create modes route to their own harness, not the coding one. */
-  async function handleModeHarness(mode: "research" | "workspace" | "create", promptText: string) {
+  async function handleModeHarness(
+    mode: "research" | "workspace" | "create",
+    promptText: string,
+    opts?: { effort: EffortId; deepResearch: boolean },
+  ) {
     if (mode === "create" && budgetExhausted) {
       openUpgradeLimit();
       return;
@@ -691,11 +792,11 @@ export default function Chat() {
       setActiveId(id);
     }
 
-    const appendReply = (reply: Msg) => {
+    const appendReply = (reply: Msg, status: WorkflowStatus = "idle") => {
       setWorkflows((prev) =>
         prev.map((w) =>
           w.id === id
-            ? { ...w, status: "idle", messages: [...w.messages, reply] }
+            ? { ...w, status, messages: [...w.messages, reply] }
             : w,
         ),
       );
@@ -737,9 +838,22 @@ export default function Chat() {
           s3Key,
           time: nowTime(),
         };
-        appendReply(imageMsg);
+        appendReply(imageMsg, "idle");
         persistTurn([imageMsg], "idle");
       } else {
+        const replyId = nextMsgId + 1;
+        const deep = mode === "research" && (opts?.deepResearch ?? false);
+        const placeholder: TextMsg = {
+          id: replyId,
+          type: "text",
+          from: "agent",
+          text: "",
+          streaming: true,
+          pendingLabel: deep ? "Researching…" : "Thinking…",
+          time: nowTime(),
+        };
+        appendReply(placeholder, "working");
+
         const history: { role: "user" | "assistant"; content: string }[] = (
           existing?.messages ?? []
         )
@@ -748,28 +862,48 @@ export default function Chat() {
             role: m.from === "me" ? "user" : "assistant",
             content: m.text,
           }));
-        const { reply } = await runChat.mutateAsync({ mode, prompt: promptText, history });
-        const replyMsg: Msg = {
-          id: nextMsgId + 1,
+        const { reply, sources } = await runChat.mutateAsync({
+          mode,
+          prompt: promptText,
+          history,
+          effort: opts?.effort ?? aiEffort,
+          deepResearch: mode === "research" && (opts?.deepResearch ?? false),
+        });
+        const replyMsg: TextMsg = {
+          id: replyId,
           type: "text",
           from: "agent",
           text: reply,
           time: nowTime(),
+          ...(sources && sources.length > 0 ? { sources } : {}),
         };
-        appendReply(replyMsg);
+        await streamInAgentText(id, replyMsg, { finalizeStatus: "idle" });
         persistTurn([replyMsg], "idle");
       }
     } catch (err) {
       if (isBudgetExceededError(err)) openUpgradeLimit();
       const message = err instanceof Error ? err.message : String(err);
-      const failMsg: Msg = {
+      const failMsg: TextMsg = {
         id: nextMsgId + 1,
         type: "text",
         from: "agent",
         text: `Couldn't get a response: ${message}`,
         time: nowTime(),
       };
-      appendReply(failMsg);
+      // Replace empty streaming placeholder if present.
+      setWorkflows((prev) =>
+        prev.map((w) => {
+          if (w.id !== id) return w;
+          const withoutPlaceholder = w.messages.filter(
+            (m) => !(m.type === "text" && m.id === failMsg.id),
+          );
+          return {
+            ...w,
+            status: "idle",
+            messages: [...withoutPlaceholder, failMsg],
+          };
+        }),
+      );
       persistTurn([failMsg], "idle");
     } finally {
       setCreatingFromPrompt(false);
@@ -829,7 +963,9 @@ export default function Chat() {
         workspace: [],
       },
     ]);
-    openWorkflow(optimisticId);
+    // Stay on Projects so the composer can morph bottom — open workflow after scaffold.
+    activeIdRef.current = optimisticId;
+    setActiveId(optimisticId);
 
     try {
       const data = await createFromPrompt.mutateAsync({
@@ -838,6 +974,10 @@ export default function Chat() {
           .map((w) => w.id)
           .filter((id) => !id.startsWith("pending-")),
       });
+
+      const scaffoldText = data.previewUrl
+        ? `Scaffold ready (${data.contentRootHash.slice(0, 8)}…). Preview at ${data.previewUrl}`
+        : `Scaffold ready (${data.contentRootHash.slice(0, 8)}…). Building your app on the Next scaffold…`;
 
       setWorkflows((prev) =>
         prev.map((w) =>
@@ -862,9 +1002,8 @@ export default function Chat() {
                     id: 2,
                     type: "text",
                     from: "agent",
-                    text: data.previewUrl
-                      ? `Scaffold ready (${data.contentRootHash.slice(0, 8)}…). Preview at ${data.previewUrl}`
-                      : `Scaffold ready (${data.contentRootHash.slice(0, 8)}…). Building your app on the Next scaffold…`,
+                    text: "",
+                    streaming: true,
                     time: nowTime(),
                   },
                   {
@@ -886,6 +1025,16 @@ export default function Chat() {
       activeIdRef.current = data.workflowId;
       setActiveId(data.workflowId);
       if (data.previewUrl) setPreviewUrl(data.previewUrl);
+      if (data.contentRootHash) setContentRootHash(data.contentRootHash);
+
+      await streamInAgentText(data.workflowId, {
+        id: 2,
+        type: "text",
+        from: "agent",
+        text: scaffoldText,
+        time: nowTime(),
+      });
+      openWorkflow(data.workflowId);
 
       setProjects((prev) => [
         ...prev.filter((p) => p.id !== data.workflowId),
@@ -926,7 +1075,8 @@ export default function Chat() {
       } else {
         void runAgentMutation.mutateAsync({
           workflowId: data.workflowId,
-          prompt: wrapNextScaffoldBootstrapPrompt(promptText),
+          // Harness build_user_prompt already instructs write_file / scaffold replace.
+          prompt: promptText,
           // Reuse status id 3 so upsert-status mutates the optimistic WorkingCard
           messageIdStart: 2,
           model,
@@ -1053,9 +1203,9 @@ export default function Chat() {
       });
   }
 
-  function openCreateWork(id: string) {
+  function openModeSession(id: string) {
     setActiveId(id);
-    setView("new");
+    setView(mode === "workspace" ? "work" : "new");
     setChatOpen(false);
   }
 
@@ -1195,8 +1345,21 @@ export default function Chat() {
       w.repo !== "research" &&
       w.repo !== "workspace",
   );
-  const showWorkflowList = signedIn && mode === "dev";
+  const researchChats = workflows.filter((w) => w.repo === "research");
+  const workspaceChats = workflows.filter((w) => w.repo === "workspace");
   const createWorks = workflows.filter((w) => w.repo === "create");
+  const modeSessions =
+    mode === "dev"
+      ? buildWorkflows
+      : mode === "research"
+        ? researchChats
+        : mode === "workspace"
+          ? workspaceChats
+          : mode === "create"
+            ? createWorks
+            : [];
+  const showModeSessions = signedIn && modeSessions.length > 0;
+  const homeView = modeDef.home;
   const activeCreateWork: CreateWork | null = React.useMemo(() => {
     if (mode !== "create" || active?.repo !== "create") return null;
     const imageMsgs = active.messages.filter(
@@ -1265,59 +1428,40 @@ export default function Chat() {
           ) : (
             <>
               {modeDef.nav.map((item) => (
-                <React.Fragment key={item.view}>
-                  <RailButton
-                    label={item.label}
-                    active={
-                      item.view === "gallery"
-                        ? view === "gallery" && !activeId
-                        : view === item.view &&
-                          !(mode === "create" && activeId && item.view === "new")
-                    }
-                    onClick={() => {
-                      if (mode === "create" && item.view === "new") {
-                        setActiveId(null);
-                      }
-                      if (mode === "create" && item.view === "gallery") {
-                        setActiveId(null);
-                      }
-                      switchView(item.view);
-                    }}
-                  >
-                    <HugeiconsIcon icon={item.icon} size={20} />
-                  </RailButton>
-                  {mode === "create" &&
-                  item.view === "gallery" &&
-                  createWorks.length > 0 ? (
-                    <div className="flex flex-col gap-0.5">
-                      {createWorks.map((w) => (
-                        <RailButton
-                          key={w.id}
-                          label={w.name}
-                          indented
-                          active={
-                            view === "new" &&
-                            w.id === activeId &&
-                            mode === "create"
-                          }
-                          onClick={() => openCreateWork(w.id)}
-                        />
-                      ))}
-                    </div>
-                  ) : null}
-                </React.Fragment>
+                <RailButton
+                  key={item.view}
+                  label={item.label}
+                  active={
+                    view === item.view &&
+                    (mode === "dev" || !(item.view === homeView && activeId))
+                  }
+                  onClick={() => {
+                    if (item.view === homeView) setActiveId(null);
+                    switchView(item.view);
+                  }}
+                >
+                  <HugeiconsIcon icon={item.icon} size={20} />
+                </RailButton>
               ))}
 
-              {showWorkflowList && buildWorkflows.length > 0 ? (
+              {showModeSessions ? (
                 <div className="mt-1 flex flex-col gap-0.5">
-                  {buildWorkflows.map((w) => (
+                  {modeSessions.map((w) => (
                     <RailButton
                       key={w.id}
                       label={w.name}
                       indented
-                      active={view === "workflows" && w.id === activeId}
+                      active={
+                        mode === "dev"
+                          ? view === "workflows" && w.id === activeId
+                          : view === homeView && w.id === activeId
+                      }
                       badge={w.unread && w.unread > 0 ? w.unread : undefined}
-                      onClick={() => openWorkflow(w.id)}
+                      onClick={() =>
+                        mode === "dev"
+                          ? openWorkflow(w.id)
+                          : openModeSession(w.id)
+                      }
                     />
                   ))}
                 </div>
@@ -1382,18 +1526,19 @@ export default function Chat() {
       </nav>
 
       <main className="flex min-h-0 min-w-0 flex-1">
-        {showHomeComposer &&
-        activeModeThread &&
-        activeModeThread.repo !== "create" ? (
+        {signedIn &&
+        (mode === "research" || mode === "workspace") &&
+        (view === "new" || view === "work") ? (
           <ModeThreadView
-            mode={activeModeThread.repo as "research" | "workspace"}
+            mode={mode}
             active={activeModeThread}
             sending={creatingFromPrompt}
-            onSend={(text) =>
-              void handleModeHarness(
-                activeModeThread.repo as "research" | "workspace",
-                text,
-              )
+            effort={aiEffort}
+            onEffortChange={setAiEffort}
+            onRename={renameActiveChat}
+            onDelete={deleteActiveChat}
+            onSend={(text, opts) =>
+              void handleModeHarness(mode, text, opts)
             }
           />
         ) : showHomeComposer ? (
@@ -1415,6 +1560,14 @@ export default function Chat() {
             onDeleteCreateWork={deleteActiveChat}
             budgetExhausted={budgetExhausted}
             onUpgradeNeeded={openUpgradeLimit}
+            bootThread={
+              mode === "dev" &&
+              view === "projects" &&
+              active &&
+              (active.id.startsWith("pending-") || active.repo === "virtual")
+                ? { name: active.name, messages: active.messages }
+                : null
+            }
           />
         ) : mode === "dev" && view === "project-list" ? (
           <ProjectListPanel projects={projects} />
@@ -1508,16 +1661,17 @@ export default function Chat() {
             emptyLabel="No sources yet."
           />
         ) : view === "gallery" ? (
-          <GalleryPanel works={createWorks} onOpenWork={openCreateWork} />
+          <GalleryPanel works={createWorks} onOpenWork={openModeSession} />
         ) : showDevWorkflows ? (
           active ? (
             <section className="flex min-w-0 flex-1 flex-col">
               <div className="flex min-h-0 min-w-0 flex-1">
                 {/* Chat thread */}
                 <div className="relative flex min-w-0 flex-1 flex-col">
-                  <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-start justify-between gap-2 p-3 md:justify-end md:p-4">
-                    <div className="pointer-events-auto md:hidden">
-                      <div className="bg-background/90 flex items-center rounded-full p-1 shadow-md ring-1 ring-black/5 backdrop-blur-sm dark:ring-white/10">
+                  <ChatThreadHeader
+                    title={active.name}
+                    leading={
+                      <div className="bg-background/90 flex items-center rounded-full p-1 shadow-md ring-1 ring-black/5 backdrop-blur-md md:hidden dark:ring-white/10">
                         <Button
                           variant="ghost"
                           size="icon-sm"
@@ -1531,9 +1685,9 @@ export default function Chat() {
                           <HugeiconsIcon icon={ArrowLeft01Icon} size={18} />
                         </Button>
                       </div>
-                    </div>
-                    <div className="pointer-events-auto">
-                      <div className="bg-background/90 flex items-center gap-0.5 rounded-full p-1 shadow-md ring-1 ring-black/5 backdrop-blur-sm dark:ring-white/10">
+                    }
+                    actions={
+                      <>
                         <Button
                           variant="ghost"
                           size="icon-sm"
@@ -1543,15 +1697,36 @@ export default function Chat() {
                         >
                           <HugeiconsIcon icon={SidebarRight01Icon} size={18} />
                         </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label="Preview"
+                          className="size-8 rounded-full"
+                          onClick={() => setPreviewOpen(true)}
+                        >
+                          <HugeiconsIcon icon={BrowserIcon} size={18} />
+                        </Button>
                         <WorkflowChatMenu
                           workflowId={active.id}
                           name={active.name}
                           onRename={renameActiveChat}
                           onDelete={deleteActiveChat}
                         />
-                      </div>
-                    </div>
-                  </div>
+                      </>
+                    }
+                  />
+
+                  <BuildPreviewDrawer
+                    open={previewOpen}
+                    onOpenChange={setPreviewOpen}
+                    previewUrl={previewUrl}
+                    files={active.workspace}
+                    rootHash={
+                      contentRootHash
+                        ? `${contentRootHash}:${previewEpoch}`
+                        : `ep:${previewEpoch}`
+                    }
+                  />
 
                   <Drawer
                     open={diffsOpen}
@@ -1887,64 +2062,38 @@ export default function Chat() {
             ) : (
               <>
                 {modeDef.nav.map((item) => (
-                  <React.Fragment key={item.view}>
-                    <MobileMenuItem
-                      label={item.label}
-                      active={
-                        item.view === "gallery"
-                          ? view === "gallery" && !activeId
-                          : view === item.view &&
-                            !(
-                              mode === "create" &&
-                              activeId &&
-                              item.view === "new"
-                            )
-                      }
-                      onClick={() => {
-                        if (mode === "create" && item.view === "new") {
-                          setActiveId(null);
-                        }
-                        if (mode === "create" && item.view === "gallery") {
-                          setActiveId(null);
-                        }
-                        switchView(item.view);
-                        setNavMenuOpen(false);
-                      }}
-                    >
-                      <HugeiconsIcon icon={item.icon} size={20} />
-                    </MobileMenuItem>
-                    {mode === "create" &&
-                    item.view === "gallery" &&
-                    createWorks.length > 0
-                      ? createWorks.map((w) => (
-                          <MobileMenuItem
-                            key={w.id}
-                            label={w.name}
-                            active={
-                              view === "new" &&
-                              w.id === activeId &&
-                              mode === "create"
-                            }
-                            onClick={() => {
-                              openCreateWork(w.id);
-                              setNavMenuOpen(false);
-                            }}
-                          />
-                        ))
-                      : null}
-                  </React.Fragment>
+                  <MobileMenuItem
+                    key={item.view}
+                    label={item.label}
+                    active={
+                      view === item.view &&
+                      (mode === "dev" || !(item.view === homeView && activeId))
+                    }
+                    onClick={() => {
+                      if (item.view === homeView) setActiveId(null);
+                      switchView(item.view);
+                      setNavMenuOpen(false);
+                    }}
+                  >
+                    <HugeiconsIcon icon={item.icon} size={20} />
+                  </MobileMenuItem>
                 ))}
 
-                {showWorkflowList && buildWorkflows.length > 0 ? (
+                {showModeSessions ? (
                   <div className="mt-1 flex flex-col gap-0.5">
-                    {buildWorkflows.map((w) => (
+                    {modeSessions.map((w) => (
                       <MobileMenuItem
                         key={w.id}
                         label={w.name}
-                        active={view === "workflows" && w.id === activeId}
+                        active={
+                          mode === "dev"
+                            ? view === "workflows" && w.id === activeId
+                            : view === homeView && w.id === activeId
+                        }
                         badge={w.unread && w.unread > 0 ? w.unread : undefined}
                         onClick={() => {
-                          openWorkflow(w.id);
+                          if (mode === "dev") openWorkflow(w.id);
+                          else openModeSession(w.id);
                           setNavMenuOpen(false);
                         }}
                       />
@@ -2278,73 +2427,211 @@ const MODE_THREAD_TITLE: Record<"research" | "workspace", string> = {
   workspace: "Work",
 };
 
-/** Chat/Work conversation — stays in its own mode chrome (no dev split-view, no diffs/sandbox). */
+const MODE_SUGGESTIONS: Record<"research" | "workspace", readonly string[]> = {
+  research: RESEARCH_SUGGESTIONS,
+  workspace: WORKSPACE_SUGGESTIONS,
+};
+
+/** Chat/Work — create-style center→bottom morph; text replies stream in. */
 function ModeThreadView({
   mode,
   active,
   sending,
+  effort,
+  onEffortChange,
+  onRename,
+  onDelete,
   onSend,
 }: {
   mode: "research" | "workspace";
-  active: Workflow;
+  active: Workflow | null;
   sending: boolean;
-  onSend: (text: string) => void;
+  effort: EffortId;
+  onEffortChange: (next: EffortId) => void;
+  onRename: (name: string) => void;
+  onDelete: () => void;
+  onSend: (text: string, opts: { effort: EffortId; deepResearch: boolean }) => void;
 }) {
   const [text, setText] = React.useState("");
+  const [deepResearch, setDeepResearch] = React.useState(false);
+  const [effortOpen, setEffortOpen] = React.useState(false);
   const bottomRef = React.useRef<HTMLDivElement>(null);
+  const studio = Boolean(active && active.messages.length > 0);
+  const suggestions = MODE_SUGGESTIONS[mode];
+
+  const lastMsg = active?.messages.at(-1);
+  const lastStreamText = lastMsg?.type === "text" ? lastMsg.text : undefined;
 
   React.useEffect(() => {
+    if (!studio) return;
     bottomRef.current?.scrollIntoView({ block: "end" });
-  }, [active.messages.length]);
+  }, [studio, active?.messages.length, lastStreamText]);
+
+  function submit(e: React.FormEvent) {
+    e.preventDefault();
+    const trimmed = text.trim();
+    if (!trimmed || sending) return;
+    setText("");
+    onSend(trimmed, { effort, deepResearch });
+  }
 
   return (
-    <section className="flex min-w-0 flex-1 flex-col">
-      <header className="flex h-16 shrink-0 items-center gap-3 border-b px-4">
-        <Avatar className="size-10">
-          <AvatarFallback className={active.avatarClass}>
-            {active.initials}
-          </AvatarFallback>
-        </Avatar>
-        <div className="min-w-0 flex-1 truncate font-medium">
-          {MODE_THREAD_TITLE[mode]} · {active.name}
-        </div>
-      </header>
+    <section className="bg-background relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+      {studio && active ? (
+        <ChatThreadHeader
+          title={active.name}
+          actions={
+            <WorkflowChatMenu
+              workflowId={active.id}
+              name={active.name}
+              onRename={onRename}
+              onDelete={onDelete}
+            />
+          }
+        />
+      ) : null}
 
-      <div className="bg-muted/20 flex-1 overflow-y-auto px-4 py-4 md:px-6">
-        <div className="mx-auto flex max-w-3xl flex-col gap-3">
-          <MessageList
-            messages={active.messages}
-            isWorking={sending}
-            onOpenDiff={() => undefined}
-            onApprove={() => undefined}
-            onRequestChanges={() => undefined}
-          />
-          <div ref={bottomRef} />
+      <div
+        className={cn(
+          "mx-auto flex w-full max-w-3xl min-h-0 flex-1 flex-col px-8 transition-[justify-content,gap,padding] duration-500 ease-out md:px-10",
+          studio
+            ? "justify-end gap-4 overflow-hidden pt-14 pb-6 md:pt-16"
+            : "items-center justify-center gap-6 py-8",
+        )}
+      >
+        {studio && active ? (
+          <div className="min-h-0 w-full flex-1 overflow-y-auto">
+            <div className="mx-auto flex max-w-3xl flex-col gap-3 py-2">
+              <Marker role="status" className="my-2">
+                <MarkerContent>
+                  {MODE_THREAD_TITLE[mode]} · {active.repo}
+                </MarkerContent>
+              </Marker>
+              <MessageList
+                messages={active.messages}
+                isWorking={sending}
+                onOpenDiff={() => undefined}
+                onApprove={() => undefined}
+                onRequestChanges={() => undefined}
+              />
+              <div ref={bottomRef} />
+            </div>
+          </div>
+        ) : (
+          <header className="flex max-w-xl flex-col items-center gap-2 text-center">
+            <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
+              Ready when you are.
+            </h1>
+          </header>
+        )}
+
+        <div
+          className={cn(
+            "flex w-full flex-col gap-2",
+            studio && "relative z-10 shrink-0",
+          )}
+        >
+          <form
+            onSubmit={submit}
+            className={cn(
+              "bg-card flex w-full flex-col rounded-3xl border shadow-sm",
+              "focus-within:border-ring focus-within:ring-ring/30 focus-within:ring-3",
+            )}
+          >
+            <textarea
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  e.currentTarget.form?.requestSubmit();
+                }
+              }}
+              placeholder={
+                mode === "research" && deepResearch
+                  ? "Ask a question to research…"
+                  : studio
+                    ? "Message…"
+                    : mode === "research"
+                      ? "What should we research?"
+                      : "What should we automate today?"
+              }
+              rows={2}
+              className="placeholder:text-muted-foreground min-h-16 w-full resize-none bg-transparent px-4 pt-4 pb-2 text-base outline-none md:text-sm"
+              aria-label="Message"
+              disabled={sending}
+            />
+            <div className="flex items-center justify-between gap-2 px-2 pb-1">
+              <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                {mode === "research" ? (
+                  <button
+                    type="button"
+                    onClick={() => setDeepResearch((v) => !v)}
+                    aria-pressed={deepResearch}
+                    title="Deep research — searches and reads arXiv before replying"
+                    className={cn(
+                      "flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-xs font-medium transition-colors",
+                      deepResearch
+                        ? "border-primary/40 bg-primary/10 text-primary"
+                        : "text-muted-foreground border-transparent hover:text-foreground",
+                    )}
+                  >
+                    <HugeiconsIcon icon={Search01Icon} size={13} />
+                    Research
+                  </button>
+                ) : null}
+                <DropdownMenu open={effortOpen} onOpenChange={setEffortOpen}>
+                  <DropdownMenuTrigger
+                    className="text-muted-foreground hover:text-foreground flex h-7 items-center gap-1 rounded-full px-2.5 text-xs capitalize transition-colors outline-none"
+                    aria-label="Select effort"
+                  >
+                    {effort}
+                    <HugeiconsIcon icon={ArrowDown01Icon} size={12} />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="min-w-56 p-1.5">
+                    <EffortSlider
+                      value={effort}
+                      onChange={(next) => {
+                        onEffortChange(next);
+                        setEffortOpen(false);
+                      }}
+                    />
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+              <Button
+                type="submit"
+                size="icon"
+                className="size-8 shrink-0 rounded-full bg-slate-300 text-black hover:bg-slate-300/80"
+                aria-label="Send"
+                disabled={sending || !text.trim()}
+              >
+                <HugeiconsIcon
+                  icon={SentIcon}
+                  size={14}
+                  className="text-black"
+                />
+              </Button>
+            </div>
+          </form>
+
+          {!studio ? (
+            <ul className="divide-border flex w-full flex-col divide-y">
+              {suggestions.map((suggestion) => (
+                <li key={suggestion}>
+                  <button
+                    type="button"
+                    className="text-muted-foreground hover:text-foreground w-full py-2 text-left text-sm transition-colors"
+                    onClick={() => setText(suggestion)}
+                  >
+                    {suggestion}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </div>
       </div>
-
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          const trimmed = text.trim();
-          if (!trimmed || sending) return;
-          setText("");
-          onSend(trimmed);
-        }}
-        className="border-t p-3 md:p-4"
-      >
-        <div className="mx-auto flex max-w-3xl items-center gap-2">
-          <Input
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="Message…"
-            className="text-base md:text-sm"
-          />
-          <Button type="submit" disabled={sending || !text.trim()}>
-            Send
-          </Button>
-        </div>
-      </form>
     </section>
   );
 }

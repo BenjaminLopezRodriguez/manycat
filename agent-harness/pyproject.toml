@@ -7,6 +7,7 @@ dependencies = [
   "langchain>=0.3.14",
   "langgraph>=0.2.60",
   "langchain-core>=0.3.28",
+  "langchain-openai>=0.2.14",
   "langchain-anthropic>=0.3.1",
   "python-dotenv>=1.0.1",
   "fastapi>=0.115.0",
@@ -14,9 +15,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-openai = ["langchain-openai>=0.2.14"]
 ollama = ["langchain-ollama>=0.2.2"]
-all = ["programming-agent[openai,ollama]"]
+all = ["programming-agent[ollama]"]
 
 [project.scripts]
 programming-agent = "programming_agent.__main__:main"

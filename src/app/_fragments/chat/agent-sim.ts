@@ -29,6 +29,7 @@ type UseAgentOptions = {
   workflow: Workflow;
   onEvent: (event: AgentEvent) => void;
   onPreviewUrl?: (url: string) => void;
+  onContentRootHash?: (hash: string) => void;
   model?: ModelId;
   effort?: EffortId;
 };
@@ -254,6 +255,7 @@ function useRemoteAgent({
   workflow,
   onEvent,
   onPreviewUrl,
+  onContentRootHash,
   model = "auto",
   effort = "high",
 }: UseAgentOptions): AgentControls {
@@ -261,6 +263,8 @@ function useRemoteAgent({
   onEventRef.current = onEvent;
   const onPreviewUrlRef = React.useRef(onPreviewUrl);
   onPreviewUrlRef.current = onPreviewUrl;
+  const onContentRootHashRef = React.useRef(onContentRootHash);
+  onContentRootHashRef.current = onContentRootHash;
 
   const stopRequestedRef = React.useRef(false);
   const [isStopping, setIsStopping] = React.useState(false);
@@ -293,6 +297,9 @@ function useRemoteAgent({
       }
       if (data.previewUrl && onPreviewUrlRef.current) {
         onPreviewUrlRef.current(data.previewUrl);
+      }
+      if (data.contentRootHash && onContentRootHashRef.current) {
+        onContentRootHashRef.current(data.contentRootHash);
       }
     },
     onError: (err) => {

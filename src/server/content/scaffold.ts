@@ -1,20 +1,13 @@
-import { createHash, randomBytes } from "node:crypto";
+import { randomBytes } from "node:crypto";
 
 import type { ContentFile } from "@/server/content/store";
+import { merkleRoot } from "@/server/content/merkle";
 import { scaffoldNextFromPrompt } from "@/server/content/scaffold-next";
 import { slugify } from "@/lib/slug";
 
-/** Deterministic content-addressed root for a file tree (virtual git seam). */
+/** Deterministic merkle tree root for a file tree (virtual git seam). */
 export function hashTree(files: ContentFile[]): string {
-  const sorted = [...files].sort((a, b) => a.path.localeCompare(b.path));
-  const h = createHash("sha256");
-  for (const f of sorted) {
-    h.update(f.path);
-    h.update("\0");
-    h.update(f.contents);
-    h.update("\0");
-  }
-  return h.digest("hex");
+  return merkleRoot(files);
 }
 
 export function changeId(): string {

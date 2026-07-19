@@ -4,7 +4,6 @@ import {
   BotIcon,
   BubbleChatIcon,
   CloudUploadIcon,
-  Edit01Icon,
   Image01Icon,
   Link01Icon,
   News01Icon,
@@ -71,8 +70,8 @@ export const MODE_CATALOG: ModeDef[] = [
     id: "workspace",
     label: "Work",
     home: "work",
-    nav: [
-      { view: "work", label: "Work", icon: Edit01Icon },
+    nav: [{ view: "work", label: "New", icon: Add01Icon }],
+    tools: [
       { view: "connections", label: "Connections", icon: Link01Icon },
       { view: "automations", label: "Automations", icon: Settings01Icon },
       { view: "activity", label: "Activity", icon: ArrowUpRight01Icon },
@@ -82,8 +81,8 @@ export const MODE_CATALOG: ModeDef[] = [
     id: "research",
     label: "Chat",
     home: "new",
-    nav: [
-      { view: "new", label: "New", icon: Add01Icon },
+    nav: [{ view: "new", label: "New", icon: Add01Icon }],
+    tools: [
       { view: "chats", label: "Chats", icon: BubbleChatIcon },
       { view: "research", label: "Research", icon: Search01Icon },
       { view: "sources", label: "Sources", icon: News01Icon },
@@ -93,10 +92,8 @@ export const MODE_CATALOG: ModeDef[] = [
     id: "create",
     label: "Create",
     home: "new",
-    nav: [
-      { view: "new", label: "New", icon: Add01Icon },
-      { view: "gallery", label: "Gallery", icon: Image01Icon },
-    ],
+    nav: [{ view: "new", label: "New", icon: Add01Icon }],
+    tools: [{ view: "gallery", label: "Gallery", icon: Image01Icon }],
   },
 ];
 

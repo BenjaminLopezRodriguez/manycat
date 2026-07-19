@@ -17,12 +17,13 @@ import {
 } from "@/server/billing/budget";
 import {
   changeId,
-  hashTree,
   projectNameFromPrompt,
   scaffoldFromPrompt,
 } from "@/server/content/scaffold";
+import { buildTree } from "@/server/content/merkle";
 import { structurePrompt } from "@/server/ai/structure-prompt";
 import { runChatCompletion, type ChatMessage } from "@/server/ai/modal-chat";
+import { runDeepResearch, type ResearchSource } from "@/server/ai/research";
 import { runImageGeneration } from "@/server/ai/modal-image";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "@/server/api/trpc";
 
@@ -40,11 +41,14 @@ import {
   deletePersistedSession,
   ensureShellProject,
   listPersistedSessions,
+  listWorkspaceFiles,
   replaceWorkspaceFiles,
+  setProjectContentRoot,
   setProjectStatus,
   setWorkflowMessages,
 } from "@/server/workflow/persist";
 import { isS3Configured, putCreateImage } from "@/server/s3/create-images";
+import { putBuildSnapshot } from "@/server/s3/build-store";
 
 export type AgentEventPayload =
   | { kind: "status"; status: WorkflowStatus }
@@ -121,6 +125,20 @@ async function orchestratorFetch(
       ...init?.headers,
     },
   });
+}
+
+function fetchErrorMessage(err: unknown, label: string, url?: string): string {
+  const cause =
+    err instanceof Error
+      ? err.message
+      : typeof err === "string"
+        ? err
+        : "unknown error";
+  const where = url ? ` (${url})` : "";
+  if (cause === "fetch failed" || /ECONNREFUSED|ENOTFOUND|ECONNRESET/i.test(cause)) {
+    return `${label} unreachable${where}. Start local infra (\`docker compose up agent orchestrator\`) or clear AGENT_HARNESS_URL / SANDBOX_ORCHESTRATOR_URL to use mock agent.`;
+  }
+  return `${label} failed${where}: ${cause}`;
 }
 
 export const workflowRouter = createTRPCRouter({
@@ -296,8 +314,19 @@ export const workflowRouter = createTRPCRouter({
       const scopedBase = slugify(`${ctx.accountId}-${nameSlug}`).slice(0, 64);
       const workflowId = dedupeId(scopedBase || "app", input.existingIds);
       const files = scaffoldFromPrompt(input.prompt);
-      const contentRootHash = hashTree(files);
       const displayName = nameSlug.replace(/-/g, " ") || "app";
+
+      const snapshot = await putBuildSnapshot({
+        accountId: ctx.accountId,
+        buildId: workflowId,
+        files,
+        branch: "main",
+        prompt: input.prompt,
+        thoughts: null,
+        parentCommitSha: null,
+        parentTreeEntries: null,
+      });
+      const contentRootHash = snapshot.commitSha;
 
       let previewUrl: string | undefined;
       let sandboxStatus = "pending";
@@ -373,12 +402,17 @@ export const workflowRouter = createTRPCRouter({
         });
 
       await db.insert(projectChanges).values({
-        id: changeId(),
+        id: snapshot.intentId || changeId(),
         accountId: ctx.accountId,
         workflowId,
         parentId: null,
         treeHash: contentRootHash,
-        diff: null,
+        diff: JSON.stringify({
+          treeSha: snapshot.treeSha,
+          changedPaths: snapshot.changedPaths,
+          thoughts: null,
+          persistedToS3: snapshot.persistedToS3,
+        }),
         prompt: input.prompt,
         templateId: "next-app",
       });
@@ -561,29 +595,54 @@ export const workflowRouter = createTRPCRouter({
         status: "working",
       });
 
-      const sandboxRes = await orchestratorFetch("/sandboxes", {
-        method: "POST",
-        body: JSON.stringify({ workflowId: input.workflowId }),
-      });
-      if (!sandboxRes.ok) {
-        throw new Error(await sandboxRes.text());
+      let previewUrl: string | undefined;
+      let orchestratorUp = false;
+      try {
+        const sandboxRes = await orchestratorFetch("/sandboxes", {
+          method: "POST",
+          body: JSON.stringify({ workflowId: input.workflowId }),
+        });
+        if (sandboxRes.ok) {
+          orchestratorUp = true;
+          const sandbox = (await sandboxRes.json()) as {
+            previewUrl?: string;
+          };
+          previewUrl = sandbox.previewUrl;
+        } else {
+          console.warn(
+            "[runAgent] orchestrator error:",
+            await sandboxRes.text().catch(() => sandboxRes.statusText),
+          );
+        }
+      } catch (err) {
+        console.warn(
+          "[runAgent] orchestrator unreachable:",
+          err instanceof Error ? err.message : err,
+        );
       }
-      const sandbox = (await sandboxRes.json()) as {
-        previewUrl?: string;
-      };
 
       let workspaceFiles: { path: string; contents: string }[] =
         input.files ?? [];
-      if (workspaceFiles.length === 0) {
-        const filesRes = await orchestratorFetch(
-          `/sandboxes/${encodeURIComponent(input.workflowId)}/files`,
-        );
-        if (filesRes.ok) {
-          const body = (await filesRes.json()) as {
-            files?: { path: string; contents: string }[];
-          };
-          workspaceFiles = body.files ?? [];
+      if (workspaceFiles.length === 0 && orchestratorUp) {
+        try {
+          const filesRes = await orchestratorFetch(
+            `/sandboxes/${encodeURIComponent(input.workflowId)}/files`,
+          );
+          if (filesRes.ok) {
+            const body = (await filesRes.json()) as {
+              files?: { path: string; contents: string }[];
+            };
+            workspaceFiles = body.files ?? [];
+          }
+        } catch {
+          /* use DB / client snapshot */
         }
+      }
+      if (workspaceFiles.length === 0) {
+        workspaceFiles = await listWorkspaceFiles({
+          accountId: ctx.accountId,
+          workflowId: input.workflowId,
+        });
       }
 
       const events: AgentEventPayload[] = [];
@@ -605,44 +664,26 @@ export const workflowRouter = createTRPCRouter({
         type: "agent-status" as const,
         text:
           workspaceFiles.length > 0
-            ? `Working in sandbox (${workspaceFiles.length} files)…`
-            : "Working in sandbox…",
+            ? `Working on workspace (${workspaceFiles.length} files)…`
+            : "Working…",
         action: "building",
         path: "page.tsx",
-        thinking:
-          workspaceFiles.length > 0
+        thinking: orchestratorUp
+          ? workspaceFiles.length > 0
             ? `Synced ${workspaceFiles.length} files into the sandbox and starting the agent loop.`
-            : "Sandbox workspace is empty — agent may need to scaffold files first.",
+            : "Sandbox workspace is empty — agent may need to scaffold files first."
+          : "Sandbox orchestrator offline — using persisted workspace files; preview URL may be unavailable.",
         streaming: true,
         time: nowTime(),
       };
       events.push({ kind: "upsert-status", message: statusMsg });
 
-      // Expand the raw ask into a structured spec before handing it to the
-      // codegen model (Modal-hosted coder) — the user still only ever sees
-      // their original message in the chat transcript.
-      const structuredPrompt = await structurePrompt(input.prompt);
-
-      const agentRes = await fetch(`${env.AGENT_HARNESS_URL}/run`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          prompt: structuredPrompt,
-          workflow_id: input.workflowId,
-          mode: "default",
-          model: input.model,
-          effort: input.effort,
-          files: workspaceFiles,
-        }),
-      });
-
-      if (!agentRes.ok) {
-        const err = await agentRes.text();
+      const failRun = async (text: string) => {
         const failMsg = {
           id: ++id,
           type: "text" as const,
           from: "agent" as const,
-          text: `Agent failed: ${err}`,
+          text,
           time: nowTime(),
         };
         events.push({ kind: "append", message: failMsg });
@@ -660,13 +701,63 @@ export const workflowRouter = createTRPCRouter({
           workflowId: input.workflowId,
           status: "idle",
         });
-        return { events, previewUrl: sandbox.previewUrl };
+        return { events, previewUrl, contentRootHash: undefined as string | undefined };
+      };
+
+      // Structure the user ask only. Harness `build_user_prompt` already
+      // instructs write_file / scaffold replacement — do not wrap again
+      // (double "User request:" confuses small Modal/Qwen models).
+      const userFacing = input.prompt;
+      const structured = await structurePrompt(userFacing);
+      const harnessPrompt = structured;
+
+      const beforeTree = buildTree(workspaceFiles).tree;
+      const [projectTip] = await db
+        .select({ contentRootHash: projects.contentRootHash })
+        .from(projects)
+        .where(
+          and(
+            eq(projects.accountId, ctx.accountId),
+            eq(projects.id, input.workflowId),
+          ),
+        )
+        .limit(1);
+      const parentCommitSha = projectTip?.contentRootHash ?? null;
+
+      let agentRes: Response;
+      try {
+        agentRes = await fetch(`${env.AGENT_HARNESS_URL}/run`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            prompt: harnessPrompt,
+            workflow_id: input.workflowId,
+            mode: "default",
+            model: input.model,
+            effort: input.effort,
+            files: workspaceFiles,
+          }),
+        });
+      } catch (err) {
+        return failRun(
+          fetchErrorMessage(err, "Agent harness", env.AGENT_HARNESS_URL),
+        );
+      }
+
+      if (!agentRes.ok) {
+        const err = await agentRes.text();
+        return failRun(`Agent failed: ${err}`);
       }
 
       const agentBody = (await agentRes.json()) as {
         output: string;
         files?: { path: string; contents: string }[];
       };
+
+      const nextFiles =
+        agentBody.files && agentBody.files.length > 0
+          ? agentBody.files
+          : workspaceFiles;
 
       if (agentBody.files && agentBody.files.length > 0) {
         await orchestratorFetch(
@@ -692,6 +783,45 @@ export const workflowRouter = createTRPCRouter({
           });
         }
       }
+
+      // Optional thought pattern: lines marked with "Thinking:" in agent prose.
+      const thoughtMatch = /(?:^|\n)Thinking:\s*([\s\S]{0,2000}?)(?:\n\n|$)/i.exec(
+        agentBody.output,
+      );
+      const thoughts = thoughtMatch?.[1]?.trim() ?? null;
+
+      const snapshot = await putBuildSnapshot({
+        accountId: ctx.accountId,
+        buildId: input.workflowId,
+        files: nextFiles,
+        branch: "main",
+        prompt: userFacing,
+        thoughts,
+        parentCommitSha,
+        parentTreeEntries: beforeTree.entries,
+      });
+
+      await setProjectContentRoot({
+        accountId: ctx.accountId,
+        workflowId: input.workflowId,
+        contentRootHash: snapshot.commitSha,
+      });
+
+      await db.insert(projectChanges).values({
+        id: snapshot.intentId || changeId(),
+        accountId: ctx.accountId,
+        workflowId: input.workflowId,
+        parentId: snapshot.parentCommitSha,
+        treeHash: snapshot.commitSha,
+        diff: JSON.stringify({
+          treeSha: snapshot.treeSha,
+          changedPaths: snapshot.changedPaths,
+          thoughts,
+          persistedToS3: snapshot.persistedToS3,
+        }),
+        prompt: userFacing,
+        templateId: null,
+      });
 
       const agentText = {
         id: ++id,
@@ -725,7 +855,11 @@ export const workflowRouter = createTRPCRouter({
         status: "needs-review",
       });
 
-      return { events, previewUrl: sandbox.previewUrl };
+      return {
+        events,
+        previewUrl,
+        contentRootHash: snapshot.commitSha,
+      };
     }),
 
   /**
@@ -748,9 +882,20 @@ export const workflowRouter = createTRPCRouter({
           )
           .max(20)
           .default([]),
+        effort: z.enum(["low", "medium", "high", "max"]).default("high"),
+        /** Research mode only — searches + reads arXiv before replying. */
+        deepResearch: z.boolean().default(false),
       }),
     )
     .mutation(async ({ input }) => {
+      if (input.mode === "research" && input.deepResearch) {
+        return runDeepResearch({
+          prompt: input.prompt,
+          history: input.history,
+          effort: input.effort,
+        });
+      }
+
       const systemPrompt =
         input.mode === "workspace"
           ? "You are Manycat's workplace assistant. Help the user plan and " +
@@ -766,7 +911,7 @@ export const workflowRouter = createTRPCRouter({
       ];
 
       const reply = await runChatCompletion(messages);
-      return { reply };
+      return { reply, sources: [] as ResearchSource[] };
     }),
 
   /** Image harness — Modal-hosted FLUX.1-schnell for "create" shell mode. */

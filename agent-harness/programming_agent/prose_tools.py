@@ -34,6 +34,18 @@ _FENCED = re.compile(
     re.IGNORECASE,
 )
 
+# Hermes / vLLM XML tool calls (when not parsed into native tool_calls)
+_HERMES_TOOL_CALL = re.compile(
+    r"<tool_call>\s*(\{[\s\S]*?\})\s*</tool_call>",
+    re.IGNORECASE,
+)
+
+# Fenced TSX/JSX the model "wrote" in chat instead of calling write_file
+_FENCED_CODE = re.compile(
+    r"```(?:tsx|typescript|jsx|javascript)?\s*\n([\s\S]*?)```",
+    re.IGNORECASE,
+)
+
 # Bare object with a known tool name (non-greedy enough for nested braces via decoder)
 _NAME_HINT = re.compile(
     r'\{\s*"name"\s*:\s*"(?P<name>' + "|".join(KNOWN_TOOLS) + r')"\s*,',
@@ -133,6 +145,16 @@ def _extract_balanced_object(text: str, start: int) -> Optional[str]:
     return None
 
 
+def _looks_like_react_page(code: str) -> bool:
+    lowered = code.lower()
+    return (
+        "export default" in lowered
+        or "function homepage" in lowered
+        or "usestate" in lowered
+        or "<main" in lowered
+    ) and len(code.strip()) >= 80
+
+
 def extract_prose_tool_calls(content: Any) -> list[dict[str, Any]]:
     """Return OpenAI-style tool_call dicts parsed from assistant prose."""
     text = _message_text(content)
@@ -156,6 +178,11 @@ def extract_prose_tool_calls(content: Any) -> list[dict[str, Any]]:
             }
         )
 
+    for match in _HERMES_TOOL_CALL.finditer(text):
+        parsed = _try_parse_tool_obj(match.group(1))
+        if parsed:
+            add(parsed)
+
     for match in _FENCED.finditer(text):
         parsed = _try_parse_tool_obj(match.group(1))
         if parsed:
@@ -168,6 +195,28 @@ def extract_prose_tool_calls(content: Any) -> list[dict[str, Any]]:
         parsed = _try_parse_tool_obj(blob)
         if parsed:
             add(parsed)
+
+    # Last resort: model dumped a full page as a code fence — treat as write_file.
+    if not any(c["name"] == "write_file" for c in found):
+        for match in _FENCED_CODE.finditer(text):
+            code = match.group(1).strip()
+            if not _looks_like_react_page(code):
+                continue
+            path = "app/page.tsx"
+            path_hint = re.search(
+                r"(?:write_file|file|path)[:\s`]+([^\s`]+\.tsx)",
+                text[: match.start()],
+                re.IGNORECASE,
+            )
+            if path_hint:
+                path = path_hint.group(1).lstrip("./")
+            add(
+                {
+                    "name": "write_file",
+                    "args": {"path": path, "content": code},
+                }
+            )
+            break
 
     return found
 
@@ -205,6 +254,7 @@ class ProseToolCallModel(Runnable[Any, BaseMessage]):
         tools: list[BaseTool],
         **kwargs: Any,
     ) -> "ProseToolCallModel":
+        # Forward tool_choice (required / write_file / auto) to the provider.
         bound = self.model.bind_tools(tools, **kwargs)  # type: ignore[attr-defined]
         return ProseToolCallModel(bound)
 

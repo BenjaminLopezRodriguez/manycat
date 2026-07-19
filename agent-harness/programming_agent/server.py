@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 from programming_agent.config import AgentConfig
 from programming_agent.harness import ProgrammingAgentHarness
 from programming_agent.prompts.sections import AgentMode
+from programming_agent.scaffold_fallback import apply_scaffold_fallback
 
 app = FastAPI(title="Programming Agent Harness", version="0.1.0")
 
@@ -113,7 +114,16 @@ def build_user_prompt(prompt: str, files: list[WorkspaceFile]) -> str:
             chunks.append(f"### `{f.path}`\n```\n{f.contents}\n```")
         body = "\n\nCurrent project files:\n\n" + "\n\n".join(chunks)
 
+    scaffold_hint = ""
+    if still_has_scaffold(files):
+        scaffold_hint = (
+            "IMPORTANT: The homepage is still a Manycat scaffold. Your FIRST "
+            "action must be a write_file tool call on app/page.tsx with a full "
+            "working UI for the user request (use 'use client' if needed).\n\n"
+        )
+
     return (
+        f"{scaffold_hint}"
         "You are editing an existing project already present in the workspace. "
         "Apply the user's request by calling tools (glob/read_file/edit_file/write_file). "
         "Do not claim there is no project or no design task. "
@@ -239,12 +249,11 @@ def run_agent(body: RunRequest) -> RunResponse:
             output = f"{output}\n\n---\n(retry)\n{output2}"
             files_after = walk_workspace(workspace)
             if still_has_scaffold(files_after):
-                output = (
-                    f"{output}\n\n---\n"
-                    "Warning: scaffold template was not replaced. The model "
-                    "described changes without successfully editing files. "
-                    "Try again or switch to GPT-4o."
-                )
+                # Small OpenAI-compatible models often narrate edits without
+                # emitting parseable tool calls — write a real UI ourselves.
+                note = apply_scaffold_fallback(workspace, body.prompt)
+                files_after = walk_workspace(workspace)
+                output = f"{output}\n\n---\n{note}"
     except Exception as exc:  # noqa: BLE001 — HTTP boundary
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 

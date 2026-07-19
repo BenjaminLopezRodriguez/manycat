@@ -1,9 +1,6 @@
 /**
- * ContentStore seam — Phase 1 is GitHub/sandbox backed.
- * Phase 4 swaps in S3 + merkle without rewriting Railway Run.
- *
- * Control plane never stores user file bodies here long-term;
- * workload plane (sandbox / S3) owns the trees.
+ * ContentStore seam — GitHub/sandbox + S3 merkle (build store).
+ * Control plane keeps tips/intents in Postgres; S3 owns blobs/trees/commits.
  */
 
 export type ContentBackend = "github" | "virtual";
@@ -44,7 +41,7 @@ export function createGitHubContentStore(opts: {
       return opts.fetchFiles(workflowId);
     },
     async recordChange() {
-      // Seam only — persisted via project_change table when virtual git lands.
+      // GitHub path: no S3 merkle commit (virtual builds use putBuildSnapshot).
     },
   };
 }

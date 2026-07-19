@@ -1,12 +1,16 @@
 "use client";
 
 import * as React from "react";
+import ReactMarkdown, { type Components } from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   ArrowDown01Icon,
   ArrowRight01Icon,
+  ArrowUpRight01Icon,
   Cancel01Icon,
   CheckmarkCircle02Icon,
+  Search01Icon,
   SourceCodeIcon,
   TickDouble02Icon,
 } from "@hugeicons/core-free-icons";
@@ -19,7 +23,169 @@ import {
   MessageFooter,
 } from "@/components/ui/message";
 import { cn } from "@/lib/utils";
-import type { AgentStatusMsg, DiffMsg, Msg } from "./data";
+import type { AgentStatusMsg, DiffMsg, ResearchSource, Msg } from "./data";
+
+const MARKDOWN_COMPONENTS: Components = {
+  p: ({ children }) => (
+    <p className="text-foreground text-sm leading-relaxed wrap-break-word [&:not(:first-child)]:mt-2">
+      {children}
+    </p>
+  ),
+  strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+  em: ({ children }) => <em className="italic">{children}</em>,
+  a: ({ children, href }) => (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      className="text-foreground underline underline-offset-2 hover:text-foreground/80"
+    >
+      {children}
+    </a>
+  ),
+  ul: ({ children }) => (
+    <ul className="marker:text-muted-foreground mt-2 list-disc pl-5 text-sm leading-relaxed first:mt-0">
+      {children}
+    </ul>
+  ),
+  ol: ({ children }) => (
+    <ol className="marker:text-muted-foreground mt-2 list-decimal pl-5 text-sm leading-relaxed first:mt-0">
+      {children}
+    </ol>
+  ),
+  li: ({ children }) => <li className="mt-0.5">{children}</li>,
+  h1: ({ children }) => (
+    <h1 className="mt-3 text-base font-semibold first:mt-0">{children}</h1>
+  ),
+  h2: ({ children }) => (
+    <h2 className="mt-3 text-[15px] font-semibold first:mt-0">{children}</h2>
+  ),
+  h3: ({ children }) => (
+    <h3 className="mt-2.5 text-sm font-semibold first:mt-0">{children}</h3>
+  ),
+  blockquote: ({ children }) => (
+    <blockquote className="border-border mt-2 border-l-2 pl-3 text-sm italic first:mt-0">
+      {children}
+    </blockquote>
+  ),
+  hr: () => <hr className="border-border my-3" />,
+  table: ({ children }) => (
+    <div className="mt-2 overflow-x-auto first:mt-0">
+      <table className="text-sm">{children}</table>
+    </div>
+  ),
+  th: ({ children }) => (
+    <th className="border-border border-b px-2 py-1 text-left font-semibold">
+      {children}
+    </th>
+  ),
+  td: ({ children }) => <td className="border-border border-b px-2 py-1">{children}</td>,
+  pre: ({ children }) => (
+    <pre className="bg-code-background text-code-foreground border-code-border/50 my-2 overflow-x-auto rounded-lg border p-3 font-mono text-[13px] leading-relaxed first:mt-0">
+      {children}
+    </pre>
+  ),
+  code: ({ className, children }) => {
+    const isFenced = className?.includes("language-");
+    if (isFenced) return <code className={className}>{children}</code>;
+    return (
+      <code className="bg-muted rounded px-1 py-0.5 font-mono text-[12px]">
+        {children}
+      </code>
+    );
+  },
+};
+
+function AgentMarkdown({ text }: { text: string }) {
+  return (
+    <ReactMarkdown remarkPlugins={[remarkGfm]} components={MARKDOWN_COMPONENTS}>
+      {text}
+    </ReactMarkdown>
+  );
+}
+
+/** Empty streaming reply — caret, then throb + Thinking… after 200ms. */
+function AgentPendingReply({ thinking }: { thinking?: string }) {
+  const [waiting, setWaiting] = React.useState(false);
+
+  React.useEffect(() => {
+    const t = window.setTimeout(() => setWaiting(true), 200);
+    return () => window.clearTimeout(t);
+  }, []);
+
+  const label = thinking?.trim() ?? "Thinking…";
+
+  return (
+    <div className="flex flex-col gap-2" aria-live="polite" aria-busy="true">
+      <div className="flex items-center gap-2">
+        <span
+          aria-hidden
+          className={cn(
+            "bg-foreground inline-block h-4 w-0.5 rounded-[1px]",
+            waiting ? "cursor-throb" : "animate-pulse",
+          )}
+        />
+        {waiting ? (
+          <span className="shimmer text-sm font-medium">{label}</span>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function StreamCaret({ throb }: { throb?: boolean }) {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "bg-foreground ml-0.5 inline-block h-4 w-0.5 translate-y-0.5 rounded-[1px] align-middle",
+        throb ? "cursor-throb" : "animate-pulse",
+      )}
+    />
+  );
+}
+
+function SourcesCard({ sources }: { sources: ResearchSource[] }) {
+  return (
+    <div className="border-border/60 bg-card w-full max-w-[min(100%,28rem)] overflow-hidden rounded-xl border">
+      <div className="border-border/50 text-muted-foreground flex items-center gap-1.5 border-b px-3 py-1.5 text-[11px] font-medium">
+        <HugeiconsIcon icon={Search01Icon} size={12} />
+        Sources
+      </div>
+      <ul className="divide-border/60 flex flex-col divide-y">
+        {sources.map((source, i) => (
+          <li key={source.url}>
+            <a
+              href={source.url}
+              target="_blank"
+              rel="noreferrer"
+              className="group flex flex-col gap-0.5 px-3 py-2 transition-colors hover:bg-muted/40"
+            >
+              <span className="flex items-start gap-1.5">
+                <span className="text-muted-foreground shrink-0 text-[11px]">
+                  [{i + 1}]
+                </span>
+                <span className="text-foreground min-w-0 truncate text-xs font-medium">
+                  {source.title}
+                </span>
+                <HugeiconsIcon
+                  icon={ArrowUpRight01Icon}
+                  size={11}
+                  className="text-muted-foreground ml-auto shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
+                />
+              </span>
+              {source.snippet ? (
+                <span className="text-muted-foreground line-clamp-2 pl-5 text-[11px] leading-snug">
+                  {source.snippet}
+                </span>
+              ) : null}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 
 type MessageListProps = {
   messages: Msg[];
@@ -307,13 +473,24 @@ export default function MessageList({
           case "text":
             if (m.from === "agent") {
               // Agent owns the canvas — no bubble chrome, just prose in the thread.
+              const isPending = Boolean(m.streaming) && !m.text;
               return (
                 <Message key={m.id} align="start">
                   <MessageContent className="max-w-none">
-                    <p className="text-foreground text-sm leading-relaxed wrap-break-word">
-                      {m.text}
-                    </p>
-                    <MessageFooter>{m.time}</MessageFooter>
+                    {isPending ? (
+                      <AgentPendingReply thinking={m.pendingLabel} />
+                    ) : (
+                      <>
+                        {m.text ? <AgentMarkdown text={m.text} /> : null}
+                        {m.streaming ? <StreamCaret /> : null}
+                      </>
+                    )}
+                    {m.sources && m.sources.length > 0 && !m.streaming ? (
+                      <SourcesCard sources={m.sources} />
+                    ) : null}
+                    {!m.streaming ? (
+                      <MessageFooter>{m.time}</MessageFooter>
+                    ) : null}
                   </MessageContent>
                 </Message>
               );

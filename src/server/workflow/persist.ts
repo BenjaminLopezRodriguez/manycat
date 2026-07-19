@@ -21,6 +21,25 @@ function messageRowId(accountId: string, workflowId: string, seq: number) {
     .slice(0, 32);
 }
 
+export async function listWorkspaceFiles(opts: {
+  accountId: string;
+  workflowId: string;
+}): Promise<{ path: string; contents: string }[]> {
+  const rows = await db
+    .select({
+      path: workspaceFiles.path,
+      contents: workspaceFiles.contents,
+    })
+    .from(workspaceFiles)
+    .where(
+      and(
+        eq(workspaceFiles.accountId, opts.accountId),
+        eq(workspaceFiles.workflowId, opts.workflowId),
+      ),
+    );
+  return rows;
+}
+
 export async function replaceWorkspaceFiles(opts: {
   accountId: string;
   workflowId: string;
@@ -122,6 +141,22 @@ export async function setProjectStatus(opts: {
   await db
     .update(projects)
     .set({ status: opts.status })
+    .where(
+      and(
+        eq(projects.accountId, opts.accountId),
+        eq(projects.id, opts.workflowId),
+      ),
+    );
+}
+
+export async function setProjectContentRoot(opts: {
+  accountId: string;
+  workflowId: string;
+  contentRootHash: string;
+}) {
+  await db
+    .update(projects)
+    .set({ contentRootHash: opts.contentRootHash })
     .where(
       and(
         eq(projects.accountId, opts.accountId),

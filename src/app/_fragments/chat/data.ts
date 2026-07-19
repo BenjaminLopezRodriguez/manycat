@@ -15,10 +15,18 @@ type MsgBase = {
   time: string;
 };
 
+export type ResearchSource = { title: string; url: string; snippet: string };
+
 export type TextMsg = MsgBase & {
   type: "text";
   from: "me" | "agent";
   text: string;
+  /** Deep-research mode only — links the agent actually read, shown as a card. */
+  sources?: ResearchSource[];
+  /** True while typewriter / token stream is still revealing this message. */
+  streaming?: boolean;
+  /** Shown next to the wait caret before the first character lands. */
+  pendingLabel?: string;
 };
 
 export type AgentStatusMsg = MsgBase & {
