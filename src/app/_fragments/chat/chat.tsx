@@ -1138,8 +1138,16 @@ export default function Chat() {
       });
 
       const scaffoldText = data.previewUrl
-        ? `Scaffold ready (${data.contentRootHash.slice(0, 8)}…). Preview at ${data.previewUrl}`
-        : `Scaffold ready (${data.contentRootHash.slice(0, 8)}…). Building your app on the Next scaffold…`;
+        ? `Scaffold ready (${data.contentRootHash.slice(0, 8)}…). Preview at ${data.previewUrl}${
+            data.persistedToS3 ? " · saved to S3" : ""
+          }`
+        : `Scaffold ready (${data.contentRootHash.slice(0, 8)}…). Building your app on the Next scaffold…${
+            data.persistedToS3 === false
+              ? " (S3 unset — local merkle only)"
+              : data.persistedToS3
+                ? " · saved to S3"
+                : ""
+          }`;
 
       setWorkflows((prev) =>
         prev.map((w) =>

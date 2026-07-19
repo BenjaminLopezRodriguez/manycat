@@ -53,7 +53,10 @@ import {
   setWorkflowMessages,
 } from "@/server/workflow/persist";
 import { isS3Configured, putCreateImage } from "@/server/s3/create-images";
-import { putBuildSnapshot } from "@/server/s3/build-store";
+import {
+  getTreeEntriesFromTip,
+  putBuildSnapshot,
+} from "@/server/s3/build-store";
 
 export type AgentEventPayload =
   | { kind: "status"; status: WorkflowStatus }
@@ -443,10 +446,13 @@ export const workflowRouter = createTRPCRouter({
       });
 
       const time = nowTime();
+      const s3Note = snapshot.persistedToS3
+        ? " Saved to S3."
+        : " (S3 unset — merkle is local only.)";
       const readyText =
         sandboxStatus === "workspace-only" || sandboxStatus.startsWith("local")
-          ? `Virtual git ready (${contentRootHash.slice(0, 8)}…). Workspace written (${sandboxStatus}).`
-          : `Virtual git ready (${contentRootHash.slice(0, 8)}…). Sandbox ${sandboxStatus}.`;
+          ? `Virtual git ready (${contentRootHash.slice(0, 8)}…). Workspace written (${sandboxStatus}).${s3Note}`
+          : `Virtual git ready (${contentRootHash.slice(0, 8)}…). Sandbox ${sandboxStatus}.${s3Note}`;
 
       const initialMessages = [
         {
@@ -476,11 +482,26 @@ export const workflowRouter = createTRPCRouter({
         files,
       });
 
+      if (!snapshot.persistedToS3) {
+        console.warn(
+          "[createFromPrompt] S3 build store not configured — merkle commit is local only",
+          { workflowId, contentRootHash },
+        );
+      } else {
+        console.info("[createFromPrompt] persisted build snapshot to S3", {
+          workflowId,
+          contentRootHash,
+          intentId: snapshot.intentId,
+          files: files.length,
+        });
+      }
+
       return {
         workflowId,
         name: displayName,
         prompt: input.prompt,
         contentRootHash,
+        persistedToS3: snapshot.persistedToS3,
         previewUrl,
         status: "idle" as const,
         sandboxStatus,
@@ -1072,6 +1093,19 @@ export const workflowRouter = createTRPCRouter({
       const events: AgentEventPayload[] = [];
       let id = Date.now();
 
+      // Parent tree for intent diffs — tip from S3, else DB workspace before replace.
+      const parentTreeEntries =
+        (await getTreeEntriesFromTip({
+          accountId: ctx.accountId,
+          buildId: input.workflowId,
+        })) ??
+        buildTree(
+          await listWorkspaceFiles({
+            accountId: ctx.accountId,
+            workflowId: input.workflowId,
+          }),
+        ).tree.entries;
+
       if (files.length > 0) {
         await replaceWorkspaceFiles({
           accountId: ctx.accountId,
@@ -1102,7 +1136,6 @@ export const workflowRouter = createTRPCRouter({
               accountId: ctx.accountId,
               workflowId: input.workflowId,
             });
-      const beforeTree = buildTree(nextFiles).tree;
       const thoughtMatch =
         /(?:^|\n)Thinking:\s*([\s\S]{0,2000}?)(?:\n\n|$)/i.exec(
           job.output ?? "",
@@ -1117,8 +1150,14 @@ export const workflowRouter = createTRPCRouter({
         prompt: row.name,
         thoughts,
         parentCommitSha: row.contentRootHash ?? null,
-        parentTreeEntries: beforeTree.entries,
+        parentTreeEntries,
       });
+      if (!snapshot.persistedToS3) {
+        console.warn(
+          "[reconcileRun] S3 build store not configured — merkle commit is local only",
+          { workflowId: input.workflowId, commitSha: snapshot.commitSha },
+        );
+      }
       await setProjectContentRoot({
         accountId: ctx.accountId,
         workflowId: input.workflowId,
