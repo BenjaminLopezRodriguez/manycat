@@ -49,10 +49,21 @@ function safeSeg(s: string) {
   return s.replace(/[^a-zA-Z0-9._-]+/g, "_").slice(0, 128);
 }
 
-function buildPrefix(accountId: string, buildId: string) {
-  const cfg = s3Config();
-  if (!cfg) throw new Error("S3 is not configured");
-  return `${cfg.prefix}/builds/${safeSeg(accountId)}/${safeSeg(buildId)}`;
+/** Pure S3 key layout: {prefix}/builds/{accountId}/{buildId}/objects|refs|intents */
+export function buildKeys(opts: {
+  prefix: string;
+  accountId: string;
+  buildId: string;
+}) {
+  const root = `${opts.prefix}/builds/${safeSeg(opts.accountId)}/${safeSeg(opts.buildId)}`;
+  return {
+    root,
+    blob: (sha: string) => `${root}/objects/blobs/${sha}`,
+    tree: (sha: string) => `${root}/objects/trees/${sha}.json`,
+    commit: (sha: string) => `${root}/objects/commits/${sha}.json`,
+    ref: (branch: string) => `${root}/refs/heads/${safeSeg(branch)}`,
+    intent: (id: string) => `${root}/intents/${id}.json`,
+  };
 }
 
 async function putText(
@@ -166,29 +177,19 @@ export async function putBuildSnapshot(opts: {
     };
   }
 
-  const root = buildPrefix(opts.accountId, opts.buildId);
+  const keys = buildKeys({
+    prefix: cfg.prefix,
+    accountId: opts.accountId,
+    buildId: opts.buildId,
+  });
 
   await Promise.all(
-    blobs.map((b) =>
-      putText(cfg, `${root}/objects/blobs/${b.sha}`, b.contents, "text/plain"),
-    ),
+    blobs.map((b) => putText(cfg, keys.blob(b.sha), b.contents, "text/plain")),
   );
-  await putText(
-    cfg,
-    `${root}/objects/trees/${tree.sha}.json`,
-    JSON.stringify(tree),
-  );
-  await putText(
-    cfg,
-    `${root}/objects/commits/${commitSha}.json`,
-    JSON.stringify(commit),
-  );
-  await putText(cfg, `${root}/refs/heads/${safeSeg(branch)}`, commitSha, "text/plain");
-  await putText(
-    cfg,
-    `${root}/intents/${intentId}.json`,
-    JSON.stringify(intent),
-  );
+  await putText(cfg, keys.tree(tree.sha), JSON.stringify(tree));
+  await putText(cfg, keys.commit(commitSha), JSON.stringify(commit));
+  await putText(cfg, keys.ref(branch), commitSha, "text/plain");
+  await putText(cfg, keys.intent(intentId), JSON.stringify(intent));
 
   return {
     commitSha,
@@ -207,22 +208,18 @@ export async function getBuildTip(opts: {
 }): Promise<{ commitSha: string; commit: MerkleCommit; tree: MerkleTree } | null> {
   const cfg = s3Config();
   if (!cfg) return null;
-  const root = buildPrefix(opts.accountId, opts.buildId);
+  const keys = buildKeys({
+    prefix: cfg.prefix,
+    accountId: opts.accountId,
+    buildId: opts.buildId,
+  });
   const branch = opts.branch ?? "main";
-  const commitSha = (
-    await getText(cfg, `${root}/refs/heads/${safeSeg(branch)}`)
-  )?.trim();
+  const commitSha = (await getText(cfg, keys.ref(branch)))?.trim();
   if (!commitSha) return null;
-  const commitRaw = await getText(
-    cfg,
-    `${root}/objects/commits/${commitSha}.json`,
-  );
+  const commitRaw = await getText(cfg, keys.commit(commitSha));
   if (!commitRaw) return null;
   const commit = JSON.parse(commitRaw) as MerkleCommit;
-  const treeRaw = await getText(
-    cfg,
-    `${root}/objects/trees/${commit.tree}.json`,
-  );
+  const treeRaw = await getText(cfg, keys.tree(commit.tree));
   if (!treeRaw) return null;
   const tree = JSON.parse(treeRaw) as MerkleTree;
   return { commitSha, commit, tree };

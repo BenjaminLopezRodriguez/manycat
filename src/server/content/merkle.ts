@@ -70,15 +70,21 @@ export function hashCommit(input: {
   return h.digest("hex");
 }
 
-export function buildTree(files: ContentFile[]): {
+export function buildTree(files: ContentFile[] | Record<string, string>): {
+  /** Mirrors tree.sha / tree.entries for callers that treat the result as a tree. */
+  sha: string;
+  entries: Record<string, string>;
   tree: MerkleTree;
   blobs: MerkleBlob[];
 } {
+  const list = Array.isArray(files)
+    ? files
+    : Object.entries(files).map(([path, contents]) => ({ path, contents }));
   const entries: Record<string, string> = {};
   const blobs: MerkleBlob[] = [];
   const seen = new Set<string>();
 
-  for (const f of [...files].sort((a, b) => a.path.localeCompare(b.path))) {
+  for (const f of [...list].sort((a, b) => a.path.localeCompare(b.path))) {
     const sha = hashBlob(f.contents);
     entries[f.path] = sha;
     if (!seen.has(sha)) {
@@ -88,7 +94,7 @@ export function buildTree(files: ContentFile[]): {
   }
 
   const treeSha = hashTreeEntries(entries);
-  return { tree: { sha: treeSha, entries }, blobs };
+  return { sha: treeSha, entries, tree: { sha: treeSha, entries }, blobs };
 }
 
 /** Root hash of a file tree (content-addressed). Replaces flat concat hash. */
@@ -96,16 +102,25 @@ export function merkleRoot(files: ContentFile[]): string {
   return buildTree(files).tree.sha;
 }
 
+type TreeLike = Record<string, string> | { entries: Record<string, string> };
+
+function treeEntries(t: TreeLike): Record<string, string> {
+  return "entries" in t && typeof t.entries === "object"
+    ? (t as { entries: Record<string, string> }).entries
+    : (t as Record<string, string>);
+}
+
 export function diffTrees(
-  before: Record<string, string> | null | undefined,
-  after: Record<string, string>,
+  before: TreeLike | null | undefined,
+  after: TreeLike,
 ): MerklePathChange[] {
-  const prev = before ?? {};
-  const paths = new Set([...Object.keys(prev), ...Object.keys(after)]);
+  const prev = before ? treeEntries(before) : {};
+  const next = treeEntries(after);
+  const paths = new Set([...Object.keys(prev), ...Object.keys(next)]);
   const changes: MerklePathChange[] = [];
   for (const path of [...paths].sort()) {
     const beforeSha = prev[path] ?? null;
-    const afterSha = after[path] ?? null;
+    const afterSha = next[path] ?? null;
     if (beforeSha === afterSha) continue;
     changes.push({ path, beforeSha, afterSha });
   }

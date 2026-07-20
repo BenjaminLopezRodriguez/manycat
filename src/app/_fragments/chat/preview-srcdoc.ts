@@ -5,6 +5,13 @@ import type { WorkspaceFile } from "./data";
  * Not a full Next runtime — enough to show layout/copy while sandbox boots.
  * Assumes shared disposable DB tables when the app needs data.
  */
+/** Intended API from the build brief: path → contents record. */
+export function toSrcDoc(files: Record<string, string>): string {
+  return buildPreviewSrcdoc(
+    Object.entries(files).map(([path, contents]) => ({ path, contents })),
+  );
+}
+
 export function buildPreviewSrcdoc(files: WorkspaceFile[]): string {
   const byPath = new Map(files.map((f) => [f.path.replace(/^\.\//, ""), f.contents]));
 
