@@ -12934,3 +12934,68 @@ More info: https://fb.me/react-controlled-components @ http://localhost:3000/_ne
     color: white;
     padding: 2px;
   ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 2411, context: Object} @ http://localhost:3000/_next/static/chunks/8247e_%40trpc_client_dist_9532f37a._.js:928
+[ 4663570ms] [LOG] %c >> query #111 %cworkflow.listSessions%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/8247e_%40trpc_client_dist_9532f37a._.js:928
+[ 4666071ms] [LOG] %c << query #111 %cworkflow.listSessions%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 2501, context: Object} @ http://localhost:3000/_next/static/chunks/8247e_%40trpc_client_dist_9532f37a._.js:928
+[ 4669072ms] [LOG] %c >> query #112 %cworkflow.listSessions%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/8247e_%40trpc_client_dist_9532f37a._.js:928
+[ 4671407ms] [LOG] %c << query #112 %cworkflow.listSessions%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 2334, context: Object} @ http://localhost:3000/_next/static/chunks/8247e_%40trpc_client_dist_9532f37a._.js:928
+[ 4674408ms] [LOG] %c >> query #113 %cworkflow.listSessions%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/8247e_%40trpc_client_dist_9532f37a._.js:928
