@@ -459,7 +459,7 @@ export default function Chat() {
     [patchAgentText],
   );
 
-  const handleAgentEvent = React.useCallback((event: AgentEvent) => {
+  const handleAgentEvent = React.useCallback((event: AgentEvent, workflowId?: string) => {
     setWorkflows((prev) =>
       prev.map((w) => {
         if (w.id !== activeIdRef.current) return w;
@@ -529,7 +529,10 @@ export default function Chat() {
       }),
     );
 
-    if (event.kind === "patch-workspace") {
+    // Background-job events must not hijack the active view or pop the drawer
+    // (an invisibly open drawer marks the whole app inert via Base UI).
+    const isActive = !workflowId || workflowId === activeIdRef.current;
+    if (event.kind === "patch-workspace" && isActive) {
       setActivePath(event.path);
       setPreviewEpoch((n) => n + 1);
       // Show preview as soon as files land so users see the UI without a manual open.
@@ -564,7 +567,7 @@ export default function Chat() {
           .then((data) => {
             if (cancelled) return;
             for (const event of data.events ?? []) {
-              handleAgentEventRef.current(event);
+              handleAgentEventRef.current(event, workflowId);
             }
             if (data.contentRootHash) setContentRootHash(data.contentRootHash);
             if (data.outcome === "budget") {

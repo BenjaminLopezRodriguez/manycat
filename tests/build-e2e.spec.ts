@@ -14,9 +14,14 @@ test.describe("Build mode e2e", () => {
     await page.goto(`${BASE}`);
     // Adapted: shipped button's accessible name is "New" — the "+" is an icon.
     await page.getByRole("button", { name: /^new$/i }).click();
-    await page.getByRole("menuitem", { name: /build/i }).click().catch(() => {});
+    // Optional mode switch — bounded timeout so a missing menu can't eat the test.
+    await page
+      .getByRole("menuitem", { name: /build/i })
+      .click({ timeout: 3_000 })
+      .catch(() => {});
     await page.getByRole("textbox").fill("make a pink calculator");
-    await page.keyboard.press("Enter");
+    // Shipped composer submits via the explicit button, not Enter.
+    await page.getByRole("button", { name: /create project/i }).click();
 
     // C: creation message advertises S3 persistence
     const created = page.getByText(/saved to s3/i);
@@ -35,8 +40,10 @@ test.describe("Build mode e2e", () => {
   });
 
   test("approximate preview does not leak JS", async ({ page }) => {
-    await page.goto(`${BASE}`); // open an existing workspace-only build
-    await page.getByRole("button", { name: /preview/i }).click();
+    await page.goto(`${BASE}`);
+    // Open an existing workspace-only build — Preview only renders in a workflow.
+    await page.getByRole("button", { name: /pink calculator/i }).first().click();
+    await page.getByRole("button", { name: /^preview$/i }).click();
     const frame = page.frameLocator("iframe");
     await expect(frame.locator("body")).not.toContainText("useState");
     await expect(frame.locator("body")).not.toContainText("return (");
@@ -48,10 +55,12 @@ test.describe("Build mode e2e", () => {
     // start a build (as above), then navigate away
     await page.goto(`${BASE}/`); // home
     // rail throbber while working
-    await expect(page.locator('[data-rail-status="working"], .rail-throbber')).toBeVisible({ timeout: 60_000 });
+    await expect(
+      page.locator('[data-rail-status="working"], .rail-throbber').first(),
+    ).toBeVisible({ timeout: 60_000 });
     // eventually blue (update) or red (failure) — must not silently vanish
     await expect(
-      page.locator('[data-rail-status="update"], [data-rail-status="failure"]')
+      page.locator('[data-rail-status="update"], [data-rail-status="failure"]').first(),
     ).toBeVisible({ timeout: 8 * 60_000 });
   });
 });
