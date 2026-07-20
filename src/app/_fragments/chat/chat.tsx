@@ -180,6 +180,9 @@ export default function Chat() {
   const [draft, setDraft] = React.useState("");
   const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = React.useState(false);
+  /** Dot badge on the Preview button: files changed since the user last looked. */
+  const [previewUnseen, setPreviewUnseen] = React.useState(false);
+  const [previewDeploying, setPreviewDeploying] = React.useState(false);
   const [contentRootHash, setContentRootHash] = React.useState<string | null>(
     null,
   );
@@ -220,6 +223,7 @@ export default function Chat() {
     refetchInterval: anyWorking ? 3000 : false,
   });
   const reconcileRun = api.workflow.reconcileRun.useMutation();
+  const runProject = api.project.run.useMutation();
   const clearUnreadMut = api.workflow.clearUnread.useMutation();
   const reconcileInFlight = React.useRef(new Set<string>());
   const budgetQuery = api.project.budget.useQuery(undefined, {
@@ -385,6 +389,79 @@ export default function Chat() {
     bubbleBadges.push("deploy");
   }
 
+  const applyProjectRunResult = React.useCallback(
+    (
+      projectId: string,
+      result: {
+        status: "running" | "success" | "failed";
+        url?: string;
+        log?: string;
+        startedAt: string;
+        finishedAt?: string;
+      },
+    ) => {
+      setProjects((prev) => {
+        const idx = prev.findIndex(
+          (p) => p.id === projectId || p.workflowIds.includes(projectId),
+        );
+        if (idx === -1) {
+          return [
+            ...prev,
+            {
+              id: projectId,
+              name: projectId,
+              repo: projectId,
+              workflowIds: [projectId],
+              runConfig: { kind: "railway" as const },
+              lastRun: result,
+            },
+          ];
+        }
+        return prev.map((p, i) => (i === idx ? { ...p, lastRun: result } : p));
+      });
+    },
+    [],
+  );
+
+  const deployWorkflow = React.useCallback(
+    async (workflowId: string) => {
+      setPreviewDeploying(true);
+      const startedAt = new Date().toISOString();
+      applyProjectRunResult(workflowId, { status: "running", startedAt });
+      try {
+        const result = await runProject.mutateAsync({
+          workflowId,
+          runConfig: { kind: "railway" },
+        });
+        applyProjectRunResult(workflowId, {
+          status: result.status,
+          url: result.url,
+          log: result.log,
+          startedAt: result.startedAt,
+          finishedAt: result.finishedAt,
+        });
+        if (result.status === "failed") {
+          toast.error(result.log?.slice(0, 200) ?? "Deploy failed");
+        } else if (result.url) {
+          toast.success(`Deployed — ${result.url}`);
+        }
+        void budgetQuery.refetch();
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        applyProjectRunResult(workflowId, {
+          status: "failed",
+          log: message,
+          startedAt,
+          finishedAt: new Date().toISOString(),
+        });
+        toast.error(message);
+      } finally {
+        setPreviewDeploying(false);
+      }
+    },
+    [applyProjectRunResult, runProject, budgetQuery],
+  );
+
   const active = workflows.find((w) => w.id === activeId) ?? null;
   const diffs = active?.messages.filter((m): m is DiffMsg => m.type === "diff") ?? [];
   const promptMsg = active?.messages.find(
@@ -535,13 +612,13 @@ export default function Chat() {
     if (event.kind === "patch-workspace" && isActive) {
       setActivePath(event.path);
       setPreviewEpoch((n) => n + 1);
-      // Show preview as soon as files land so users see the UI without a manual open.
+      // Never force the drawer open — signal the update with a dot badge instead.
       if (
         event.path === "app/page.tsx" ||
         event.path === "app/page.jsx" ||
         event.path.endsWith("/page.tsx")
       ) {
-        setPreviewOpen(true);
+        setPreviewUnseen(true);
       }
     }
   }, [streamInAgentText]);
@@ -1760,30 +1837,7 @@ export default function Chat() {
         ) : mode === "dev" && view === "deployments" ? (
           <DeploymentsPanel
             projects={projects}
-            onProjectRunResult={(projectId, result) => {
-              setProjects((prev) => {
-                const idx = prev.findIndex(
-                  (p) =>
-                    p.id === projectId || p.workflowIds.includes(projectId),
-                );
-                if (idx === -1) {
-                  return [
-                    ...prev,
-                    {
-                      id: projectId,
-                      name: projectId,
-                      repo: projectId,
-                      workflowIds: [projectId],
-                      runConfig: { kind: "railway" as const },
-                      lastRun: result,
-                    },
-                  ];
-                }
-                return prev.map((p, i) =>
-                  i === idx ? { ...p, lastRun: result } : p,
-                );
-              });
-            }}
+            onProjectRunResult={applyProjectRunResult}
           />
         ) : mode === "dev" && view === "agents" ? (
           <SectionScaffold
@@ -1887,10 +1941,16 @@ export default function Chat() {
                           variant="ghost"
                           size="icon-sm"
                           aria-label="Preview"
-                          className="size-8 rounded-full"
+                          className="relative size-8 rounded-full"
                           onClick={() => setPreviewOpen(true)}
                         >
                           <HugeiconsIcon icon={BrowserIcon} size={18} />
+                          {previewUnseen ? (
+                            <span
+                              className="absolute top-0.5 right-0.5 size-2 rounded-full bg-sky-500"
+                              aria-hidden
+                            />
+                          ) : null}
                         </Button>
                         <WorkflowChatMenu
                           workflowId={active.id}
@@ -1904,7 +1964,12 @@ export default function Chat() {
 
                   <BuildPreviewDrawer
                     open={previewOpen}
-                    onOpenChange={setPreviewOpen}
+                    onOpenChange={(o) => {
+                      setPreviewOpen(o);
+                      setPreviewUnseen(false);
+                    }}
+                    onDeploy={() => void deployWorkflow(active.id)}
+                    deploying={previewDeploying}
                     previewUrl={previewUrl}
                     files={active.workspace}
                     rootHash={

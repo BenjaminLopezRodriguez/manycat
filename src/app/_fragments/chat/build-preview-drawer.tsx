@@ -2,7 +2,11 @@
 
 import * as React from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowUpRight01Icon, Cancel01Icon } from "@hugeicons/core-free-icons";
+import {
+  ArrowUp01Icon,
+  ArrowUpRight01Icon,
+  Cancel01Icon,
+} from "@hugeicons/core-free-icons";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -25,6 +29,8 @@ export function BuildPreviewDrawer({
   previewUrl,
   files,
   rootHash,
+  onDeploy,
+  deploying,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -32,6 +38,8 @@ export function BuildPreviewDrawer({
   files: WorkspaceFile[];
   /** Remount iframe when workspace merkle tip changes. */
   rootHash?: string | null;
+  onDeploy?: () => void;
+  deploying?: boolean;
 }) {
   const isMobile = useIsMobile();
   const srcdoc = React.useMemo(() => buildPreviewSrcdoc(files), [files]);
@@ -60,6 +68,22 @@ export function BuildPreviewDrawer({
               ? "Live sandbox — hot reload as the agent writes files."
               : "Approximate view from workspace files (sandbox URL unavailable)."}
           </DrawerDescription>
+          {onDeploy ? (
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="absolute top-4 right-14"
+              aria-label="Deploy"
+              disabled={deploying}
+              onClick={onDeploy}
+            >
+              <HugeiconsIcon
+                icon={ArrowUp01Icon}
+                size={16}
+                className={deploying ? "animate-pulse" : undefined}
+              />
+            </Button>
+          ) : null}
           <DrawerClose
             render={
               <Button
