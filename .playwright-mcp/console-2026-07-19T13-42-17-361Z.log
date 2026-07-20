@@ -1,0 +1,2659 @@
+[  253241ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[  253356ms] [LOG] [Fast Refresh] done in 215ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[  261064ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[  261113ms] [LOG] [Fast Refresh] done in 150ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[  288879ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[  288907ms] [LOG] [Fast Refresh] done in 129ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[  396511ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[  396695ms] [LOG] %c >> query #7 %cworkflow.isEnabled%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[  396695ms] [LOG] %c >> query #8 %cworkflow.listSessions%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[  396695ms] [LOG] %c >> query #9 %cproject.budget%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[  396713ms] [LOG] [Fast Refresh] done in 267ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[  397001ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[  397004ms] [LOG] [Fast Refresh] done in 104ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[  397418ms] [LOG] %c << query #7 %cworkflow.isEnabled%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 723, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[  397618ms] [LOG] %c << query #9 %cproject.budget%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 922, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[  398229ms] [LOG] %c << query #8 %cworkflow.listSessions%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 1534, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[  400386ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[  400452ms] [LOG] [Fast Refresh] done in 130ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[  401664ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[  401741ms] ReferenceError: showWorkflowList is not defined
+    at Chat (http://localhost:3000/_next/static/chunks/src_app__fragments_chat_ce54f2d7._.js?id=%255Bproject%255D%252Fsrc%252Fapp%252F_fragments%252Fchat%252Fchat.tsx+%255Bapp-client%255D+%2528ecmascript%2529:1372:33)
+    at Object.react_stack_bottom_frame (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:13072:24)
+    at renderWithHooks (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:4091:24)
+    at updateFunctionComponent (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:5523:21)
+    at beginWork (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:6111:24)
+    at runWithFiberInDEV (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:886:74)
+    at performUnitOfWork (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8298:97)
+    at workLoopSync (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8190:40)
+    at renderRootSync (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8173:13)
+    at performWorkOnRoot (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:7932:56)
+    at performSyncWorkOnRoot (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8890:9)
+    at flushSyncWorkAcrossRoots_impl (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8809:316)
+    at flushSyncWork$1 (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8048:86)
+    at Object.scheduleRefresh (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:294:13)
+    at http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_6a66a683._.js:391:33
+    at Set.forEach (<anonymous>)
+    at Object.performReactRefresh (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_6a66a683._.js:384:38)
+    at applyUpdate (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_6a66a683._.js:878:31)
+    at http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_6a66a683._.js:886:13
+[  401750ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:6289
+[  401821ms] ReferenceError: showWorkflowList is not defined
+    at Chat (http://localhost:3000/_next/static/chunks/src_app__fragments_chat_ce54f2d7._.js?id=%255Bproject%255D%252Fsrc%252Fapp%252F_fragments%252Fchat%252Fchat.tsx+%255Bapp-client%255D+%2528ecmascript%2529:1372:33)
+    at Object.react_stack_bottom_frame (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:13072:24)
+    at renderWithHooks (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:4091:24)
+    at updateFunctionComponent (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:5523:21)
+    at beginWork (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:6111:24)
+    at runWithFiberInDEV (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:886:74)
+    at performUnitOfWork (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8298:97)
+    at workLoopSync (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8190:40)
+    at renderRootSync (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8173:13)
+    at performWorkOnRoot (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:7932:56)
+    at performSyncWorkOnRoot (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8890:9)
+    at flushSyncWorkAcrossRoots_impl (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8809:316)
+    at flushSyncWork$1 (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8048:86)
+    at Object.scheduleRefresh (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:294:13)
+    at http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_6a66a683._.js:391:33
+    at Set.forEach (<anonymous>)
+    at Object.performReactRefresh (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_6a66a683._.js:384:38)
+    at applyUpdate (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_6a66a683._.js:878:31)
+    at http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_6a66a683._.js:886:13
+[  401777ms] [LOG] [Fast Refresh] done in 185ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[  401964ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[  402105ms] [LOG] [Fast Refresh] done in 243ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[  402651ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:14537
+[  402849ms] [LOG] %c >> query #1 %cworkflow.isEnabled%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[  402922ms] ReferenceError: showWorkflowList is not defined
+    at Chat (http://localhost:3000/_next/static/chunks/src_app__fragments_chat_ce54f2d7._.js:9511:33)
+    at Object.react_stack_bottom_frame (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:13072:24)
+    at renderWithHooks (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:4091:24)
+    at updateFunctionComponent (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:5523:21)
+    at beginWork (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:6111:24)
+    at runWithFiberInDEV (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:886:74)
+    at performUnitOfWork (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8298:97)
+    at workLoopSync (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8190:40)
+    at renderRootSync (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8173:13)
+    at performWorkOnRoot (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:7932:56)
+    at performSyncWorkOnRoot (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8890:9)
+    at flushSyncWorkAcrossRoots_impl (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8809:316)
+    at flushPassiveEffects (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8641:13)
+    at http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8426:17
+    at MessagePort.performWorkUntilDeadline (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_6a66a683._.js:2601:64)
+[  403664ms] [LOG] %c << query #1 %cworkflow.isEnabled%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 816, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[  407101ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[  407163ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:6289
+[  407173ms] [LOG] [Fast Refresh] done in 159ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[  407273ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[  407381ms] [LOG] [Fast Refresh] done in 209ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[  407777ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:14537
+[  407899ms] [LOG] %c >> query #1 %cworkflow.isEnabled%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[  407941ms] ReferenceError: showWorkflowList is not defined
+    at Chat (http://localhost:3000/_next/static/chunks/src_app__fragments_chat_ce54f2d7._.js:10555:37)
+    at Object.react_stack_bottom_frame (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:13072:24)
+    at renderWithHooks (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:4091:24)
+    at updateFunctionComponent (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:5523:21)
+    at beginWork (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:6111:24)
+    at runWithFiberInDEV (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:886:74)
+    at performUnitOfWork (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8298:97)
+    at workLoopSync (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8190:40)
+    at renderRootSync (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8173:13)
+    at performWorkOnRoot (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:7932:56)
+    at performSyncWorkOnRoot (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8890:9)
+    at flushSyncWorkAcrossRoots_impl (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8809:316)
+    at flushPassiveEffects (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8641:13)
+    at http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8426:17
+    at MessagePort.performWorkUntilDeadline (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_6a66a683._.js:2601:64)
+[  408555ms] [LOG] %c << query #1 %cworkflow.isEnabled%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 657, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[  412605ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[  412730ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:6289
+[  412899ms] [LOG] [Fast Refresh] done in 223ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[  413328ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:14537
+[  413443ms] [LOG] %c >> query #1 %cworkflow.isEnabled%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[  413710ms] [LOG] %c >> query #2 %cworkflow.listSessions%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[  413710ms] [LOG] %c >> query #3 %cproject.budget%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[  414064ms] [LOG] %c << query #1 %cworkflow.isEnabled%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 622, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[  414293ms] [LOG] %c << query #3 %cproject.budget%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 583, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[  414830ms] [LOG] %c << query #2 %cworkflow.listSessions%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 1120, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[  415668ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[  415739ms] [LOG] [Fast Refresh] done in 135ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[  421972ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[  422092ms] [LOG] [Fast Refresh] done in 180ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[  423363ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[  423444ms] [LOG] [Fast Refresh] done in 141ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[  550926ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[  551109ms] [LOG] %c >> query #4 %cworkflow.isEnabled%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[  551109ms] [LOG] %c >> query #5 %cworkflow.listSessions%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[  551109ms] [LOG] %c >> query #6 %cproject.budget%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[  551132ms] [LOG] [Fast Refresh] done in 255ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[  551646ms] [LOG] %c << query #4 %cworkflow.isEnabled%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 538, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[  551761ms] [LOG] %c << query #6 %cproject.budget%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 651, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[  551947ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[  552001ms] [LOG] [Fast Refresh] done in 118ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[  552723ms] [LOG] %c << query #5 %cworkflow.listSessions%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 1613, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[  557443ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[  557694ms] [LOG] [Fast Refresh] done in 319ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[  561165ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[  561208ms] [LOG] [Fast Refresh] done in 131ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[  567893ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[  567992ms] [LOG] [Fast Refresh] done in 155ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[  578780ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[  578869ms] [LOG] [Fast Refresh] done in 191ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[  650712ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[  650819ms] [LOG] %c >> query #7 %cworkflow.isEnabled%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[  650820ms] [LOG] %c >> query #8 %cworkflow.listSessions%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[  650820ms] [LOG] %c >> query #9 %cproject.budget%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[  650844ms] [LOG] [Fast Refresh] done in 184ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[  651636ms] [LOG] %c << query #9 %cproject.budget%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 817, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[  651653ms] [LOG] %c << query #7 %cworkflow.isEnabled%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 834, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[  653130ms] [LOG] %c << query #8 %cworkflow.listSessions%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 2310, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[  687547ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[  687609ms] [LOG] %c >> query #10 %cworkflow.isEnabled%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[  687609ms] [LOG] %c >> query #11 %cworkflow.listSessions%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[  687609ms] [LOG] %c >> query #12 %cproject.budget%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[  687625ms] [LOG] [Fast Refresh] done in 139ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[  688374ms] [LOG] %c << query #10 %cworkflow.isEnabled%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 766, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[  688510ms] [LOG] %c << query #12 %cproject.budget%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 900, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[  688780ms] [LOG] %c << query #11 %cworkflow.listSessions%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 1171, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[  700951ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[  701056ms] [LOG] [Fast Refresh] done in 205ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[  743357ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[  743414ms] [LOG] %c >> query #13 %cworkflow.isEnabled%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[  743415ms] [LOG] %c >> query #14 %cworkflow.listSessions%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[  743415ms] [LOG] %c >> query #15 %cproject.budget%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[  743431ms] [LOG] [Fast Refresh] done in 133ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[  743998ms] [LOG] %c << query #15 %cproject.budget%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 582, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[  744144ms] [LOG] %c << query #13 %cworkflow.isEnabled%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 730, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[  744522ms] [LOG] %c << query #14 %cworkflow.listSessions%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 1108, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[  748084ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[  748283ms] [LOG] [Fast Refresh] done in 265ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[  750011ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[  750127ms] [LOG] [Fast Refresh] done in 180ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[  750338ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[  750358ms] [LOG] [Fast Refresh] done in 106ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[  752808ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[  752959ms] [LOG] [Fast Refresh] done in 234ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[  756168ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[  756182ms] [LOG] [Fast Refresh] done in 115ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[ 1043433ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[ 1043450ms] [LOG] [Fast Refresh] done in 118ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[ 1043770ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[ 1043798ms] [LOG] [Fast Refresh] done in 129ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[ 1052967ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[ 1053029ms] [LOG] [Fast Refresh] done in 150ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[ 1053987ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[ 1054040ms] [LOG] %c >> query #16 %cworkflow.isEnabled%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1054041ms] [LOG] %c >> query #17 %cworkflow.listSessions%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1054041ms] [LOG] %c >> query #18 %cproject.budget%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1054059ms] [LOG] [Fast Refresh] done in 135ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[ 1054749ms] [LOG] %c << query #16 %cworkflow.isEnabled%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 708, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1054832ms] [LOG] %c << query #18 %cproject.budget%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 791, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1055514ms] [LOG] %c << query #17 %cworkflow.listSessions%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 1473, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1055817ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[ 1055851ms] [LOG] [Fast Refresh] done in 105ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[ 1057462ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[ 1057516ms] [LOG] [Fast Refresh] done in 117ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[ 1057824ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[ 1057856ms] [LOG] [Fast Refresh] done in 93ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[ 1065940ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[ 1066075ms] [LOG] [Fast Refresh] done in 201ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[ 1076194ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[ 1076267ms] [LOG] [Fast Refresh] done in 136ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[ 1079069ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[ 1079355ms] [LOG] [Fast Refresh] done in 327ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[ 1081352ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[ 1081420ms] [LOG] [Fast Refresh] done in 131ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[ 1087924ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[ 1087995ms] [LOG] %c >> query #19 %cworkflow.isEnabled%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1087996ms] [LOG] %c >> query #20 %cworkflow.listSessions%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1087996ms] [LOG] %c >> query #21 %cproject.budget%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1088012ms] [LOG] [Fast Refresh] done in 147ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[ 1088588ms] [LOG] %c << query #19 %cworkflow.isEnabled%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 593, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1088807ms] [LOG] %c << query #21 %cproject.budget%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 811, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1089448ms] [LOG] %c << query #20 %cworkflow.listSessions%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 1453, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1093408ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[ 1093491ms] [LOG] [Fast Refresh] done in 148ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[ 1096208ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[ 1096289ms] TypeError: Cannot read properties of null (reading 'messages')
+    at ModeThreadView (http://localhost:3000/_next/static/chunks/src_app__fragments_chat_0913b3a3._.js?id=%255Bproject%255D%252Fsrc%252Fapp%252F_fragments%252Fchat%252Fchat.tsx+%255Bapp-client%255D+%2528ecmascript%2529:3137:16)
+    at Object.react_stack_bottom_frame (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:13072:24)
+    at renderWithHooks (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:4091:24)
+    at updateFunctionComponent (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:5523:21)
+    at beginWork (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:6111:24)
+    at runWithFiberInDEV (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:886:74)
+    at performUnitOfWork (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8298:97)
+    at workLoopSync (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8190:40)
+    at renderRootSync (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8173:13)
+    at performWorkOnRoot (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:7932:56)
+    at performSyncWorkOnRoot (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8890:9)
+    at flushSyncWorkAcrossRoots_impl (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8809:316)
+    at flushSyncWork$1 (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8048:86)
+    at Object.scheduleRefresh (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:294:13)
+    at http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_6a66a683._.js:391:33
+    at Set.forEach (<anonymous>)
+    at Object.performReactRefresh (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_6a66a683._.js:384:38)
+    at applyUpdate (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_6a66a683._.js:878:31)
+    at http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_6a66a683._.js:886:13
+[ 1096276ms] [LOG] [Fast Refresh] done in 138ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[ 1100922ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[ 1100970ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:6289
+[ 1101020ms] [LOG] [Fast Refresh] done in 145ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[ 1101151ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[ 1101265ms] [LOG] [Fast Refresh] done in 215ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[ 1101687ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:14537
+[ 1101818ms] [LOG] %c >> query #1 %cworkflow.isEnabled%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1102135ms] TypeError: Cannot read properties of null (reading 'messages')
+    at ModeThreadView (http://localhost:3000/_next/static/chunks/src_app__fragments_chat_0913b3a3._.js:11410:16)
+    at Object.react_stack_bottom_frame (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:13072:24)
+    at renderWithHooks (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:4091:24)
+    at updateFunctionComponent (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:5523:21)
+    at beginWork (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:6111:24)
+    at runWithFiberInDEV (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:886:74)
+    at performUnitOfWork (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8298:97)
+    at workLoopSync (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8190:40)
+    at renderRootSync (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8173:13)
+    at performWorkOnRoot (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:7932:56)
+    at performWorkOnRootViaSchedulerTask (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:8882:9)
+    at MessagePort.performWorkUntilDeadline (http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_6a66a683._.js:2601:64)
+[ 1102361ms] [LOG] %c << query #1 %cworkflow.isEnabled%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 542, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1111903ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[ 1112087ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:6289
+[ 1112094ms] [LOG] [Fast Refresh] done in 281ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[ 1112194ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[ 1112262ms] [LOG] [Fast Refresh] done in 168ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[ 1112711ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:14537
+[ 1112805ms] [LOG] %c >> query #1 %cworkflow.isEnabled%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1113066ms] [LOG] %c >> query #2 %cworkflow.listSessions%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1113066ms] [LOG] %c >> query #3 %cproject.budget%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1113377ms] [LOG] %c << query #1 %cworkflow.isEnabled%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 572, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1113803ms] [LOG] %c << query #3 %cproject.budget%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 736, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1114418ms] [LOG] %c << query #2 %cworkflow.listSessions%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 1351, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1133899ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[ 1133962ms] [LOG] [Fast Refresh] done in 128ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[ 1152965ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[ 1153149ms] [LOG] %c >> query #4 %cworkflow.isEnabled%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1153149ms] [LOG] %c >> query #5 %cworkflow.listSessions%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1153149ms] [LOG] %c >> query #6 %cproject.budget%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1153165ms] [LOG] [Fast Refresh] done in 260ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[ 1153226ms] [LOG] %c >> mutation #7 %cworkflow.persistSession%c %O 
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+   
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: Object, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1153226ms] [LOG] %c >> mutation #8 %cworkflow.runChat%c %O 
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+   
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: Object, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1153555ms] [LOG] %c << query #4 %cworkflow.isEnabled%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 406, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1153819ms] [LOG] %c << query #6 %cproject.budget%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 669, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1154520ms] [LOG] %c << query #5 %cworkflow.listSessions%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 1371, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1154535ms] [LOG] %c << mutation #7 %cworkflow.persistSession%c %O 
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+   
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: Object, result: Object, elapsedMs: 1309, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1158277ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[ 1158367ms] [LOG] [Fast Refresh] done in 148ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[ 1177089ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[ 1177136ms] [LOG] [Fast Refresh] done in 147ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[ 1177378ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:14537
+[ 1177436ms] [LOG] %c >> query #1 %cworkflow.isEnabled%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1177695ms] [LOG] %c >> query #2 %cworkflow.listSessions%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1177695ms] [LOG] %c >> query #3 %cproject.budget%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1178143ms] [LOG] %c << query #1 %cworkflow.isEnabled%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 708, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1178574ms] [LOG] %c << query #3 %cproject.budget%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 879, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1179163ms] [LOG] %c << query #2 %cworkflow.listSessions%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 1468, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1184344ms] [LOG] %c >> mutation #4 %cworkflow.persistSession%c %O 
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+   
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: Object, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1184345ms] [LOG] %c >> mutation #5 %cworkflow.runChat%c %O 
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+   
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: Object, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1185892ms] [LOG] %c << mutation #4 %cworkflow.persistSession%c %O 
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+   
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: Object, result: Object, elapsedMs: 1548, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1202250ms] [ERROR] Failed to load resource: net::ERR_INCOMPLETE_CHUNKED_ENCODING @ http://localhost:3000/api/trpc/workflow.persistSession,workflow.runChat?batch=1:0
+[ 1202251ms] [ERROR] %c << mutation #5 %cworkflow.runChat%c %O 
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+   
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: Object, result: TRPCClientError: network error
+    at TRPCClientError.from (http://localhost:3000/_next/static/chun…, elapsedMs: 17906, context: Object} @ http://localhost:3000/_next/static/chunks/12305_next_dist_cfff89d9._.js:2405
+[ 1202254ms] [LOG] %c >> query #6 %cproject.budget%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1202255ms] [LOG] %c >> mutation #7 %cworkflow.persistSession%c %O 
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+   
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: Object, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1202292ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/api/trpc/project.budget?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%7D:0
+[ 1202293ms] [ERROR] %c << query #6 %cproject.budget%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: TRPCClientError: Failed to fetch
+    at TRPCClientError.from (http://localhost:3000/_next/static/ch…, elapsedMs: 38, context: Object} @ http://localhost:3000/_next/static/chunks/12305_next_dist_cfff89d9._.js:2405
+[ 1202293ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/api/trpc/workflow.persistSession?batch=1:0
+[ 1202293ms] [ERROR] %c << mutation #7 %cworkflow.persistSession%c %O 
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+   
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: Object, result: TRPCClientError: Failed to fetch
+    at TRPCClientError.from (http://localhost:3000/_next/static/ch…, elapsedMs: 38, context: Object} @ http://localhost:3000/_next/static/chunks/12305_next_dist_cfff89d9._.js:2405
+[ 1202293ms] [WARNING] [persistSession] Failed to fetch @ http://localhost:3000/_next/static/chunks/src_app__fragments_chat_0913b3a3._.js:9127
+[ 1202294ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/__nextjs_original-stack-frames:0
+[ 1202318ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/__nextjs_original-stack-frames:0
+[ 1202319ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/__nextjs_original-stack-frames:0
+[ 1203294ms] [LOG] %c >> query #8 %cproject.budget%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1203295ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/api/trpc/project.budget?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%7D:0
+[ 1203295ms] [ERROR] %c << query #8 %cproject.budget%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: TRPCClientError: Failed to fetch
+    at TRPCClientError.from (http://localhost:3000/_next/static/ch…, elapsedMs: 1, context: Object} @ http://localhost:3000/_next/static/chunks/12305_next_dist_cfff89d9._.js:2405
+[ 1203297ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/__nextjs_original-stack-frames:0
+[ 1205297ms] [LOG] %c >> query #9 %cproject.budget%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1208439ms] [LOG] %c << query #9 %cproject.budget%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 3143, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1209878ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:14537
+[ 1209933ms] [LOG] %c >> query #1 %cworkflow.isEnabled%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1210190ms] [LOG] %c >> query #2 %cworkflow.listSessions%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1210190ms] [LOG] %c >> query #3 %cproject.budget%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1210425ms] [LOG] %c << query #1 %cworkflow.isEnabled%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 493, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1210880ms] [LOG] %c << query #3 %cproject.budget%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 690, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1211417ms] [LOG] %c << query #2 %cworkflow.listSessions%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 1227, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1215266ms] [LOG] %c >> mutation #4 %cworkflow.persistSession%c %O 
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+   
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: Object, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1215266ms] [LOG] %c >> mutation #5 %cworkflow.runChat%c %O 
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+   
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: Object, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1216736ms] [LOG] %c << mutation #4 %cworkflow.persistSession%c %O 
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+   
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: Object, result: Object, elapsedMs: 1470, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1249850ms] [LOG] %c << mutation #5 %cworkflow.runChat%c %O 
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+   
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: Object, result: Object, elapsedMs: 34584, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1251385ms] [LOG] %c >> query #6 %cproject.budget%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1251385ms] [LOG] %c >> mutation #7 %cworkflow.persistSession%c %O 
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+   
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: Object, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1252089ms] [LOG] %c << query #6 %cproject.budget%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 703, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1252827ms] [LOG] %c << mutation #7 %cworkflow.persistSession%c %O 
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+   
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: Object, result: Object, elapsedMs: 1441, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1255144ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:14537
+[ 1255204ms] [LOG] %c >> query #1 %cworkflow.isEnabled%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1255467ms] [LOG] %c >> query #2 %cworkflow.listSessions%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1255467ms] [LOG] %c >> query #3 %cproject.budget%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1255580ms] [LOG] %c << query #1 %cworkflow.isEnabled%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 375, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1256199ms] [LOG] %c << query #3 %cproject.budget%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 732, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1256678ms] [LOG] %c << query #2 %cworkflow.listSessions%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 1211, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1264855ms] [LOG] %c >> mutation #4 %cworkflow.persistSession%c %O 
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+   
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: Object, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1264855ms] [LOG] %c >> mutation #5 %cworkflow.runChat%c %O 
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+   
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: Object, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1266374ms] [LOG] %c << mutation #4 %cworkflow.persistSession%c %O 
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+   
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: Object, result: Object, elapsedMs: 1520, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1268180ms] [LOG] %c << mutation #5 %cworkflow.runChat%c %O 
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+   
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: Object, result: Object, elapsedMs: 3326, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1269693ms] [LOG] %c >> query #6 %cproject.budget%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1269693ms] [LOG] %c >> mutation #7 %cworkflow.persistSession%c %O 
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+   
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: Object, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1270236ms] [LOG] %c << query #6 %cproject.budget%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 543, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1271181ms] [LOG] %c << mutation #7 %cworkflow.persistSession%c %O 
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+   
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: Object, result: Object, elapsedMs: 1488, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1275844ms] [LOG] %c >> mutation #8 %cworkflow.persistSession%c %O 
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+   
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: Object, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1275844ms] [LOG] %c >> mutation #9 %cworkflow.runChat%c %O 
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+   
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: Object, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1277292ms] [LOG] %c << mutation #8 %cworkflow.persistSession%c %O 
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+   
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: Object, result: Object, elapsedMs: 1448, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1280802ms] [LOG] %c << mutation #9 %cworkflow.runChat%c %O 
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+   
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: Object, result: Object, elapsedMs: 4958, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1281952ms] [LOG] %c >> query #10 %cproject.budget%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1281952ms] [LOG] %c >> mutation #11 %cworkflow.persistSession%c %O 
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+   
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: Object, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1282801ms] [LOG] %c << query #10 %cproject.budget%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 849, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1283321ms] [LOG] %c << mutation #11 %cworkflow.persistSession%c %O 
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+   
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: Object, result: Object, elapsedMs: 1369, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1314778ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[ 1314892ms] [LOG] [Fast Refresh] done in 214ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[ 1379624ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[ 1379718ms] [LOG] [Fast Refresh] done in 165ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[ 1381613ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[ 1381643ms] [LOG] [Fast Refresh] done in 105ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[ 1381917ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[ 1381943ms] [LOG] [Fast Refresh] done in 81ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[ 1386150ms] [LOG] %c >> mutation #12 %cworkflow.persistSession%c %O 
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+   
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: Object, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1386150ms] [LOG] %c >> mutation #13 %cworkflow.runChat%c %O 
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+   
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: Object, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1387570ms] [LOG] %c << mutation #12 %cworkflow.persistSession%c %O 
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+   
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: Object, result: Object, elapsedMs: 1420, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1388783ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[ 1388806ms] [LOG] [Fast Refresh] done in 123ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[ 1389227ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[ 1389258ms] [LOG] %c >> query #14 %cworkflow.isEnabled%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1389258ms] [LOG] %c >> query #15 %cworkflow.listSessions%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1389258ms] [LOG] %c >> query #16 %cproject.budget%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1389273ms] [LOG] [Fast Refresh] done in 110ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[ 1389562ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[ 1389588ms] [LOG] [Fast Refresh] done in 85ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[ 1389671ms] [LOG] %c << query #14 %cworkflow.isEnabled%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 413, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1390277ms] [LOG] %c << query #16 %cproject.budget%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 1019, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1390545ms] [LOG] %c << query #15 %cworkflow.listSessions%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 1287, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1395769ms] [LOG] %c << mutation #13 %cworkflow.runChat%c %O 
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+   
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: Object, result: Object, elapsedMs: 9618, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1397184ms] [LOG] %c >> query #17 %cproject.budget%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1397184ms] [LOG] %c >> mutation #18 %cworkflow.persistSession%c %O 
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+   
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: Object, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1397711ms] [LOG] %c << query #17 %cproject.budget%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 526, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1398326ms] [LOG] %c << mutation #18 %cworkflow.persistSession%c %O 
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+   
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: Object, result: Object, elapsedMs: 1141, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1418013ms] [LOG] %c >> mutation #19 %cworkflow.persistSession%c %O 
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+   
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: Object, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1418013ms] [LOG] %c >> mutation #20 %cworkflow.runChat%c %O 
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+   
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: Object, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1419202ms] [LOG] %c << mutation #19 %cworkflow.persistSession%c %O 
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+   
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: Object, result: Object, elapsedMs: 1188, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1458491ms] [LOG] %c << mutation #20 %cworkflow.runChat%c %O 
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+   
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: Object, result: Object, elapsedMs: 40477, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1460113ms] [LOG] %c >> query #21 %cproject.budget%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1460114ms] [LOG] %c >> mutation #22 %cworkflow.persistSession%c %O 
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+   
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: Object, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1460703ms] [LOG] %c << query #21 %cproject.budget%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 589, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1461576ms] [LOG] %c << mutation #22 %cworkflow.persistSession%c %O 
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+   
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: Object, result: Object, elapsedMs: 1463, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1538290ms] [LOG] %c >> mutation #23 %cworkflow.createFromPrompt%c %O 
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+   
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: Object, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1541098ms] [LOG] %c << mutation #23 %cworkflow.createFromPrompt%c %O 
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+   
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: Object, result: Object, elapsedMs: 2808, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1541722ms] [LOG] %c >> query #24 %cworkflow.isEnabled%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1542407ms] [LOG] %c << query #24 %cworkflow.isEnabled%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 685, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1542408ms] [LOG] %c >> query #25 %cproject.budget%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1542408ms] [LOG] %c >> mutation #26 %cworkflow.runAgent%c %O 
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+   
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #c5a3fc;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: Object, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1542990ms] [ERROR] %c << mutation #26 %cworkflow.runAgent%c %O 
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+   
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: Object, result: TRPCClientError: fetch failed
+    at TRPCClientError.from (http://localhost:3000/_next/static/chunk…, elapsedMs: 582, context: Object} @ http://localhost:3000/_next/static/chunks/12305_next_dist_cfff89d9._.js:2405
+[ 1543028ms] TRPCClientError: fetch failed
+    at TRPCClientError.from (http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:1786:48)
+    at http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:6987:386
+[ 1543195ms] [LOG] %c << query #25 %cproject.budget%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 788, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[ 1806952ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[ 1807003ms] [LOG] [Fast Refresh] done in 127ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[32599297ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:14537
+[32599379ms] [LOG] %c >> query #1 %cworkflow.isEnabled%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[32599642ms] [LOG] %c >> query #2 %cworkflow.listSessions%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[32599643ms] [LOG] %c >> query #3 %cproject.budget%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[32599819ms] [LOG] %c << query #1 %cworkflow.isEnabled%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 440, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[32600209ms] [LOG] %c << query #3 %cproject.budget%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 567, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[32601283ms] [LOG] %c << query #2 %cworkflow.listSessions%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 1640, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[32602219ms] [ERROR] Base UI: A component is changing the uncontrolled snapPoint state of Drawer to be controlled.
+Elements should not switch from uncontrolled to controlled (or vice versa).
+Decide between using a controlled or uncontrolled Drawer element for the lifetime of the component.
+The nature of the state is determined during the first render. It's considered controlled if the value is not `undefined`.
+More info: https://fb.me/react-controlled-components @ http://localhost:3000/_next/static/chunks/12305_next_dist_cfff89d9._.js:2405
+[32602219ms] [ERROR] Base UI: A component is changing the default snapPoint state of an uncontrolled Drawer after being initialized. To suppress this warning opt to use a controlled Drawer. @ http://localhost:3000/_next/static/chunks/12305_next_dist_cfff89d9._.js:2405
+[32608583ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:14537
+[32608639ms] [LOG] %c >> query #1 %cworkflow.isEnabled%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[32608933ms] [LOG] %c >> query #2 %cworkflow.listSessions%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[32608934ms] [LOG] %c >> query #3 %cproject.budget%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[32609376ms] [LOG] %c << query #1 %cworkflow.isEnabled%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 737, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[32609647ms] [LOG] %c << query #3 %cproject.budget%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 713, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[32610622ms] [LOG] %c << query #2 %cworkflow.listSessions%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 1688, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[32612922ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:14537
+[32612977ms] [LOG] %c >> query #1 %cworkflow.isEnabled%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[32613244ms] [LOG] %c >> query #2 %cworkflow.listSessions%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[32613245ms] [LOG] %c >> query #3 %cproject.budget%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[32613458ms] [LOG] %c << query #1 %cworkflow.isEnabled%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 482, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[32614097ms] [LOG] %c << query #3 %cproject.budget%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 853, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[32615073ms] [LOG] %c << query #2 %cworkflow.listSessions%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 1828, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[32619055ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:14537
+[32619111ms] [LOG] %c >> query #1 %cworkflow.isEnabled%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[32619373ms] [LOG] %c >> query #2 %cworkflow.listSessions%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[32619374ms] [LOG] %c >> query #3 %cproject.budget%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[32619635ms] [LOG] %c << query #1 %cworkflow.isEnabled%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 523, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[32619959ms] [LOG] %c << query #3 %cproject.budget%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 585, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[32621019ms] [LOG] %c << query #2 %cworkflow.listSessions%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 1645, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[32626883ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/_next/static/chunks/12305_next_dist_compiled_react-dom_ece3626f._.js:14537
+[32626932ms] [LOG] %c >> query #1 %cworkflow.isEnabled%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[32627203ms] [LOG] %c >> query #2 %cworkflow.listSessions%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[32627203ms] [LOG] %c >> query #3 %cproject.budget%c %O 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+   
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #72e3ff;
+    color: black;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[32627621ms] [LOG] %c << query #1 %cworkflow.isEnabled%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 688, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[32627908ms] [LOG] %c << query #3 %cproject.budget%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 704, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[32628533ms] [LOG] %c << query #2 %cworkflow.listSessions%c %O 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+   
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #3fb0d8;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: undefined, result: Object, elapsedMs: 1329, context: Object} @ http://localhost:3000/_next/static/chunks/node_modules__pnpm_274e339d._.js:3421
+[32709086ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[32709171ms] [LOG] [Fast Refresh] done in 159ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[32709275ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[32709420ms] [LOG] [Fast Refresh] done in 247ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[32709797ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[32709814ms] [LOG] [Fast Refresh] done in 118ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[32711574ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[32711780ms] [LOG] [Fast Refresh] done in 116ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[32722063ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[32722361ms] [LOG] [Fast Refresh] done in 197ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[32724440ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[32724441ms] [LOG] [Fast Refresh] done in 1ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[32734448ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[32734607ms] [LOG] [Fast Refresh] done in 242ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816
+[32734709ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5956
+[32734834ms] [LOG] [Fast Refresh] done in 227ms @ http://localhost:3000/_next/static/chunks/12305_next_dist_client_12895ae8._.js:5816

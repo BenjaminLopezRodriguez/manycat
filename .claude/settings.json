@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__plugin_playwright_playwright__browser_click",
+      "mcp__plugin_playwright_playwright__browser_type",
+      "mcp__plugin_playwright_playwright__browser_wait_for",
+      "Bash(pnpm add *)",
+      "mcp__plugin_playwright_playwright__browser_take_screenshot",
+      "Bash(git -C /Users/benji/projects/manycat status --short)",
+      "Bash(git checkout *)",
+      "Bash(git -C /Users/benji/projects/manycat status --short .playwright-mcp)",
+      "Bash(git -C /Users/benji/projects/manycat diff --stat)"
+    ]
+  }
+}
