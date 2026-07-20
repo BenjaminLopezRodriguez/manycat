@@ -196,6 +196,34 @@ type MessageListProps = {
   onRequestChanges: (messageId: number) => void;
 };
 
+/** Day + time tile for work schedule cards: `Tue` / `3:40PM`. */
+function formatScheduleWhen(iso: string): { day: string; time: string } {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return { day: "—", time: "—" };
+  const day = new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(d);
+  const time = new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  })
+    .format(d)
+    .replace(/\s/g, "")
+    .toUpperCase();
+  return { day, time };
+}
+
+/** Coerce prompt field in case a stale/object payload sneaks through. */
+function promptText(prompt: unknown): string {
+  if (typeof prompt === "string") return prompt;
+  if (prompt && typeof prompt === "object") {
+    const o = prompt as Record<string, unknown>;
+    for (const key of ["prompt", "text", "content", "message"]) {
+      if (typeof o[key] === "string") return o[key];
+    }
+  }
+  return "";
+}
+
 function fileName(path: string) {
   const parts = path.split("/").filter(Boolean);
   return parts.at(-1) ?? path;
@@ -352,19 +380,21 @@ export function InlineDiffEditor({
   );
 }
 
-function workingLabel(msg: AgentStatusMsg) {
-  if (msg.action) {
-    return `${msg.action} ${msg.path ? fileName(msg.path) : ""}`.trim();
-  }
-  // Legacy status lines from older runs — keep the chip short
-  const pathMatch = /\b([\w.-]+\.(?:tsx?|jsx?|css|json|md))\b/i.exec(msg.text);
-  if (pathMatch) {
-    const rawVerb = msg.text.split(/\s+/)[0]?.toLowerCase() ?? "working";
-    const verb = rawVerb.replace(/[^a-z]/g, "");
-    return `${verb.length > 0 ? verb : "working"} ${pathMatch[1]}`;
-  }
-  if (/sandbox/i.test(msg.text)) return "working sandbox";
-  return msg.text.replace(/…$/, "").slice(0, 36);
+function workingVerb(msg: AgentStatusMsg) {
+  if (msg.action?.trim()) return msg.action.trim().toLowerCase();
+  const raw = msg.text.split(/\s+/)[0]?.toLowerCase() ?? "editing";
+  const verb = raw.replace(/[^a-z]/g, "");
+  if (verb === "edited" || verb === "editing" || verb === "building") return verb;
+  if (/sandbox/i.test(msg.text)) return "working";
+  return verb.length > 0 ? verb : "editing";
+}
+
+/** Paths touched this run — prefer accumulated list, fall back to latest path. */
+function workingPaths(msg: AgentStatusMsg): string[] {
+  if (msg.paths?.length) return msg.paths;
+  if (msg.path?.trim()) return [msg.path.trim()];
+  const pathMatch = /\b([\w./-]+\.(?:tsx?|jsx?|css|json|md))\b/i.exec(msg.text);
+  return pathMatch?.[1] ? [pathMatch[1]] : [];
 }
 
 function WorkingCard({
@@ -376,54 +406,82 @@ function WorkingCard({
   expanded: boolean;
   onToggle: () => void;
 }) {
-  const label = workingLabel(msg);
+  const verb = workingVerb(msg);
+  const paths = workingPaths(msg);
   const thinking = msg.thinking?.trim();
-  const detail = thinking && thinking.length > 0 ? thinking : msg.text;
+  const detail = thinking && thinking.length > 0 ? thinking : null;
   const canExpand = Boolean(detail);
+  const hasFiles = paths.length > 0;
 
   return (
-    <div className="flex w-fit max-w-[min(100%,16rem)] flex-col gap-1.5">
+    <div className="flex w-fit max-w-[min(100%,18rem)] flex-col gap-1.5">
       <button
         type="button"
         onClick={canExpand ? onToggle : undefined}
         aria-expanded={canExpand ? expanded : undefined}
         className={cn(
-          "border-border/70 bg-card inline-flex w-fit max-w-full items-center gap-2 rounded-lg border px-2.5 py-1.5 text-left text-xs shadow-sm",
+          "border-border/70 bg-card inline-flex w-fit max-w-full flex-col gap-1 rounded-lg border px-2.5 py-1.5 text-left text-xs shadow-sm",
           canExpand && "hover:bg-muted/40 cursor-pointer transition-colors",
           !canExpand && "cursor-default",
         )}
       >
-        <span
-          className={cn(
-            "size-2 shrink-0 rounded-full",
-            msg.streaming
-              ? "bg-primary animate-pulse"
-              : "bg-muted-foreground/50",
-          )}
-          aria-hidden
-        />
-        <span
-          className={cn(
-            "max-w-[11rem] truncate font-mono text-[12px]",
-            msg.streaming && "shimmer",
-          )}
-        >
-          {label}
-        </span>
-        {canExpand && (
-          <HugeiconsIcon
-            icon={expanded ? ArrowDown01Icon : ArrowRight01Icon}
-            size={12}
-            className="text-muted-foreground shrink-0"
+        <span className="flex w-full items-center gap-2">
+          <span
+            className={cn(
+              "size-2 shrink-0 rounded-full",
+              msg.streaming
+                ? "bg-primary animate-pulse"
+                : "bg-muted-foreground/50",
+            )}
+            aria-hidden
           />
-        )}
+          <span
+            className={cn(
+              "min-w-0 flex-1 font-medium text-[12px]",
+              msg.streaming && "shimmer",
+            )}
+          >
+            {hasFiles
+              ? `${verb} ${paths.length} file${paths.length === 1 ? "" : "s"}`
+              : msg.text.replace(/…$/, "").slice(0, 36)}
+          </span>
+          {canExpand && (
+            <HugeiconsIcon
+              icon={expanded ? ArrowDown01Icon : ArrowRight01Icon}
+              size={12}
+              className="text-muted-foreground shrink-0"
+            />
+          )}
+        </span>
+
+        {hasFiles ? (
+          <ul
+            className="border-border/50 ml-4 flex flex-col gap-0.5 border-l pl-2"
+            aria-label="Files being edited"
+          >
+            {paths.map((path) => (
+              <li
+                key={path}
+                className={cn(
+                  "text-muted-foreground max-w-[14rem] truncate font-mono text-[11px] leading-snug",
+                  msg.streaming &&
+                    path === paths[paths.length - 1] &&
+                    "text-foreground",
+                )}
+                title={path}
+              >
+                {fileName(path)}
+              </li>
+            ))}
+          </ul>
+        ) : null}
       </button>
 
-      {canExpand && expanded && (
+      {canExpand && expanded && detail ? (
         <div className="border-border/60 bg-muted/30 text-muted-foreground w-fit max-w-[min(100%,20rem)] rounded-lg border px-3 py-2 text-xs leading-relaxed">
           {detail}
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
@@ -431,10 +489,10 @@ function WorkingCard({
 function LiveWorkingIndicator({ msg }: { msg: AgentStatusMsg }) {
   const [expanded, setExpanded] = React.useState(false);
 
-  // New step → collapse so the thread doesn't jump
+  // New run / action → collapse so the thread doesn't jump (paths can grow live)
   React.useEffect(() => {
     setExpanded(false);
-  }, [msg.id, msg.text, msg.action, msg.path]);
+  }, [msg.id, msg.action]);
 
   return (
     <Message align="start">
@@ -577,6 +635,57 @@ export default function MessageList({
                       <span>{m.text}</span>
                     </BubbleContent>
                   </Bubble>
+                  <MessageFooter>{m.time}</MessageFooter>
+                </MessageContent>
+              </Message>
+            );
+
+          case "work-schedule":
+            return (
+              <Message key={m.id} align="start">
+                <MessageContent className="max-w-none">
+                  <div className="flex flex-col gap-2.5">
+                    {m.reasoning ? (
+                      <p className="text-muted-foreground text-sm leading-relaxed">
+                        {m.reasoning}
+                      </p>
+                    ) : null}
+                    <ul className="flex flex-col gap-2">
+                      {m.slots.map((slot) => {
+                        const when = formatScheduleWhen(slot.at);
+                        return (
+                          <li key={`${slot.at}-${slot.label}`}>
+                            <div className="bg-muted/40 flex items-start gap-3 rounded-2xl border px-3 py-2.5">
+                              <div
+                                className="text-foreground flex w-11 shrink-0 flex-col items-center justify-center text-center"
+                                title={slot.label}
+                              >
+                                <span className="text-[11px] leading-none font-semibold tracking-wide uppercase">
+                                  {when.day}
+                                </span>
+                                <span className="text-muted-foreground mt-1.5 text-[10px] leading-none font-medium tabular-nums">
+                                  {when.time}
+                                </span>
+                              </div>
+                              <p className="text-foreground min-w-0 flex-1 text-[15px] leading-snug font-medium whitespace-pre-wrap">
+                                {promptText(slot.prompt)}
+                              </p>
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                    {m.notify ? (
+                      <p className="text-muted-foreground text-[11px]">
+                        You&apos;ll be notified when each runs
+                      </p>
+                    ) : null}
+                    {!m.reasoning && m.goal ? (
+                      <p className="text-muted-foreground text-xs">
+                        Goal: {m.goal}
+                      </p>
+                    ) : null}
+                  </div>
                   <MessageFooter>{m.time}</MessageFooter>
                 </MessageContent>
               </Message>

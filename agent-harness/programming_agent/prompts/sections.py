@@ -88,9 +88,74 @@ TOOL_DISCIPLINE = """\
   your approach.
 - NEVER paste tool calls as JSON / markdown in your reply. Always invoke the
   real tool interface (write_file / edit_file / …). Prose JSON does not edit
-  files. Prefer write_file for new or full-file rewrites.
-- For homepage / scaffold replacement, your first action must be write_file
-  on app/page.tsx with a complete working implementation."""
+  files.
+- Prefer edit_file (SEARCH/REPLACE) for changes to existing files. Use
+  write_file only for new files or a full greenfield/scaffold homepage rewrite.
+- For homepage / scaffold replacement (oneshot), your first action must be
+  write_file on app/page.tsx with a complete working implementation.
+- If edit_file returns Error: old_string not found, re-read the file and retry
+  with an exact substring — do not silently invent a full overwrite."""
+
+WEB_RESEARCH = """\
+# Web research brief (from Manycat websearch harness)
+
+When the user message or session instructions include a web research brief /
+chunks / plan, treat that as ground truth for brand, product, and visual
+references (e.g. what a Casio calculator looks like). Prefer those facts over
+inventing UI details.
+
+The research harness also attaches a **detailed plan** and **targets** that
+coder, eval, browser, and deploy_debug harnesses share:
+- Follow plan steps in order when building.
+- Satisfy targets for your role (`doneWhen` is the check).
+- Use `read_research_plan` for the full plan JSON.
+- Use `read_research_target` (optionally filter by harness) for the next target.
+- Use `read_research_chunk` for more visual/UX evidence.
+
+Do not ask the user to explain the brand. Do not invent details that
+contradict the brief."""
+
+RUN_KIND_ONESHOT = """\
+# Run kind: oneshot (greenfield)
+
+Replace the Manycat scaffold with a complete working UI. Follow the build
+contract and research plan/targets. First mutating action should be write_file
+on app/page.tsx (or the primary entry). Then browser_check + report_to_evaluator
+when a preview URL exists."""
+
+RUN_KIND_MODIFY = """\
+# Run kind: modify (existing / imported codebase)
+
+Make a **minimal diff** for the user ask. Read entrypoints/hotspots first.
+Do NOT replace the project with a new scaffold. Do NOT rewrite unrelated files.
+**Prefer edit_file** for every change to an existing file (SEARCH/REPLACE with
+enough unique context). Use write_file only when creating a new file. If
+edit_file fails with a mismatch error, re-read and retry — never fall back to
+dumping a whole page unless the user asked for a full rewrite. Skip
+scaffold-fallback behavior. Verify UI only if the change is user-visible."""
+
+RUN_KIND_UNDERSTAND = """\
+# Run kind: understand
+
+Summarize the repository only. Do not call write_file or edit_file.
+Use read/glob/query_code_graph if needed, then stop with a short map of stack,
+entrypoints, and safe edit targets."""
+
+DEPLOY_DEBUG = """\
+# Deploy debug / compile fix (mandatory when fixing Railway build failures)
+
+You are fixing compile/deploy failures. The primary test is: does the page
+build? (`npm run build` via `build_probe` exit 0).
+
+1. Read the CoT / graphSlice / log evidence in the user message.
+2. Optionally call `query_code_graph` with fileHints as seeds (budgeted).
+3. Fix with write_file / edit_file (keep Next App Router + railway.toml npm /
+   next start on $PORT).
+4. Call `build_probe` — do NOT claim success without ok:true / exitCode:0.
+5. If build_probe fails, use its outputTail as the next evidence and fix again.
+6. When build_probe passes, call `report_deploy_to_evaluator` with the probe JSON.
+7. Do not ask the user for logs. Do not request the full codebase. Do not
+   redeploy to Railway yourself — Manycat ships after compile is green."""
 
 WEBSITE_VERIFICATION = """\
 # Website verification (mandatory for UI / landing / app pages)
@@ -98,7 +163,9 @@ WEBSITE_VERIFICATION = """\
 When the user asks for a website, landing page, calculator, waitlist, or any
 interactive UI you MUST:
 
-1. Implement with write_file / edit_file.
+1. Implement with edit_file for existing files; write_file for new files or
+   oneshot scaffold replace. After the first successful mutate, address any
+   auto cheap-verify type/build snips before claiming UI done.
 2. Call `browser_check` against the sandbox preview (default URL) — capture
    HTTP status, visible text, and console / page errors. If it returns
    `skipped: true` / no_preview_url, do NOT ask the user for a URL; continue
@@ -117,9 +184,10 @@ CODE_EDITING = """\
 # Code editing
 
 - Read surrounding code before editing. Match naming, types, and patterns.
-- Make minimal diffs that solve the root problem.
+- Make minimal diffs that solve the root problem — prefer edit_file.
 - Do not drive-by refactor unrelated code.
-- Preserve existing behavior unless the task requires a change."""
+- Preserve existing behavior unless the task requires a change.
+- After edits, rely on cheap verify / tests when available before finishing."""
 
 PLAN_MODE = """\
 # Plan mode (read-only)
@@ -157,6 +225,8 @@ STATIC_SECTIONS: tuple[PromptSection, ...] = (
     PromptSection("doing_tasks", DOING_TASKS),
     PromptSection("action_safety", ACTION_SAFETY),
     PromptSection("tool_discipline", TOOL_DISCIPLINE),
+    PromptSection("web_research", WEB_RESEARCH),
+    PromptSection("deploy_debug", DEPLOY_DEBUG),
     PromptSection("website_verification", WEBSITE_VERIFICATION),
     PromptSection("code_editing", CODE_EDITING),
     PromptSection("subagent_delegation", SUBAGENT_DELEGATION),

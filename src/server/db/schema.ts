@@ -57,6 +57,31 @@ export const projects = createTable(
     templateId: d.varchar({ length: 128 }),
     railwayServiceId: d.varchar({ length: 128 }),
     railwayDomain: d.varchar({ length: 512 }),
+    /** Latest Railway deployment id for async deploy-debug polling. */
+    railwayDeploymentId: d.varchar({ length: 128 }),
+    /** Async deploy-debug state machine status. */
+    deployJobStatus: d
+      .varchar({ length: 32 })
+      .$type<
+        | "idle"
+        | "deploying"
+        | "compiling"
+        | "debugging"
+        | "shipping"
+        | "verifying"
+        | "ready"
+        | "failed"
+      >()
+      .notNull()
+      .default("idle"),
+    compileAttempt: d.integer().notNull().default(0),
+    shipAttempt: d.integer().notNull().default(0),
+    lastCompileErrorHash: d.varchar({ length: 64 }),
+    lastShipErrorHash: d.varchar({ length: 64 }),
+    /** Last DeployDebugBundle + attempt history (sanitized). */
+    lastDeployDebugBundle: d.jsonb().$type<Record<string, unknown>>(),
+    /** Background harness job for deploy_debug mode. */
+    deployDebugJobId: d.varchar({ length: 64 }),
     mirrorGithubRepo: d.varchar({ length: 512 }),
     neonMode: d.varchar({ length: 16 }).$type<"shared" | "dedicated">(),
     neonSchema: d.varchar({ length: 128 }),
@@ -80,6 +105,11 @@ export const projects = createTable(
     /** Tokens already billed for the in-flight agent job (incremental). */
     agentBilledPromptTokens: d.integer().notNull().default(0),
     agentBilledCompletionTokens: d.integer().notNull().default(0),
+    /**
+     * Durable Build ContextPack (origin, research, codebase brief, plan).
+     * Source of truth across Vercel instances — not process memory.
+     */
+    contextPack: d.jsonb().$type<Record<string, unknown>>(),
     createdAt: d
       .timestamp({ withTimezone: true })
       .$defaultFn(() => /* @__PURE__ */ new Date())
@@ -141,6 +171,45 @@ export const workspaceFiles = createTable(
 );
 
 /**
+ * Warm Railway workload services ready for claim on Run.
+ * @see docs/superpowers/specs/2026-07-19-railway-warm-pool-design.md
+ */
+export type RailwayPoolSlotStatus =
+  | "hot"
+  | "claimed"
+  | "draining"
+  | "recycling"
+  | "broken";
+
+export const railwayPoolSlots = createTable(
+  "railway_pool_slot",
+  (d) => ({
+    id: d.varchar({ length: 64 }).primaryKey(),
+    railwayServiceId: d.varchar({ length: 128 }).notNull(),
+    railwayDomain: d.varchar({ length: 512 }),
+    status: d
+      .varchar({ length: 32 })
+      .$type<RailwayPoolSlotStatus>()
+      .notNull()
+      .default("hot"),
+    accountId: d.varchar({ length: 128 }),
+    workflowId: d.varchar({ length: 64 }),
+    claimedAt: d.timestamp({ withTimezone: true }),
+    lastHotAt: d.timestamp({ withTimezone: true }),
+    generation: d.integer().notNull().default(0),
+    createdAt: d
+      .timestamp({ withTimezone: true })
+      .$defaultFn(() => /* @__PURE__ */ new Date())
+      .notNull(),
+    updatedAt: d.timestamp({ withTimezone: true }).$onUpdate(() => new Date()),
+  }),
+  (t) => [
+    index("railway_pool_service_idx").on(t.railwayServiceId),
+    index("railway_pool_status_idx").on(t.status),
+  ],
+);
+
+/**
  * Reserved shape for prompt-linked change history (virtual git / agent commits).
  * Not written heavily in Phase 1 — schema seam for Phase 4+.
  */
@@ -165,6 +234,195 @@ export const projectChanges = createTable(
   }),
   (t) => [
     index("project_change_scope_idx").on(t.accountId, t.workflowId),
+  ],
+);
+
+/** Work plan-over-time schedule (Manycat is source of truth). */
+export type WorkPlanStatus = "active" | "paused" | "ended";
+export type WorkPlanCadence =
+  | { kind: "daily" }
+  | { kind: "weekdays" }
+  | { kind: "interval"; hours: number };
+
+export const workPlans = createTable(
+  "work_plan",
+  (d) => ({
+    id: d.varchar({ length: 64 }).primaryKey(),
+    accountId: d
+      .varchar({ length: 128 })
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    workflowId: d.varchar({ length: 64 }).notNull(),
+    startsAt: d.timestamp({ withTimezone: true }).notNull(),
+    endsAt: d.timestamp({ withTimezone: true }).notNull(),
+    cadence: d.jsonb().$type<WorkPlanCadence>().notNull(),
+    timezone: d.varchar({ length: 64 }).notNull().default("UTC"),
+    promptTemplate: d.text().notNull().default(""),
+    /** Per-fire prompt steps [{at,label,prompt}] for multi-step goals. */
+    steps: d
+      .jsonb()
+      .$type<{ at: string; label: string; prompt: string }[]>(),
+    status: d
+      .varchar({ length: 16 })
+      .$type<WorkPlanStatus>()
+      .notNull()
+      .default("active"),
+    nextDueAt: d.timestamp({ withTimezone: true }),
+    googleEventId: d.varchar({ length: 256 }),
+    /** Email/notify when a timed prompt fires. */
+    notify: d.boolean().notNull().default(true),
+    createdAt: d
+      .timestamp({ withTimezone: true })
+      .$defaultFn(() => /* @__PURE__ */ new Date())
+      .notNull(),
+    updatedAt: d.timestamp({ withTimezone: true }).$onUpdate(() => new Date()),
+  }),
+  (t) => [
+    index("work_plan_account_idx").on(t.accountId),
+    index("work_plan_due_idx").on(t.status, t.nextDueAt),
+    index("work_plan_workflow_idx").on(t.accountId, t.workflowId),
+  ],
+);
+
+export type WorkOccurrenceStatus =
+  | "pending"
+  | "notified"
+  | "running"
+  | "done"
+  | "skipped";
+
+export const workPlanOccurrences = createTable(
+  "work_plan_occurrence",
+  (d) => ({
+    id: d.varchar({ length: 64 }).primaryKey(),
+    planId: d
+      .varchar({ length: 64 })
+      .notNull()
+      .references(() => workPlans.id, { onDelete: "cascade" }),
+    dueAt: d.timestamp({ withTimezone: true }).notNull(),
+    status: d
+      .varchar({ length: 16 })
+      .$type<WorkOccurrenceStatus>()
+      .notNull()
+      .default("pending"),
+    firedAt: d.timestamp({ withTimezone: true }),
+    createdAt: d
+      .timestamp({ withTimezone: true })
+      .$defaultFn(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  }),
+  (t) => [
+    index("work_occurrence_plan_idx").on(t.planId, t.dueAt),
+    index("work_occurrence_status_idx").on(t.status),
+  ],
+);
+
+/** Join-link ACL for shared Work chats. */
+export const workSessionMembers = createTable(
+  "work_session_member",
+  (d) => ({
+    workflowId: d.varchar({ length: 64 }).notNull(),
+    /** Owner of the underlying `projects` row (messages live here). */
+    ownerAccountId: d
+      .varchar({ length: 128 })
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    accountId: d
+      .varchar({ length: 128 })
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    role: d
+      .varchar({ length: 16 })
+      .$type<"owner" | "member">()
+      .notNull()
+      .default("member"),
+    joinedAt: d
+      .timestamp({ withTimezone: true })
+      .$defaultFn(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  }),
+  (t) => [
+    primaryKey({ columns: [t.workflowId, t.accountId] }),
+    index("work_member_account_idx").on(t.accountId),
+    index("work_member_owner_idx").on(t.ownerAccountId, t.workflowId),
+  ],
+);
+
+export const workJoinTokens = createTable(
+  "work_join_token",
+  (d) => ({
+    token: d.varchar({ length: 64 }).primaryKey(),
+    workflowId: d.varchar({ length: 64 }).notNull(),
+    ownerAccountId: d
+      .varchar({ length: 128 })
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    createdBy: d
+      .varchar({ length: 128 })
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    expiresAt: d.timestamp({ withTimezone: true }),
+    revokedAt: d.timestamp({ withTimezone: true }),
+    createdAt: d
+      .timestamp({ withTimezone: true })
+      .$defaultFn(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  }),
+  (t) => [index("work_join_workflow_idx").on(t.workflowId)],
+);
+
+/** Work intelligence notes mined from threads. */
+export const workNotes = createTable(
+  "work_note",
+  (d) => ({
+    id: d.varchar({ length: 64 }).primaryKey(),
+    workflowId: d.varchar({ length: 64 }).notNull(),
+    ownerAccountId: d
+      .varchar({ length: 128 })
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    sourceMessageId: d.varchar({ length: 64 }),
+    authorAccountId: d.varchar({ length: 128 }),
+    authorLabel: d.varchar({ length: 128 }),
+    text: d.text().notNull(),
+    summary: d.varchar({ length: 512 }).notNull(),
+    usedInPlanId: d.varchar({ length: 64 }),
+    createdAt: d
+      .timestamp({ withTimezone: true })
+      .$defaultFn(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  }),
+  (t) => [
+    index("work_note_workflow_idx").on(t.workflowId, t.createdAt),
+    index("work_note_unused_idx").on(t.workflowId, t.usedInPlanId),
+  ],
+);
+
+/** OAuth tokens for connectors (Google Calendar mirror, etc.). */
+export const oauthConnections = createTable(
+  "oauth_connection",
+  (d) => ({
+    id: d.varchar({ length: 64 }).primaryKey(),
+    accountId: d
+      .varchar({ length: 128 })
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    provider: d
+      .varchar({ length: 32 })
+      .$type<"google_calendar">()
+      .notNull(),
+    accessTokenEnc: d.text().notNull(),
+    refreshTokenEnc: d.text(),
+    scopes: d.text().notNull().default(""),
+    expiresAt: d.timestamp({ withTimezone: true }),
+    createdAt: d
+      .timestamp({ withTimezone: true })
+      .$defaultFn(() => /* @__PURE__ */ new Date())
+      .notNull(),
+    updatedAt: d.timestamp({ withTimezone: true }).$onUpdate(() => new Date()),
+  }),
+  (t) => [
+    index("oauth_connection_account_idx").on(t.accountId, t.provider),
   ],
 );
 

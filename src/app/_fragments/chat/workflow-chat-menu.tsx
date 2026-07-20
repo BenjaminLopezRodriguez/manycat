@@ -37,17 +37,25 @@ import {
 } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
+import { api } from "@/trpc/react";
 
 type WorkflowChatMenuProps = {
   workflowId: string;
   name: string;
   onRename: (name: string) => void;
   onDelete: () => void;
+  /** When set, Share mints a join token for Work chats. */
+  shareMode?: "copy" | "join";
 };
 
-function shareUrlFor(workflowId: string) {
-  if (typeof window === "undefined") return `/c/${workflowId}`;
-  return `${window.location.origin}/c/${workflowId}`;
+function shareUrlFor(workflowId: string, joinToken?: string) {
+  if (typeof window === "undefined") {
+    return joinToken
+      ? `/c/${workflowId}?join=${joinToken}`
+      : `/c/${workflowId}`;
+  }
+  const base = `${window.location.origin}/c/${workflowId}`;
+  return joinToken ? `${base}?join=${joinToken}` : base;
 }
 
 export function WorkflowChatMenu({
@@ -55,6 +63,7 @@ export function WorkflowChatMenu({
   name,
   onRename,
   onDelete,
+  shareMode = "copy",
 }: WorkflowChatMenuProps) {
   const isMobile = useIsMobile();
   const [actionsOpen, setActionsOpen] = React.useState(false);
@@ -62,16 +71,27 @@ export function WorkflowChatMenu({
   const [shareOpen, setShareOpen] = React.useState(false);
   const [renameValue, setRenameValue] = React.useState(name);
   const [copied, setCopied] = React.useState(false);
+  const [joinToken, setJoinToken] = React.useState<string | null>(null);
+  const mintJoin = api.work.mintJoinToken.useMutation();
 
   React.useEffect(() => {
     if (renameOpen) setRenameValue(name);
   }, [renameOpen, name]);
 
   React.useEffect(() => {
-    if (!shareOpen) setCopied(false);
-  }, [shareOpen]);
+    if (!shareOpen) {
+      setCopied(false);
+      return;
+    }
+    if (shareMode === "join" && !joinToken && !mintJoin.isPending) {
+      void mintJoin
+        .mutateAsync({ workflowId })
+        .then((r) => setJoinToken(r.token))
+        .catch(() => setJoinToken(null));
+    }
+  }, [shareOpen, shareMode, workflowId, joinToken, mintJoin]);
 
-  const shareUrl = shareUrlFor(workflowId);
+  const shareUrl = shareUrlFor(workflowId, joinToken ?? undefined);
 
   function openRename() {
     setActionsOpen(false);
@@ -238,7 +258,9 @@ export function WorkflowChatMenu({
             <SheetHeader>
               <SheetTitle>Share chat</SheetTitle>
               <SheetDescription>
-                Anyone with this link can open this chat.
+                {shareMode === "join"
+                  ? "Anyone signed in with this link can join this Work chat."
+                  : "Anyone with this link can open this chat."}
               </SheetDescription>
             </SheetHeader>
             <div className="px-6">
@@ -246,6 +268,7 @@ export function WorkflowChatMenu({
                 shareUrl={shareUrl}
                 copied={copied}
                 onCopy={() => void copyShareLink()}
+                loading={shareMode === "join" && !joinToken && mintJoin.isPending}
               />
             </div>
             <SheetFooter>
@@ -259,13 +282,16 @@ export function WorkflowChatMenu({
             <DialogHeader>
               <DialogTitle>Share chat</DialogTitle>
               <DialogDescription>
-                Anyone with this link can open this chat.
+                {shareMode === "join"
+                  ? "Anyone signed in with this link can join this Work chat."
+                  : "Anyone with this link can open this chat."}
               </DialogDescription>
             </DialogHeader>
             <ShareLinkBody
               shareUrl={shareUrl}
               copied={copied}
               onCopy={() => void copyShareLink()}
+              loading={shareMode === "join" && !joinToken && mintJoin.isPending}
             />
             <DialogFooter>
               <Button onClick={() => setShareOpen(false)}>Done</Button>
@@ -309,16 +335,18 @@ function ShareLinkBody({
   shareUrl,
   copied,
   onCopy,
+  loading,
 }: {
   shareUrl: string;
   copied: boolean;
   onCopy: () => void;
+  loading?: boolean;
 }) {
   return (
     <div className="flex items-center gap-2 px-0 sm:px-0">
       <Input
         readOnly
-        value={shareUrl}
+        value={loading ? "Creating join link…" : shareUrl}
         className="font-mono text-xs md:text-sm"
         onFocus={(e) => e.target.select()}
       />
@@ -329,6 +357,7 @@ function ShareLinkBody({
         aria-label={copied ? "Copied" : "Copy link"}
         onClick={onCopy}
         className="shrink-0"
+        disabled={loading}
       >
         <HugeiconsIcon icon={copied ? Tick02Icon : Copy01Icon} size={16} />
       </Button>

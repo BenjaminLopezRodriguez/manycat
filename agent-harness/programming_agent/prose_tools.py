@@ -26,6 +26,12 @@ KNOWN_TOOLS = frozenset(
         "browser_check",
         "read_app_logs",
         "report_to_evaluator",
+        "build_probe",
+        "query_code_graph",
+        "report_deploy_to_evaluator",
+        "read_research_chunk",
+        "read_research_plan",
+        "read_research_target",
         "todo_write",
         "task",
     }
