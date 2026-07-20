@@ -346,6 +346,46 @@ export async function deletePersistedSession(opts: {
   accountId: string;
   workflowId: string;
 }) {
+  const [row] = await db
+    .select({
+      railwayServiceId: projects.railwayServiceId,
+    })
+    .from(projects)
+    .where(
+      and(
+        eq(projects.accountId, opts.accountId),
+        eq(projects.id, opts.workflowId),
+      ),
+    )
+    .limit(1);
+
+  if (row?.railwayServiceId) {
+    try {
+      const { releaseToPool, recycleSlot } = await import(
+        "@/server/railway/pool"
+      );
+      const { released } = await releaseToPool({
+        accountId: opts.accountId,
+        workflowId: opts.workflowId,
+        serviceId: row.railwayServiceId,
+      });
+      if (released) {
+        // Best-effort immediate recycle; cron will retry if this fails.
+        void recycleSlot({ serviceId: row.railwayServiceId }).catch((err) => {
+          console.warn(
+            "[deletePersistedSession] recycleSlot:",
+            err instanceof Error ? err.message : err,
+          );
+        });
+      }
+    } catch (err) {
+      console.warn(
+        "[deletePersistedSession] pool release:",
+        err instanceof Error ? err.message : err,
+      );
+    }
+  }
+
   await db
     .delete(projects)
     .where(
@@ -375,5 +415,132 @@ export async function ensurePersistenceSchema() {
   `);
   await db.execute(sql`
     ALTER TABLE "manycat_project" ADD COLUMN IF NOT EXISTS "agentBilledCompletionTokens" integer NOT NULL DEFAULT 0
+  `);
+  await db.execute(sql`
+    ALTER TABLE "manycat_project" ADD COLUMN IF NOT EXISTS "contextPack" jsonb
+  `);
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS "manycat_railway_pool_slot" (
+      "id" varchar(64) PRIMARY KEY,
+      "railwayServiceId" varchar(128) NOT NULL,
+      "railwayDomain" varchar(512),
+      "status" varchar(32) NOT NULL DEFAULT 'hot',
+      "accountId" varchar(128),
+      "workflowId" varchar(64),
+      "claimedAt" timestamptz,
+      "lastHotAt" timestamptz,
+      "generation" integer NOT NULL DEFAULT 0,
+      "createdAt" timestamptz NOT NULL DEFAULT now(),
+      "updatedAt" timestamptz
+    )
+  `);
+  await db.execute(sql`
+    CREATE UNIQUE INDEX IF NOT EXISTS "railway_pool_service_uidx"
+      ON "manycat_railway_pool_slot" ("railwayServiceId")
+  `);
+  await db.execute(sql`
+    CREATE INDEX IF NOT EXISTS "railway_pool_status_idx"
+      ON "manycat_railway_pool_slot" ("status")
+  `);
+
+  // Work mode tables (plan-over-time, join links, intelligence, OAuth).
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS "manycat_work_plan" (
+      "id" varchar(64) PRIMARY KEY,
+      "accountId" varchar(128) NOT NULL REFERENCES "manycat_account"("id") ON DELETE cascade,
+      "workflowId" varchar(64) NOT NULL,
+      "startsAt" timestamptz NOT NULL,
+      "endsAt" timestamptz NOT NULL,
+      "cadence" jsonb NOT NULL,
+      "timezone" varchar(64) NOT NULL DEFAULT 'UTC',
+      "promptTemplate" text NOT NULL DEFAULT '',
+      "status" varchar(16) NOT NULL DEFAULT 'active',
+      "nextDueAt" timestamptz,
+      "googleEventId" varchar(256),
+      "createdAt" timestamptz NOT NULL DEFAULT now(),
+      "updatedAt" timestamptz
+    )
+  `);
+  await db.execute(sql`
+    CREATE INDEX IF NOT EXISTS "work_plan_account_idx" ON "manycat_work_plan" ("accountId")
+  `);
+  await db.execute(sql`
+    CREATE INDEX IF NOT EXISTS "work_plan_due_idx" ON "manycat_work_plan" ("status", "nextDueAt")
+  `);
+  await db.execute(sql`
+    CREATE INDEX IF NOT EXISTS "work_plan_workflow_idx" ON "manycat_work_plan" ("accountId", "workflowId")
+  `);
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS "manycat_work_plan_occurrence" (
+      "id" varchar(64) PRIMARY KEY,
+      "planId" varchar(64) NOT NULL REFERENCES "manycat_work_plan"("id") ON DELETE cascade,
+      "dueAt" timestamptz NOT NULL,
+      "status" varchar(16) NOT NULL DEFAULT 'pending',
+      "firedAt" timestamptz,
+      "createdAt" timestamptz NOT NULL DEFAULT now()
+    )
+  `);
+  await db.execute(sql`
+    CREATE INDEX IF NOT EXISTS "work_occurrence_plan_idx" ON "manycat_work_plan_occurrence" ("planId", "dueAt")
+  `);
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS "manycat_work_session_member" (
+      "workflowId" varchar(64) NOT NULL,
+      "ownerAccountId" varchar(128) NOT NULL REFERENCES "manycat_account"("id") ON DELETE cascade,
+      "accountId" varchar(128) NOT NULL REFERENCES "manycat_account"("id") ON DELETE cascade,
+      "role" varchar(16) NOT NULL DEFAULT 'member',
+      "joinedAt" timestamptz NOT NULL DEFAULT now(),
+      PRIMARY KEY ("workflowId", "accountId")
+    )
+  `);
+  await db.execute(sql`
+    CREATE INDEX IF NOT EXISTS "work_member_account_idx" ON "manycat_work_session_member" ("accountId")
+  `);
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS "manycat_work_join_token" (
+      "token" varchar(64) PRIMARY KEY,
+      "workflowId" varchar(64) NOT NULL,
+      "ownerAccountId" varchar(128) NOT NULL REFERENCES "manycat_account"("id") ON DELETE cascade,
+      "createdBy" varchar(128) NOT NULL REFERENCES "manycat_account"("id") ON DELETE cascade,
+      "expiresAt" timestamptz,
+      "revokedAt" timestamptz,
+      "createdAt" timestamptz NOT NULL DEFAULT now()
+    )
+  `);
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS "manycat_work_note" (
+      "id" varchar(64) PRIMARY KEY,
+      "workflowId" varchar(64) NOT NULL,
+      "ownerAccountId" varchar(128) NOT NULL REFERENCES "manycat_account"("id") ON DELETE cascade,
+      "sourceMessageId" varchar(64),
+      "authorAccountId" varchar(128),
+      "authorLabel" varchar(128),
+      "text" text NOT NULL,
+      "summary" varchar(512) NOT NULL,
+      "usedInPlanId" varchar(64),
+      "createdAt" timestamptz NOT NULL DEFAULT now()
+    )
+  `);
+  await db.execute(sql`
+    CREATE INDEX IF NOT EXISTS "work_note_workflow_idx" ON "manycat_work_note" ("workflowId", "createdAt")
+  `);
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS "manycat_oauth_connection" (
+      "id" varchar(64) PRIMARY KEY,
+      "accountId" varchar(128) NOT NULL REFERENCES "manycat_account"("id") ON DELETE cascade,
+      "provider" varchar(32) NOT NULL,
+      "accessTokenEnc" text NOT NULL,
+      "refreshTokenEnc" text,
+      "scopes" text NOT NULL DEFAULT '',
+      "expiresAt" timestamptz,
+      "createdAt" timestamptz NOT NULL DEFAULT now(),
+      "updatedAt" timestamptz
+    )
+  `);
+  await db.execute(sql`
+    CREATE INDEX IF NOT EXISTS "oauth_connection_account_idx" ON "manycat_oauth_connection" ("accountId", "provider")
+  `);
+  await db.execute(sql`
+    ALTER TABLE "manycat_work_plan" ADD COLUMN IF NOT EXISTS "notify" boolean NOT NULL DEFAULT true
   `);
 }

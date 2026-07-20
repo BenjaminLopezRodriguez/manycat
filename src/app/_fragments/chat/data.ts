@@ -35,13 +35,27 @@ export type AgentStatusMsg = MsgBase & {
   text: string;
   /** Verb for the working card, e.g. "building" */
   action?: string;
-  /** File path shown on the working card */
+  /** File path shown on the working card (latest) */
   path?: string;
+  /** Accumulated files touched this run — WorkingCard lists these */
+  paths?: string[];
   /** Model reasoning — collapsed behind thinking toggle */
   thinking?: string;
   /** True while the agent is still streaming this status line */
   streaming?: boolean;
 };
+
+/** Merge a path into the run's working-file list (order preserved, unique). */
+export function mergeWorkingPaths(
+  existing: string[] | undefined,
+  next: string | undefined,
+): string[] | undefined {
+  if (!next?.trim()) return existing;
+  const path = next.trim();
+  if (!existing?.length) return [path];
+  if (existing.includes(path)) return existing;
+  return [...existing, path];
+}
 
 export type DiffMsg = MsgBase & {
   type: "diff";
@@ -63,6 +77,15 @@ export type MilestoneMsg = MsgBase & {
   text: string;
 };
 
+/** Timed prompts inside a goal timeframe — shown as [prompt 2:10pm Monday] tiles. */
+export type WorkScheduleMsg = MsgBase & {
+  type: "work-schedule";
+  planId: string;
+  goal: string;
+  notify: boolean;
+  slots: { label: string; at: string }[];
+};
+
 export type ImageMsg = MsgBase & {
   type: "image";
   prompt: string;
@@ -75,7 +98,13 @@ export type ImageMsg = MsgBase & {
 };
 
 export type Msg =
-  TextMsg | AgentStatusMsg | DiffMsg | ApprovalMsg | MilestoneMsg | ImageMsg;
+  | TextMsg
+  | AgentStatusMsg
+  | DiffMsg
+  | ApprovalMsg
+  | MilestoneMsg
+  | WorkScheduleMsg
+  | ImageMsg;
 
 export type LastRunOutcome = "ok" | "failed" | "budget" | null;
 
@@ -134,6 +163,8 @@ export function messagePreview(m: Msg): string {
       return m.text;
     case "milestone":
       return m.text;
+    case "work-schedule":
+      return `Timed prompts: ${m.slots.map((s) => s.label).join(", ")}`;
     case "image":
       return `Image: ${m.prompt}`;
   }

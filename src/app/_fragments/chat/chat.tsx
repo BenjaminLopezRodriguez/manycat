@@ -62,6 +62,8 @@ import type { EffortId, ModelId } from "@/lib/ai-models";
 import {
   deriveProjectsFromWorkflows,
   initialWorkflows,
+  mergeWorkingPaths,
+  type AgentStatusMsg,
   type ApprovalMsg,
   type DiffMsg,
   type ImageMsg,
@@ -71,6 +73,7 @@ import {
   type TextMsg,
   type Workflow,
   type WorkflowStatus,
+  type WorkScheduleMsg,
 } from "./data";
 import ImportRepoDialog from "./import-repo";
 import IntegrationsSheet from "./integrations-sheet";
@@ -95,6 +98,16 @@ import { BuildPreviewDrawer } from "./build-preview-drawer";
 import { ChatThreadHeader } from "./chat-thread-header";
 import { WorkflowChatMenu } from "./workflow-chat-menu";
 import Workspace from "./workspace";
+import {
+  WorkPlanButton,
+  type WorkScheduleCreated,
+} from "./work-plan-button";
+import { WorkIntelligenceChips } from "./work-intelligence-chips";
+import {
+  WorkActivityPane,
+  WorkAutomationsPane,
+  WorkConnectionsPane,
+} from "./work-panes";
 
 /** Icon badges that can pin to the mobile status bubble */
 type BubbleBadge = "deploy" | "working" | "review";
@@ -141,6 +154,7 @@ function isMsg(value: unknown): value is Workflow["messages"][number] {
     m.type === "diff" ||
     m.type === "approval" ||
     m.type === "milestone" ||
+    m.type === "work-schedule" ||
     m.type === "image"
   );
 }
@@ -250,7 +264,61 @@ export default function Chat() {
   const persistSession = api.workflow.persistSession.useMutation();
   const renameSession = api.workflow.renameSession.useMutation();
   const deleteSession = api.workflow.deleteSession.useMutation();
+  const extractNotes = api.work.extractNotes.useMutation();
+  const sharedSessionsQuery = api.work.listSharedSessions.useQuery(undefined, {
+    enabled: signedIn,
+    staleTime: 30_000,
+  });
   const [sessionsHydrated, setSessionsHydrated] = React.useState(false);
+  const [activePlanId, setActivePlanId] = React.useState<string | null>(null);
+  const [workNotify, setWorkNotify] = React.useState(true);
+
+  function appendWorkSchedule(schedule: WorkScheduleCreated) {
+    const wfId = schedule.workflowId;
+    setActivePlanId(schedule.planId);
+    setActiveId(wfId);
+    const scheduleMsg: WorkScheduleMsg = {
+      id: Date.now(),
+      type: "work-schedule",
+      planId: schedule.planId,
+      goal: schedule.goal,
+      notify: schedule.notify,
+      slots: schedule.slots,
+      time: nowTime(),
+    };
+    setWorkflows((prev) => {
+      const existing = prev.find((w) => w.id === wfId);
+      if (existing) {
+        return prev.map((w) =>
+          w.id === wfId
+            ? { ...w, messages: [...w.messages, scheduleMsg] }
+            : w,
+        );
+      }
+      return [
+        ...prev,
+        {
+          id: wfId,
+          name: schedule.goal.slice(0, 32) || "Work plan",
+          initials: "WP",
+          avatarClass: "bg-sky-200 text-sky-900",
+          repo: "workspace",
+          status: "idle" as const,
+          messages: [scheduleMsg],
+          workspace: [],
+        },
+      ];
+    });
+    void persistSession
+      .mutateAsync({
+        workflowId: wfId,
+        mode: "workspace",
+        name: schedule.goal.slice(0, 256) || "Work plan",
+        status: "idle",
+        messages: [scheduleMsg],
+      })
+      .catch(() => undefined);
+  }
 
   React.useEffect(() => {
     if (!signedIn || !sessionsQuery.data || sessionsHydrated) return;
@@ -343,6 +411,42 @@ export default function Chat() {
       setActiveId(null);
     }
   }, [signedIn]);
+
+  // Merge shared Work chats (join-link members) into the local workflow list.
+  React.useEffect(() => {
+    if (!signedIn || !sharedSessionsQuery.data) return;
+    const shared = sharedSessionsQuery.data.filter((s) => s.shared);
+    if (shared.length === 0) return;
+    setWorkflows((prev) => {
+      const byId = new Map(prev.map((w) => [w.id, w]));
+      for (const s of shared) {
+        if (byId.has(s.id)) continue;
+        const name = s.name || s.id;
+        byId.set(s.id, {
+          id: s.id,
+          name,
+          initials: name.slice(0, 2).toUpperCase() || "WK",
+          avatarClass: "bg-amber-200 text-amber-900",
+          repo: "workspace",
+          status: (s.status as WorkflowStatus) ?? "idle",
+          unread: s.unread ?? 0,
+          messages: (s.messages ?? []).filter(isMsg),
+          workspace: [],
+        });
+      }
+      return [...byId.values()];
+    });
+  }, [signedIn, sharedSessionsQuery.data]);
+
+  // Deep-link: /?mode=workspace&view=work&session=<id>
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const sessionId = params.get("session");
+    if (!sessionId) return;
+    if (mode !== "workspace") return;
+    setActiveId(sessionId);
+  }, [mode, sessionsHydrated, sharedSessionsQuery.data]);
 
   // Soft-sync status/unread from listSessions while background jobs run.
   React.useEffect(() => {
@@ -572,25 +676,53 @@ export default function Chat() {
             return { ...w, messages: [...w.messages, msg] };
           }
           case "upsert-status": {
-            // One live status row per run — replace any prior agent-status
+            // One live status row per run — replace any prior agent-status,
+            // keeping the accumulated file list so WorkingCard can show all edits.
+            const prior = w.messages.find(
+              (m): m is AgentStatusMsg => m.type === "agent-status",
+            );
             const withoutStatus = w.messages.filter(
               (m) => m.type !== "agent-status",
             );
+            let paths = mergeWorkingPaths(prior?.paths, prior?.path);
+            for (const p of event.message.paths ?? []) {
+              paths = mergeWorkingPaths(paths, p);
+            }
+            paths = mergeWorkingPaths(paths, event.message.path);
+            const message: AgentStatusMsg = {
+              ...event.message,
+              paths,
+            };
             return {
               ...w,
-              messages: [...withoutStatus, event.message],
+              messages: [...withoutStatus, message],
             };
           }
-          case "patch-workspace":
-            return {
-              ...w,
-              workspace: applyWorkspacePatch(
-                w.workspace,
-                event.path,
-                event.contents,
-                event.edited,
-              ),
-            };
+          case "patch-workspace": {
+            const workspace = applyWorkspacePatch(
+              w.workspace,
+              event.path,
+              event.contents,
+              event.edited,
+            );
+            if (!event.edited) {
+              return { ...w, workspace };
+            }
+            // Append patched path onto the live WorkingCard file list
+            const messages = w.messages.map((m) => {
+              if (m.type !== "agent-status") return m;
+              return {
+                ...m,
+                path: event.path,
+                paths: mergeWorkingPaths(m.paths ?? (m.path ? [m.path] : []), event.path),
+                action: m.action ?? "edited",
+                text: m.streaming
+                  ? m.text
+                  : `Edited ${mergeWorkingPaths(m.paths, event.path)?.length ?? 1} file(s)`,
+              };
+            });
+            return { ...w, workspace, messages };
+          }
           case "resolve-approval":
             return {
               ...w,
@@ -902,33 +1034,100 @@ export default function Chat() {
     name: string;
     repo: string;
     status: "idle";
+    previewUrl?: string;
+    contentRootHash?: string | null;
+    files?: { path: string; contents: string }[];
+    nextRunKind?: "understand";
+    optimisticWorkflowId?: string;
   }) {
-    const files = await utils.workflow.getSandboxFiles
-      .fetch({ workflowId: data.workflowId })
-      .then((r) => r.files)
-      .catch(() => []); // ponytail: file listing is best-effort, workflow still usable without it
+    const optimisticId = data.optimisticWorkflowId;
+    const files =
+      data.files ??
+      (await utils.workflow.getSandboxFiles
+        .fetch({ workflowId: data.workflowId })
+        .then((r) => r.files)
+        .catch(() => []));
 
     setWorkflows((prev) =>
-      prev.map((w) =>
-        w.id === data.workflowId
-          ? {
-              ...w,
-              status: "idle",
-              workspace: files,
-              messages: [
-                ...w.messages,
-                {
-                  id: nextMsgId(w.messages),
-                  type: "text",
-                  from: "agent",
-                  text: `Cloned ${data.repo} — ${files.length} files ready.`,
-                  time: nowTime(),
-                },
-              ],
-            }
-          : w,
-      ),
+      prev.map((w) => {
+        const match =
+          w.id === data.workflowId ||
+          (optimisticId != null && w.id === optimisticId) ||
+          w.repo === data.repo;
+        if (!match) return w;
+        return {
+          ...w,
+          id: data.workflowId,
+          name: data.name,
+          repo: data.repo,
+          status: "working" as const,
+          workspace: files,
+          messages: [
+            ...w.messages.filter((m) => m.type !== "agent-status"),
+            {
+              id: nextMsgId(w.messages),
+              type: "text" as const,
+              from: "agent" as const,
+              text: `Cloned ${data.repo} — ${files.length} files ready. Mapping the codebase…`,
+              time: nowTime(),
+            },
+            {
+              id: nextMsgId(w.messages) + 1,
+              type: "agent-status" as const,
+              text: "Mapping repository…",
+              action: "exploring",
+              path: "codebase",
+              thinking:
+                "Building a codebase brief and graph so later edits stay minimal.",
+              streaming: true,
+              time: nowTime(),
+            },
+          ],
+        };
+      }),
     );
+    activeIdRef.current = data.workflowId;
+    setActiveId(data.workflowId);
+    if (data.previewUrl) setPreviewUrl(data.previewUrl);
+    if (data.contentRootHash) setContentRootHash(data.contentRootHash);
+
+    const infraStatus = await utils.workflow.isEnabled.fetch().catch(() => ({
+      enabled: false,
+    }));
+    if (!infraStatus.enabled) {
+      setWorkflows((prev) =>
+        prev.map((w) =>
+          w.id === data.workflowId
+            ? {
+                ...w,
+                status: "idle",
+                messages: [
+                  ...w.messages.filter((m) => m.type !== "agent-status"),
+                  {
+                    id: Date.now(),
+                    type: "text",
+                    from: "agent",
+                    text: "Import ready, but agent infra is not configured — send a message once AGENT_HARNESS_URL is set.",
+                    time: nowTime(),
+                  },
+                ],
+              }
+            : w,
+        ),
+      );
+      return;
+    }
+
+    void runAgentMutation.mutateAsync({
+      workflowId: data.workflowId,
+      prompt: `Understand repository ${data.repo}`,
+      omitUserMessage: true,
+      runKind: "understand",
+      messageIdStart: 10,
+      model: aiModel,
+      effort: aiEffort,
+      files: files.map((f) => ({ path: f.path, contents: f.contents })),
+    });
   }
 
   function handleImportError(workflowId: string, message: string) {
@@ -975,7 +1174,10 @@ export default function Chat() {
       { repoUrl: repoFullName, existingIds },
       {
         onSuccess: (data) => {
-          void handleImportSuccess(data);
+          void handleImportSuccess({
+            ...data,
+            optimisticWorkflowId: workflowId,
+          });
         },
         onError: (err) => {
           if (isBudgetExceededError(err)) openUpgradeLimit();
@@ -1104,13 +1306,23 @@ export default function Chat() {
             role: m.from === "me" ? "user" : "assistant",
             content: m.text,
           }));
-        const { reply, sources } = await runChat.mutateAsync({
+        const chatResult = await runChat.mutateAsync({
           mode,
           prompt: promptText,
           history,
           effort: opts?.effort ?? aiEffort,
           deepResearch: mode === "research" && (opts?.deepResearch ?? false),
+          workflowId: mode === "workspace" ? id : undefined,
+          timeZone:
+            mode === "workspace"
+              ? Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"
+              : undefined,
         });
+        const reply = chatResult.reply;
+        const sources =
+          "sources" in chatResult ? chatResult.sources : undefined;
+        const schedule =
+          "schedule" in chatResult ? chatResult.schedule : null;
         const replyMsg: TextMsg = {
           id: replyId,
           type: "text",
@@ -1119,8 +1331,45 @@ export default function Chat() {
           time: nowTime(),
           ...(sources && sources.length > 0 ? { sources } : {}),
         };
+        const extra: Msg[] = [replyMsg];
+        if (schedule?.slots?.length) {
+          const scheduleMsg: WorkScheduleMsg = {
+            id: replyId + 1,
+            type: "work-schedule",
+            planId: schedule.planId,
+            goal: schedule.goal,
+            notify: schedule.notify,
+            slots: schedule.slots,
+            time: nowTime(),
+          };
+          extra.push(scheduleMsg);
+          setActivePlanId(schedule.planId);
+        }
         await streamInAgentText(id, replyMsg, { finalizeStatus: "idle" });
-        persistTurn([replyMsg], "idle");
+        if (extra.length > 1) {
+          setWorkflows((prev) =>
+            prev.map((w) =>
+              w.id === id
+                ? {
+                    ...w,
+                    messages: [
+                      ...w.messages.filter((m) => m.id !== replyMsg.id),
+                      ...extra,
+                    ],
+                  }
+                : w,
+            ),
+          );
+        }
+        persistTurn(extra, "idle");
+        if (mode === "workspace") {
+          void extractNotes
+            .mutateAsync({
+              workflowId: id,
+              messageText: `${promptText}\n${reply}`,
+            })
+            .catch(() => undefined);
+        }
       }
     } catch (err) {
       if (isBudgetExceededError(err)) openUpgradeLimit();
@@ -1217,11 +1466,12 @@ export default function Chat() {
           .filter((id) => !id.startsWith("pending-")),
       });
 
+      const tip = data.contentRootHash?.slice(0, 8) ?? "local";
       const scaffoldText = data.previewUrl
-        ? `Scaffold ready (${data.contentRootHash.slice(0, 8)}…). Preview at ${data.previewUrl}${
+        ? `Scaffold ready (${tip}…). Preview at ${data.previewUrl}${
             data.persistedToS3 ? " · saved to S3" : ""
           }`
-        : `Scaffold ready (${data.contentRootHash.slice(0, 8)}…). Building your app on the Next scaffold…${
+        : `Scaffold ready (${tip}…). Building your app on the Next scaffold…${
             data.persistedToS3 === false
               ? " (S3 unset — local merkle only)"
               : data.persistedToS3
@@ -1333,6 +1583,7 @@ export default function Chat() {
           effort,
           files: data.files.map((f) => ({ path: f.path, contents: f.contents })),
           omitUserMessage: true,
+          runKind: "oneshot",
         });
       }
     } catch (err) {
@@ -1800,6 +2051,30 @@ export default function Chat() {
             onEffortChange={setAiEffort}
             onRename={renameActiveChat}
             onDelete={deleteActiveChat}
+            activePlanId={activePlanId}
+            notify={workNotify}
+            onNotifyChange={setWorkNotify}
+            onPlanCreated={(planId, workflowId) => {
+              setActivePlanId(planId);
+              setActiveId(workflowId);
+              setWorkflows((prev) => {
+                if (prev.some((w) => w.id === workflowId)) return prev;
+                return [
+                  ...prev,
+                  {
+                    id: workflowId,
+                    name: "Work plan",
+                    initials: "WP",
+                    avatarClass: "bg-sky-200 text-sky-900",
+                    repo: "workspace",
+                    status: "idle" as const,
+                    messages: [],
+                    workspace: [],
+                  },
+                ];
+              });
+            }}
+            onSchedule={appendWorkSchedule}
             onSend={(text, opts) =>
               void handleModeHarness(mode, text, opts)
             }
@@ -1859,26 +2134,11 @@ export default function Chat() {
             }
           />
         ) : view === "connections" ? (
-          <SectionScaffold
-            title="Connections"
-            description="Link Gmail, Zapier, and other apps so Workspace agents can act on your behalf."
-            icon={Link01Icon}
-            emptyLabel="No apps connected yet."
-          />
+          <WorkConnectionsPane />
         ) : view === "automations" ? (
-          <SectionScaffold
-            title="Automations"
-            description="Recipes that run across your connected apps."
-            icon={Settings01Icon}
-            emptyLabel="No automations yet."
-          />
+          <WorkAutomationsPane />
         ) : view === "activity" ? (
-          <SectionScaffold
-            title="Activity"
-            description="Recent runs from Workspace agents."
-            icon={ArrowUpRight01Icon}
-            emptyLabel="No activity yet."
-          />
+          <WorkActivityPane />
         ) : view === "chats" ? (
           <SectionScaffold
             title="Chats"
@@ -2693,6 +2953,11 @@ function ModeThreadView({
   onRename,
   onDelete,
   onSend,
+  activePlanId,
+  onPlanCreated,
+  notify,
+  onNotifyChange,
+  onSchedule,
 }: {
   mode: "research" | "workspace";
   active: Workflow | null;
@@ -2702,13 +2967,20 @@ function ModeThreadView({
   onRename: (name: string) => void;
   onDelete: () => void;
   onSend: (text: string, opts: { effort: EffortId; deepResearch: boolean }) => void;
+  activePlanId?: string | null;
+  onPlanCreated?: (planId: string, workflowId: string) => void;
+  notify?: boolean;
+  onNotifyChange?: (next: boolean) => void;
+  onSchedule?: (schedule: WorkScheduleCreated) => void;
 }) {
   const [text, setText] = React.useState("");
   const [deepResearch, setDeepResearch] = React.useState(false);
   const [effortOpen, setEffortOpen] = React.useState(false);
   const bottomRef = React.useRef<HTMLDivElement>(null);
+  const draftWorkflowId = React.useRef(`workspace-${Date.now()}`);
   const studio = Boolean(active && active.messages.length > 0);
   const suggestions = MODE_SUGGESTIONS[mode];
+  const planWorkflowId = active?.id ?? draftWorkflowId.current;
 
   const lastMsg = active?.messages.at(-1);
   const lastStreamText = lastMsg?.type === "text" ? lastMsg.text : undefined;
@@ -2737,6 +3009,7 @@ function ModeThreadView({
               name={active.name}
               onRename={onRename}
               onDelete={onDelete}
+              shareMode={mode === "workspace" ? "join" : "copy"}
             />
           }
         />
@@ -2782,6 +3055,15 @@ function ModeThreadView({
             studio && "relative z-10 shrink-0",
           )}
         >
+          {mode === "workspace" ? (
+            <WorkIntelligenceChips
+              workflowId={active?.id ?? null}
+              planId={activePlanId}
+              onInsert={(chipText) =>
+                setText((prev) => (prev ? `${prev}\n${chipText}` : chipText))
+              }
+            />
+          ) : null}
           <form
             onSubmit={submit}
             className={cn(
@@ -2814,6 +3096,18 @@ function ModeThreadView({
             />
             <div className="flex items-center justify-between gap-2 px-2 pb-1">
               <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                {mode === "workspace" ? (
+                  <WorkPlanButton
+                    workflowId={planWorkflowId}
+                    goalHint={text || active?.name}
+                    notify={notify ?? true}
+                    onNotifyChange={(next) => onNotifyChange?.(next)}
+                    onCreated={(planId) =>
+                      onPlanCreated?.(planId, planWorkflowId)
+                    }
+                    onSchedule={onSchedule}
+                  />
+                ) : null}
                 {mode === "research" ? (
                   <button
                     type="button"
