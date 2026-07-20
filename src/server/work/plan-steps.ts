@@ -27,7 +27,8 @@ export function coercePromptText(value: unknown): string {
   if (value && typeof value === "object") {
     const o = value as Record<string, unknown>;
     for (const key of ["prompt", "text", "content", "message"]) {
-      if (typeof o[key] === "string") return (o[key] as string).trim();
+      const field = o[key];
+      if (typeof field === "string") return field.trim();
     }
   }
   return "";
@@ -98,7 +99,11 @@ export function buildPlaceholderPlanSteps(opts: {
     cadence: opts.cadence,
     timeZone: opts.timeZone,
   });
-  const hint = opts.goalHint?.trim() || "Stay on track with ongoing work.";
+  const trimmedHint = opts.goalHint?.trim();
+  const hint =
+    trimmedHint && trimmedHint.length > 0
+      ? trimmedHint
+      : "Stay on track with ongoing work.";
   if (slots.length === 0) {
     return {
       promptTemplate: `Timed goal prompt: ${hint}`,
@@ -151,7 +156,11 @@ export async function generatePlanSteps(opts: {
     cadence: opts.cadence,
     timeZone: opts.timeZone,
   });
-  const hint = opts.goalHint?.trim() || "Stay on track with ongoing work.";
+  const trimmedHint = opts.goalHint?.trim();
+  const hint =
+    trimmedHint && trimmedHint.length > 0
+      ? trimmedHint
+      : "Stay on track with ongoing work.";
   const notes = await notesForAgenda({ workflowId: opts.workflowId });
 
   if (slots.length === 0) {

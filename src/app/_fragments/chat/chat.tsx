@@ -3004,7 +3004,7 @@ function ModeThreadView({
     const msgs = active?.messages ?? [];
     for (let i = msgs.length - 1; i >= 0; i--) {
       const m = msgs[i];
-      if (m?.type === "text" && m.from === "user" && m.text.trim()) {
+      if (m?.type === "text" && m.from === "me" && m.text.trim()) {
         return m.text.trim();
       }
     }
@@ -3017,7 +3017,7 @@ function ModeThreadView({
     const lines: string[] = [];
     for (const m of msgs.slice(-12)) {
       if (m.type !== "text" || !m.text.trim()) continue;
-      const who = m.from === "user" ? "User" : "Assistant";
+      const who = m.from === "me" ? "User" : "Assistant";
       lines.push(`${who}: ${m.text.trim().slice(0, 500)}`);
     }
     if (text.trim() && !lines.at(-1)?.endsWith(text.trim().slice(0, 500))) {

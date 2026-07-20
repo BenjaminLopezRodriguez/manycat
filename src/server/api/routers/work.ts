@@ -96,10 +96,14 @@ export const workRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       await ensureAccount(ctx.accountId);
       await ensurePersistenceSchema();
+      const fromGoal = input.goal?.trim();
+      const fromTemplate = input.promptTemplate?.trim();
       const goalText =
-        input.goal?.trim() ||
-        input.promptTemplate?.trim() ||
-        "Stay on track with ongoing work.";
+        fromGoal && fromGoal.length > 0
+          ? fromGoal
+          : fromTemplate && fromTemplate.length > 0
+            ? fromTemplate
+            : "Stay on track with ongoing work.";
       await ensureShellProject({
         accountId: ctx.accountId,
         workflowId: input.workflowId,
@@ -167,10 +171,14 @@ export const workRouter = createTRPCRouter({
         throw new TRPCError({ code: "NOT_FOUND", message: "Plan not found" });
       }
 
+      const fromGoal = input.goal?.trim();
+      const fromTemplate = plan.promptTemplate?.trim();
       const goalText =
-        input.goal?.trim() ||
-        plan.promptTemplate?.trim() ||
-        "Stay on track with ongoing work.";
+        fromGoal && fromGoal.length > 0
+          ? fromGoal
+          : fromTemplate && fromTemplate.length > 0
+            ? fromTemplate
+            : "Stay on track with ongoing work.";
 
       const planned = await generatePlanSteps({
         accountId: ctx.accountId,

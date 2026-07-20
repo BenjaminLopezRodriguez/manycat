@@ -115,7 +115,7 @@ export function WorkPlanButton({
     const goalText = goalHint?.trim()
       ? goalHint.trim()
       : "Stay on track with ongoing work.";
-    const ctx = conversationContext?.trim() || undefined;
+    const trimmedCtx = conversationContext?.trim();
 
     // Set the timeframe immediately (no LLM wait).
     const plan = await createPlan.mutateAsync({
@@ -125,7 +125,7 @@ export function WorkPlanButton({
       cadence,
       timezone: timeZone,
       goal: goalText,
-      conversationContext: ctx,
+      ...(trimmedCtx ? { conversationContext: trimmedCtx } : {}),
       notify,
     });
 
@@ -152,7 +152,7 @@ export function WorkPlanButton({
       .mutateAsync({
         planId: plan.id,
         goal: goalText,
-        conversationContext: ctx,
+        ...(trimmedCtx ? { conversationContext: trimmedCtx } : {}),
       })
       .then((refined) => {
         onSchedule?.({
