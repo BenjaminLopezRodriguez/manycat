@@ -12,7 +12,8 @@ test.describe("Build mode e2e", () => {
   test("pink calculator build mutates scaffold and saves to S3", async ({ page }) => {
     test.setTimeout(10 * 60_000);
     await page.goto(`${BASE}`);
-    await page.getByRole("button", { name: /\+ new/i }).click();
+    // Adapted: shipped button's accessible name is "New" — the "+" is an icon.
+    await page.getByRole("button", { name: /^new$/i }).click();
     await page.getByRole("menuitem", { name: /build/i }).click().catch(() => {});
     await page.getByRole("textbox").fill("make a pink calculator");
     await page.keyboard.press("Enter");

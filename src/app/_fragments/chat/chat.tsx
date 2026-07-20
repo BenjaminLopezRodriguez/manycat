@@ -2880,6 +2880,7 @@ function RailSessionMark({ indicator }: { indicator?: RailIndicator }) {
   if (indicator === "working") {
     return (
       <span
+        data-rail-status="working"
         className="border-sidebar-foreground/30 size-3.5 shrink-0 animate-spin rounded-full border-2 border-r-transparent"
         aria-label="Working"
       />
@@ -2888,6 +2889,7 @@ function RailSessionMark({ indicator }: { indicator?: RailIndicator }) {
   if (indicator === "update") {
     return (
       <span
+        data-rail-status="update"
         className="size-2 shrink-0 rounded-full bg-sky-500"
         aria-label="Update ready"
       />
@@ -2896,6 +2898,7 @@ function RailSessionMark({ indicator }: { indicator?: RailIndicator }) {
   if (indicator === "error") {
     return (
       <span
+        data-rail-status="failure"
         className="size-2 shrink-0 rounded-full bg-red-500"
         aria-label="Run failed"
       />
