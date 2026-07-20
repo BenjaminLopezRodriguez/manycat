@@ -24,7 +24,11 @@ from langchain_core.messages import (
 from langchain_core.tools import BaseTool
 
 from programming_agent.jobs import TokenUsage
-from programming_agent.prose_tools import inject_prose_tool_calls, wrap_model_for_prose_tools
+from programming_agent.prose_tools import (
+    extract_prose_tool_calls,
+    inject_prose_tool_calls,
+    wrap_model_for_prose_tools,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -312,12 +316,8 @@ def run_tool_loop(
                 if name in MUTATING_TOOLS and not content.startswith("Error:"):
                     mutated = True
                 if name in VERIFY_TOOLS and not str(content).startswith("Error:"):
-                    called.add(name)
                     # browser_check with skipped:true still counts as attempted.
-                    if name == VERIFY_BROWSER and '"skipped": true' in str(
-                        content
-                    ).replace(" ", ""):
-                        called.add(VERIFY_BROWSER)
+                    called.add(name)
             messages.append(
                 ToolMessage(content=content, tool_call_id=call_id, name=name)
             )
@@ -370,3 +370,169 @@ def _message_content(message: Union[BaseMessage, Any]) -> str:
                 parts.append(str(block.get("text") or ""))
         return "\n".join(parts)
     return str(content or "")
+
+
+# --- Intended API from the build brief (OpenAI-dict models, in-memory workspaces) ---
+
+
+def recover_tool_call_from_prose(text: str) -> Optional[dict[str, Any]]:
+    """First tool call recoverable from assistant prose, OpenAI-arg shape."""
+    calls = extract_prose_tool_calls(text)
+    if not calls:
+        return None
+    return {"name": calls[0]["name"], "arguments": calls[0]["args"]}
+
+
+def apply_scaffold_fallback(
+    *, prompt: str, workspace: dict[str, str]
+) -> dict[str, str]:
+    """In-memory variant of scaffold_fallback.apply_scaffold_fallback."""
+    from programming_agent.scaffold_fallback import (
+        build_fallback_page,
+        extract_user_request,
+    )
+
+    out = dict(workspace)
+    out["app/page.tsx"] = build_fallback_page(extract_user_request(prompt))
+    return out
+
+
+def _to_openai_message(msg: BaseMessage) -> dict[str, Any]:
+    import json as _json
+
+    if isinstance(msg, SystemMessage):
+        return {"role": "system", "content": _message_content(msg)}
+    if isinstance(msg, ToolMessage):
+        return {
+            "role": "tool",
+            "content": _message_content(msg),
+            "tool_call_id": msg.tool_call_id,
+        }
+    if isinstance(msg, AIMessage):
+        calls = [
+            {
+                "id": _tool_id(c, i),
+                "type": "function",
+                "function": {
+                    "name": _tool_name(c),
+                    "arguments": _json.dumps(_tool_args(c)),
+                },
+            }
+            for i, c in enumerate(getattr(msg, "tool_calls", None) or [])
+        ]
+        return {
+            "role": "assistant",
+            "content": _message_content(msg) or None,
+            "tool_calls": calls or None,
+        }
+    return {"role": "user", "content": _message_content(msg)}
+
+
+def _from_openai_message(reply: Any) -> AIMessage:
+    import json as _json
+
+    if isinstance(reply, BaseMessage):
+        return reply if isinstance(reply, AIMessage) else AIMessage(content=_message_content(reply))
+    if not isinstance(reply, dict):
+        return AIMessage(content=str(reply or ""))
+    calls = []
+    for i, c in enumerate(reply.get("tool_calls") or []):
+        fn = c.get("function") or {}
+        args = fn.get("arguments") or {}
+        if isinstance(args, str):
+            try:
+                args = _json.loads(args)
+            except _json.JSONDecodeError:
+                args = {}
+        calls.append(
+            {
+                "name": str(fn.get("name") or c.get("name") or ""),
+                "args": args if isinstance(args, dict) else {},
+                "id": str(c.get("id") or f"call_{i}"),
+                "type": "tool_call",
+            }
+        )
+    return AIMessage(content=reply.get("content") or "", tool_calls=calls)
+
+
+class _DictModelAdapter:
+    """Bridge an OpenAI-dict-style model (`.chat(messages, tools, tool_choice)`)
+    into the bind_tools/invoke interface run_tool_loop expects."""
+
+    def __init__(
+        self,
+        model: Any,
+        tools: Optional[Sequence[BaseTool]] = None,
+        tool_choice: Optional[str] = None,
+    ) -> None:
+        self.model = model
+        self._tools = list(tools or [])
+        self._choice = tool_choice
+
+    def bind_tools(
+        self, tools: Sequence[BaseTool], tool_choice: Optional[str] = None, **kw: Any
+    ) -> "_DictModelAdapter":
+        return _DictModelAdapter(self.model, tools, tool_choice)
+
+    def invoke(self, messages: Sequence[BaseMessage], config: Any = None, **kw: Any) -> AIMessage:
+        from langchain_core.utils.function_calling import convert_to_openai_tool
+
+        oai_tools = [convert_to_openai_tool(t) for t in self._tools]
+        try:
+            reply = self.model.chat(
+                [_to_openai_message(m) for m in messages],
+                tools=oai_tools or None,
+                tool_choice=self._choice,
+            )
+        except (IndexError, StopIteration):
+            # Scripted/test models with no replies left: treat as final answer.
+            return AIMessage(content="")
+        return _from_openai_message(reply)
+
+
+def run(
+    *,
+    model: Any,
+    prompt: str,
+    workspace: dict[str, str],
+    max_turns: int = 8,
+) -> dict[str, Any]:
+    """Run the forced tool loop over an in-memory workspace dict."""
+    from langchain_core.tools import StructuredTool
+
+    written: list[str] = []
+
+    def write_file(path: str, content: str) -> str:
+        workspace[path] = content
+        written.append(path)
+        return f"Wrote {path}"
+
+    def edit_file(path: str, old_string: str, new_string: str) -> str:
+        src = workspace.get(path)
+        if src is None or old_string not in src:
+            return f"Error: old_string not found in {path}"
+        workspace[path] = src.replace(old_string, new_string, 1)
+        written.append(path)
+        return f"Edited {path}"
+
+    tools = [
+        StructuredTool.from_function(func=write_file, name="write_file",
+                                     description="Write full file contents."),
+        StructuredTool.from_function(func=edit_file, name="edit_file",
+                                     description="Replace old_string with new_string."),
+    ]
+    result = run_tool_loop(
+        model=_DictModelAdapter(model),  # type: ignore[arg-type]
+        tools=tools,
+        system="You are a coding agent. Use write_file / edit_file to mutate the workspace.",
+        user_message=prompt,
+        max_turns=max_turns,
+        force_tools_until_mutate=True,
+        prefer_write_file=True,
+    )
+    return {
+        "output": result.output,
+        "mutated": result.mutated,
+        "files_written": sorted(set(written)),
+        "cancelled": result.cancelled,
+    }

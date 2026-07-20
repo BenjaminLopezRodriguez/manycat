@@ -54,6 +54,11 @@ _NAME_HINT = re.compile(
     r'\{\s*"name"\s*:\s*"(?P<name>' + "|".join(KNOWN_TOOLS) + r')"\s*,',
 )
 
+# Function-call syntax: write_file({"path": ..., "content": ...})
+_CALL_SYNTAX = re.compile(
+    r"\b(?P<name>" + "|".join(KNOWN_TOOLS) + r")\s*\(\s*(?=\{)",
+)
+
 
 def _message_text(content: Any) -> str:
     if isinstance(content, str):
@@ -198,6 +203,18 @@ def extract_prose_tool_calls(content: Any) -> list[dict[str, Any]]:
         parsed = _try_parse_tool_obj(blob)
         if parsed:
             add(parsed)
+
+    # write_file({...}) — Hermes narrates calls in function syntax.
+    for match in _CALL_SYNTAX.finditer(text):
+        blob = _extract_balanced_object(text, match.end())
+        if not blob:
+            continue
+        try:
+            args = json.loads(blob)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(args, dict):
+            add(_normalize_call(match.group("name"), args))
 
     # Last resort: model dumped a full page as a code fence — treat as write_file.
     if not any(c["name"] == "write_file" for c in found):

@@ -93,6 +93,34 @@ def _agent_reachable_url(url: str) -> str:
     return out
 
 
+_SKIPPED_RESULT = {
+    "status": "skipped",
+    "skipped": True,
+    "reason": "no_preview_url",
+    "message": (
+        "Sandbox has no live preview URL (workspace-only / Docker "
+        "unavailable). Skip asking the user. Read app/page.tsx, "
+        "call read_app_logs if useful, then report_to_evaluator with "
+        "file evidence and note preview was unavailable."
+    ),
+}
+
+
+def browser_check(preview_url: Optional[str] = None, **kwargs: Any) -> dict[str, Any]:
+    """Context-free check: skipped dict when no URL, else a Playwright report."""
+    from pathlib import Path
+
+    if not (preview_url or "").strip():
+        return dict(_SKIPPED_RESULT)
+    ctx = ToolContext(Path.cwd(), preview_url=preview_url)
+    tool = make_browser_tools(ctx)[0]
+    raw = tool.func(url=preview_url, **kwargs)  # type: ignore[misc]
+    try:
+        return json.loads(raw)
+    except (TypeError, json.JSONDecodeError):
+        return {"status": "error", "message": str(raw)}
+
+
 def make_browser_tools(ctx: ToolContext) -> list[StructuredTool]:
     def browser_check(
         url: Optional[str] = None,
@@ -105,19 +133,7 @@ def make_browser_tools(ctx: ToolContext) -> list[StructuredTool]:
         if not target:
             # Workspace-only sandboxes (no Docker) have no live preview.
             # Do not ask the user for a URL — report skipped and continue via files/logs.
-            return json.dumps(
-                {
-                    "skipped": True,
-                    "reason": "no_preview_url",
-                    "message": (
-                        "Sandbox has no live preview URL (workspace-only / Docker "
-                        "unavailable). Skip asking the user. Read app/page.tsx, "
-                        "call read_app_logs if useful, then report_to_evaluator with "
-                        "file evidence and note preview was unavailable."
-                    ),
-                },
-                indent=2,
-            )
+            return json.dumps(_SKIPPED_RESULT, indent=2)
 
         try:
             from playwright.sync_api import sync_playwright
