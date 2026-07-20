@@ -20,6 +20,7 @@ import { db } from "@/server/db";
 import { accounts, projects } from "@/server/db/schema";
 import type { ContentFile } from "@/server/content/store";
 import { hardenWorkspaceForRailway } from "@/server/content/scaffold-next";
+import { getBuildFiles } from "@/server/s3/build-store";
 import { ensureMirroredRepo } from "@/server/github/mirror";
 import { ensureAppDatabase } from "@/server/neon/provision";
 import {
@@ -129,8 +130,9 @@ async function walkWorkspaceFiles(
   return out;
 }
 
-/** Load virtual project files from sandbox orchestrator or local workspace fallback. */
+/** Load virtual project files: sandbox orchestrator → local workspace → S3 tip. */
 async function loadVirtualWorkspaceFiles(
+  accountId: string,
   workflowId: string,
 ): Promise<ContentFile[]> {
   if (isInfraEnabled()) {
@@ -159,10 +161,14 @@ async function loadVirtualWorkspaceFiles(
     fs.promises.realpath(cwd).catch(() => null),
     fs.promises.realpath(WORKSPACE_ROOT).catch(() => null),
   ]);
-  if (!realRoot || !realCwd?.startsWith(realRoot + path.sep)) {
-    return [];
+  if (realRoot && realCwd?.startsWith(realRoot + path.sep)) {
+    const local = await walkWorkspaceFiles(realCwd, realCwd);
+    if (local.length > 0) return local;
   }
-  return walkWorkspaceFiles(realCwd, realCwd);
+
+  // Durable fallback: serverless prod has no local workspace, but every build
+  // snapshot lives in the S3 merkle store.
+  return (await getBuildFiles({ accountId, buildId: workflowId })) ?? [];
 }
 
 export const projectRouter = createTRPCRouter({
@@ -294,7 +300,10 @@ export const projectRouter = createTRPCRouter({
         } else if (project?.contentBackend === "virtual") {
           // Mirror before Neon/Railway — fail here if push cannot proceed.
           try {
-            const files = await loadVirtualWorkspaceFiles(input.workflowId);
+            const files = await loadVirtualWorkspaceFiles(
+              ctx.accountId,
+              input.workflowId,
+            );
             if (files.length === 0) {
               return {
                 status: "failed",

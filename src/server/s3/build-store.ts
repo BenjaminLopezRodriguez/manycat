@@ -9,6 +9,7 @@ import { env } from "@/env";
 import {
   buildTree,
   diffTrees,
+  filesFromBlobs,
   hashCommit,
   type MerkleCommit,
   type MerklePathChange,
@@ -231,4 +232,29 @@ export async function getTreeEntriesFromTip(opts: {
 }): Promise<Record<string, string> | null> {
   const tip = await getBuildTip(opts);
   return tip?.tree.entries ?? null;
+}
+
+/** Reconstruct the tip snapshot's files from S3 blobs. Null when unavailable. */
+export async function getBuildFiles(opts: {
+  accountId: string;
+  buildId: string;
+}): Promise<ContentFile[] | null> {
+  const cfg = s3Config();
+  if (!cfg) return null;
+  const tip = await getBuildTip(opts);
+  if (!tip) return null;
+  const keys = buildKeys({
+    prefix: cfg.prefix,
+    accountId: opts.accountId,
+    buildId: opts.buildId,
+  });
+  const blobs = new Map<string, string>();
+  await Promise.all(
+    [...new Set(Object.values(tip.tree.entries))].map(async (sha) => {
+      const text = await getText(cfg, keys.blob(sha));
+      if (text != null) blobs.set(sha, text);
+    }),
+  );
+  const files = filesFromBlobs(tip.tree.entries, blobs);
+  return files.length > 0 ? files : null;
 }
