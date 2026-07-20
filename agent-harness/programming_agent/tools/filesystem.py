@@ -11,6 +11,8 @@ from pathlib import Path
 from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, Field
 
+from programming_agent.tools.edit_apply import apply_search_replace
+
 
 class ToolContext:
     def __init__(
@@ -123,7 +125,7 @@ def make_filesystem_tools(ctx: ToolContext) -> list[StructuredTool]:
         replace_all: bool = False,
     ) -> str:
         resolved = ctx.resolve(path)
-        # Models often call edit_file with empty old_string to create a file.
+        # Empty old_string or missing file → create/overwrite via write semantics.
         if not (old_string or "").strip():
             resolved.parent.mkdir(parents=True, exist_ok=True)
             resolved.write_text(new_string, encoding="utf-8")
@@ -135,47 +137,14 @@ def make_filesystem_tools(ctx: ToolContext) -> list[StructuredTool]:
             return f"File missing; wrote {resolved} ({len(new_string)} bytes)"
 
         text = resolved.read_text(encoding="utf-8")
-        candidates = [old_string]
-        # JSON / prose stubs often keep literal \n instead of real newlines.
-        if "\\n" in old_string:
-            candidates.append(old_string.replace("\\n", "\n").replace("\\t", "\t"))
-        # Tolerate CRLF / trailing whitespace drift.
-        candidates.append(old_string.replace("\r\n", "\n"))
-
-        matched: Optional[str] = None
-        for cand in candidates:
-            if cand and cand in text:
-                matched = cand
-                break
-
-        if matched is None:
-            # Weak models invent wrong old_string for full-page rewrites.
-            # Prefer applying new_string over failing the whole agent run.
-            if len(new_string) >= 40:
-                resolved.write_text(new_string, encoding="utf-8")
-                return (
-                    f"old_string not found; overwrote {resolved} "
-                    f"({len(new_string)} bytes). Prefer write_file for full rewrites."
-                )
-            return (
-                "Error: old_string not found in file. "
-                "Re-read the file and call write_file with the full new contents, "
-                "or edit_file with an exact substring from the file."
-            )
-
-        count = text.count(matched)
-        if count > 1 and not replace_all:
-            return (
-                f"Error: old_string appears {count} times; "
-                "set replace_all=true or provide more unique context."
-            )
-        updated = (
-            text.replace(matched, new_string)
-            if replace_all
-            else text.replace(matched, new_string, 1)
+        result = apply_search_replace(
+            text, old_string, new_string, replace_all=replace_all
         )
-        resolved.write_text(updated, encoding="utf-8")
-        return f"Edited {resolved}"
+        if not result.ok or result.text is None:
+            return result.error or "Error: edit_file failed"
+        resolved.write_text(result.text, encoding="utf-8")
+        kind = result.match_kind or "exact"
+        return f"Edited {resolved} (match={kind})"
 
     def glob_search(pattern: str) -> str:
         matches: list[str] = []
@@ -232,7 +201,8 @@ def make_filesystem_tools(ctx: ToolContext) -> list[StructuredTool]:
             name="write_file",
             description=(
                 "Write full contents to a file (create or overwrite). "
-                "Prefer this over edit_file when replacing a whole page/component."
+                "Use for new files or full greenfield/scaffold homepage replacement. "
+                "For edits to existing imported code, prefer edit_file."
             ),
             args_schema=WriteFileInput,
             handle_tool_error=True,
@@ -241,8 +211,10 @@ def make_filesystem_tools(ctx: ToolContext) -> list[StructuredTool]:
             func=edit_file,
             name="edit_file",
             description=(
-                "Replace exact text in a file. old_string must appear verbatim. "
-                "For full-file rewrites prefer write_file."
+                "Surgical SEARCH/REPLACE edit. old_string should match file text "
+                "(exact preferred; whitespace-tolerant fallback). "
+                "On mismatch returns Error with nearby context — never silent. "
+                "Prefer over write_file for modify-mode changes to existing files."
             ),
             args_schema=EditFileInput,
             handle_tool_error=True,

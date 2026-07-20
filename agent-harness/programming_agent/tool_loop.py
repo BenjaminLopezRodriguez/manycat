@@ -36,6 +36,17 @@ MUTATING_TOOLS = frozenset({"write_file", "edit_file"})
 VERIFY_BROWSER = "browser_check"
 VERIFY_EVAL = "report_to_evaluator"
 VERIFY_TOOLS = frozenset({VERIFY_BROWSER, VERIFY_EVAL})
+BUILD_PROBE = "build_probe"
+DEPLOY_EVAL = "report_deploy_to_evaluator"
+DEPLOY_VERIFY_TOOLS = frozenset({BUILD_PROBE, DEPLOY_EVAL})
+
+# Runs once after first successful mutate, before browser_check / build_probe nudges.
+CHEAP_VERIFY_CMD = (
+    "if [ -f package.json ]; then "
+    "(npx --yes tsc --noEmit -p . 2>&1 || npm run build --if-present 2>&1 || true) "
+    "| head -80; "
+    "else echo 'cheap_verify: no package.json'; fi"
+)
 
 
 @dataclass
@@ -162,6 +173,7 @@ def run_tool_loop(
     force_tools_until_mutate: bool = True,
     prefer_write_file: bool = False,
     require_website_verification: Optional[bool] = None,
+    require_build_probe: bool = False,
     should_cancel: Optional[Callable[[], bool]] = None,
     on_usage: Optional[Callable[[TokenUsage], None]] = None,
 ) -> ToolLoopResult:
@@ -172,10 +184,14 @@ def run_tool_loop(
     tool_choice=required (or write_file) until write_file/edit_file succeeds.
     When require_website_verification is True (or auto-detected), the loop also
     forces browser_check + report_to_evaluator before a final prose answer.
+    When require_build_probe is True, forces build_probe + report_deploy_to_evaluator
+    (compile gate: does npm run build succeed?).
     """
     wrapped = wrap_model_for_prose_tools(model)
     by_name = {t.name: t for t in tools}
-    can_verify = VERIFY_TOOLS.issubset(by_name)
+    can_deploy_verify = DEPLOY_VERIFY_TOOLS.issubset(by_name)
+    require_deploy = bool(require_build_probe) and can_deploy_verify
+    can_verify = VERIFY_TOOLS.issubset(by_name) and not require_deploy
     if require_website_verification is None:
         require_verify = can_verify and looks_like_website_task(user_message)
     else:
@@ -191,21 +207,38 @@ def run_tool_loop(
     called: set[str] = set()
     summaries: list[str] = []
     forced_left = 6 if force_tools_until_mutate else 0
-    verify_nudges = 4 if require_verify else 0
+    verify_nudges = 8 if require_deploy else (4 if require_verify else 0)
     cancelled = False
+    build_probe_ok = False
+    cheap_verify_done = False
 
     for turn in range(max(1, max_turns)):
         if should_cancel and should_cancel():
             cancelled = True
             break
 
-        verified = VERIFY_BROWSER in called and VERIFY_EVAL in called
+        deploy_verified = (
+            BUILD_PROBE in called and DEPLOY_EVAL in called and build_probe_ok
+        )
+        verified = (
+            deploy_verified
+            if require_deploy
+            else (VERIFY_BROWSER in called and VERIFY_EVAL in called)
+        )
         if force_tools_until_mutate and not mutated and forced_left > 0:
             if prefer_write_file and turn == 0 and "write_file" in by_name:
                 choice: Optional[str] = "write_file"
             else:
                 choice = "required"
             forced_left -= 1
+        elif require_deploy and mutated and not deploy_verified and verify_nudges > 0:
+            if BUILD_PROBE not in called or not build_probe_ok:
+                choice = BUILD_PROBE if BUILD_PROBE in by_name else "required"
+            elif DEPLOY_EVAL not in called and DEPLOY_EVAL in by_name:
+                choice = DEPLOY_EVAL
+            else:
+                choice = "required"
+            verify_nudges -= 1
         elif require_verify and mutated and not verified and verify_nudges > 0:
             if VERIFY_BROWSER not in called and VERIFY_BROWSER in by_name:
                 choice = VERIFY_BROWSER
@@ -248,6 +281,32 @@ def run_tool_loop(
 
         if (
             not tool_calls
+            and require_deploy
+            and mutated
+            and not deploy_verified
+            and verify_nudges >= 0
+            and choice in (BUILD_PROBE, DEPLOY_EVAL, "required")
+        ):
+            missing = []
+            if BUILD_PROBE not in called or not build_probe_ok:
+                missing.append(BUILD_PROBE)
+            if DEPLOY_EVAL not in called:
+                missing.append(DEPLOY_EVAL)
+            messages.append(ai)
+            messages.append(
+                HumanMessage(
+                    content=(
+                        "Deploy compile gate incomplete. Call these tools now "
+                        f"(real tool calls, not prose): {', '.join(missing)}. "
+                        "Primary test: build_probe must return ok:true / "
+                        "exitCode:0, then report_deploy_to_evaluator."
+                    )
+                )
+            )
+            continue
+
+        if (
+            not tool_calls
             and require_verify
             and mutated
             and not verified
@@ -277,16 +336,23 @@ def run_tool_loop(
         if not tool_calls:
             text = _message_content(ai).strip()
             if (
-                require_verify
+                (require_deploy or require_verify)
                 and mutated
                 and not verified
                 and verify_nudges > 0
             ):
-                missing = [
-                    t
-                    for t in (VERIFY_BROWSER, VERIFY_EVAL)
-                    if t not in called
-                ]
+                if require_deploy:
+                    missing = []
+                    if BUILD_PROBE not in called or not build_probe_ok:
+                        missing.append(BUILD_PROBE)
+                    if DEPLOY_EVAL not in called:
+                        missing.append(DEPLOY_EVAL)
+                else:
+                    missing = [
+                        t
+                        for t in (VERIFY_BROWSER, VERIFY_EVAL)
+                        if t not in called
+                    ]
                 messages.append(
                     HumanMessage(
                         content=(
@@ -309,22 +375,64 @@ def run_tool_loop(
             args = _tool_args(call)
             call_id = _tool_id(call, i)
             tool = by_name.get(name)
+            just_mutated = False
             if tool is None:
                 content = f"Error: unknown tool {name!r}"
             else:
                 content = _invoke_tool(tool, args)
                 if name in MUTATING_TOOLS and not content.startswith("Error:"):
+                    just_mutated = not mutated
                     mutated = True
                 if name in VERIFY_TOOLS and not str(content).startswith("Error:"):
                     # browser_check with skipped:true still counts as attempted.
                     called.add(name)
+                if name in DEPLOY_VERIFY_TOOLS and not str(content).startswith(
+                    "Error:"
+                ):
+                    called.add(name)
+                    if name == BUILD_PROBE:
+                        try:
+                            parsed = __import__("json").loads(content)
+                            build_probe_ok = bool(parsed.get("ok"))
+                        except Exception:  # noqa: BLE001
+                            build_probe_ok = '"ok": true' in content.lower()
             messages.append(
                 ToolMessage(content=content, tool_call_id=call_id, name=name)
             )
+            # After first successful mutate: cheap typecheck/build snip before
+            # Playwright / build_probe (Aider-style lint-after-edit).
+            if (
+                just_mutated
+                and not cheap_verify_done
+                and (require_verify or require_deploy)
+                and "bash" in by_name
+            ):
+                cheap_verify_done = True
+                cheap = _invoke_tool(
+                    by_name["bash"],
+                    {
+                        "command": CHEAP_VERIFY_CMD,
+                        "description": "cheap post-mutate verify",
+                    },
+                )
+                messages.append(
+                    HumanMessage(
+                        content=(
+                            "Post-mutate cheap verify (auto). If there are type/build "
+                            "errors, fix with edit_file (prefer surgical SEARCH/REPLACE) "
+                            "before browser_check / build_probe.\n"
+                            f"```\n{str(cheap)[:4000]}\n```"
+                        )
+                    )
+                )
         if cancelled:
             break
 
-    verified = VERIFY_BROWSER in called and VERIFY_EVAL in called
+    verified = (
+        (BUILD_PROBE in called and DEPLOY_EVAL in called and build_probe_ok)
+        if require_deploy
+        else (VERIFY_BROWSER in called and VERIFY_EVAL in called)
+    )
     output = ""
     for msg in reversed(messages):
         if isinstance(msg, AIMessage):
@@ -341,7 +449,13 @@ def run_tool_loop(
             output = summaries[-1]
         else:
             output = "Done."
-    if require_verify and mutated and not verified and not cancelled:
+    if require_deploy and mutated and not verified and not cancelled:
+        output = (
+            f"{output}\n\n---\n"
+            "Warning: finished without successful build_probe + "
+            "report_deploy_to_evaluator. Treat compile as unverified."
+        )
+    elif require_verify and mutated and not verified and not cancelled:
         output = (
             f"{output}\n\n---\n"
             "Warning: finished without browser_check + report_to_evaluator. "
