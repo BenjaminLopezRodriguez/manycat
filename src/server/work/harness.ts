@@ -1,6 +1,9 @@
 import { runChatCompletion, type ChatMessage } from "@/server/ai/modal-chat";
-import { createWorkPlan } from "@/server/work/plans";
-import { generatePlanSteps } from "@/server/work/plan-steps";
+import { createWorkPlan, updateWorkPlan } from "@/server/work/plans";
+import {
+  buildPlaceholderPlanSteps,
+  generatePlanSteps,
+} from "@/server/work/plan-steps";
 import type { WorkPlanCadence } from "@/server/db/schema";
 
 export type GoalTimeframeToolResult = {
@@ -17,16 +20,18 @@ export type GoalTimeframeToolResult = {
 const TOOL_HINT = `
 You have one tool for Work mode:
 
-set_goal_timeframe — schedule timed prompts inside a goal window (the model is NOT running continuously).
+set_goal_timeframe — set a goal timeframe, then the planner reasons about that window + goal
+and authors timed autonomous prompts (the model is NOT running continuously).
 Call it by emitting exactly this block (and nothing else in that block):
 
 <<<TOOL set_goal_timeframe
-{"hours":24,"goal":"short goal text","notify":true}
+{"hours":24,"goal":"concrete goal from the conversation","notify":true}
 TOOL>>>
 
 hours must be one of: 6, 12, 24, 48, 72, 120, 168.
+goal must be a concrete outcome (not vague). Prefer the user's stated goal.
 notify=true means email/push when a timed prompt fires.
-After the tool runs you will get a result; then reply briefly to the user.
+After the tool runs you will get reasoning + prompts; then reply briefly to the user.
 If the user is not asking to set a timeframe, answer normally without the tool.
 `.trim();
 
@@ -66,15 +71,15 @@ async function executeGoalTimeframe(opts: {
   goal: string;
   notify: boolean;
   timeZone: string;
+  conversationContext?: string;
 }): Promise<GoalTimeframeToolResult> {
   const startsAt = new Date();
   startsAt.setSeconds(0, 0);
   const endsAt = new Date(startsAt.getTime() + opts.hours * 60 * 60 * 1000);
   const cadence = cadenceForHours(opts.hours);
 
-  const planned = await generatePlanSteps({
-    accountId: opts.accountId,
-    workflowId: opts.workflowId,
+  // Persist immediately so the timeframe is real even if LLM refine is slow.
+  const placeholders = buildPlaceholderPlanSteps({
     goalHint: opts.goal,
     startsAt,
     endsAt,
@@ -89,10 +94,43 @@ async function executeGoalTimeframe(opts: {
     endsAt,
     cadence,
     timezone: opts.timeZone,
-    promptTemplate: planned.promptTemplate,
+    promptTemplate: `Timed goal prompt: ${opts.goal}`,
     notify: opts.notify,
-    steps: planned.steps,
+    steps: placeholders.steps,
   });
+
+  let reasoning = placeholders.reasoning;
+  let slots = placeholders.steps;
+  let promptTemplate = placeholders.promptTemplate;
+
+  try {
+    const planned = await generatePlanSteps({
+      accountId: opts.accountId,
+      workflowId: opts.workflowId,
+      goalHint: opts.goal,
+      conversationContext: opts.conversationContext,
+      startsAt,
+      endsAt,
+      cadence,
+      timeZone: opts.timeZone,
+    });
+    await updateWorkPlan({
+      planId: plan.id,
+      accountId: opts.accountId,
+      patch: {
+        promptTemplate: planned.promptTemplate,
+        steps: planned.steps,
+      },
+    });
+    reasoning = planned.reasoning;
+    slots = planned.steps;
+    promptTemplate = planned.promptTemplate;
+  } catch (err) {
+    console.warn(
+      "[executeGoalTimeframe] refine failed; keeping placeholders:",
+      err instanceof Error ? err.message : err,
+    );
+  }
 
   return {
     planId: plan.id,
@@ -100,9 +138,9 @@ async function executeGoalTimeframe(opts: {
     hours: opts.hours,
     notify: opts.notify,
     goal: opts.goal,
-    promptTemplate: planned.promptTemplate,
-    reasoning: planned.reasoning,
-    slots: planned.steps,
+    promptTemplate,
+    reasoning,
+    slots,
   };
 }
 
@@ -127,7 +165,8 @@ export async function runWorkHarness(opts: {
 
   const systemPrompt =
     "You are Manycat's workplace assistant. Help the user plan and track work. " +
-    "You can set a goal timeframe so timed prompts fire inside a window " +
+    "When they want a goal timeframe, call set_goal_timeframe with the hours and a concrete goal — " +
+    "the planner will reason about that window and author the timed prompts " +
     "(you are not running continuously).\n\n" +
     TOOL_HINT;
 
@@ -153,6 +192,14 @@ export async function runWorkHarness(opts: {
     goal: call.goal,
     notify: call.notify,
     timeZone,
+    conversationContext: [
+      ...opts.history.map(
+        (m) => `${m.role === "user" ? "User" : "Assistant"}: ${m.content}`,
+      ),
+      `User: ${opts.prompt}`,
+    ]
+      .join("\n")
+      .slice(0, 8000),
   });
 
   const followUp = await runChatCompletion([
@@ -166,13 +213,16 @@ export async function runWorkHarness(opts: {
           ok: true,
           planId: schedule.planId,
           hours: schedule.hours,
+          goal: schedule.goal,
           notify: schedule.notify,
-          slots: schedule.slots.map(
-            (s) => `[prompt ${s.label}] ${s.prompt.slice(0, 80)}`,
-          ),
           reasoning: schedule.reasoning,
+          slots: schedule.slots.map((s) => ({
+            when: s.label,
+            prompt: s.prompt.slice(0, 160),
+          })),
         }) +
-        `\n\nConfirm briefly. The UI already shows each timed prompt card — keep your reply short.`,
+        `\n\nConfirm briefly that the timeframe is set and the plan fits the goal. ` +
+        `The UI already shows each timed prompt card — keep your reply short.`,
     },
   ]);
 

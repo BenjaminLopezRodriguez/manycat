@@ -12,13 +12,19 @@ import {
   ensureOwnerMembership,
 } from "@/server/work/membership";
 import {
+  buildPlaceholderPlanSteps,
+  generatePlanSteps,
+} from "@/server/work/plan-steps";
+import {
   createWorkPlan,
   generateAgenda,
   listWorkPlans,
   pauseWorkPlan,
   updateWorkPlan,
 } from "@/server/work/plans";
-import { generatePlanSteps } from "@/server/work/plan-steps";
+import { and, eq } from "drizzle-orm";
+import { db } from "@/server/db";
+import { workPlans } from "@/server/db/schema";
 import {
   extractAndStoreNotes,
   listIntelligenceChips,
@@ -78,18 +84,27 @@ export const workRouter = createTRPCRouter({
         endsAt: z.coerce.date(),
         cadence: cadenceSchema,
         timezone: z.string().min(1).max(64).default("UTC"),
+        /** Goal the timeframe is for — LLM reasons around this + the window. */
+        goal: z.string().min(1).max(4000).optional(),
+        /** @deprecated prefer `goal` */
         promptTemplate: z.string().max(8000).optional(),
+        /** Recent Work chat so the planner can ground prompts. */
+        conversationContext: z.string().max(12_000).optional(),
         notify: z.boolean().default(true),
       }),
     )
     .mutation(async ({ ctx, input }) => {
       await ensureAccount(ctx.accountId);
       await ensurePersistenceSchema();
+      const goalText =
+        input.goal?.trim() ||
+        input.promptTemplate?.trim() ||
+        "Stay on track with ongoing work.";
       await ensureShellProject({
         accountId: ctx.accountId,
         workflowId: input.workflowId,
         mode: "workspace",
-        name: input.promptTemplate?.slice(0, 48) ?? "Work plan",
+        name: goalText.slice(0, 48) || "Work plan",
         status: "idle",
       });
       await ensureOwnerMembership({
@@ -97,10 +112,9 @@ export const workRouter = createTRPCRouter({
         ownerAccountId: ctx.accountId,
       });
 
-      const planned = await generatePlanSteps({
-        accountId: ctx.accountId,
-        workflowId: input.workflowId,
-        goalHint: input.promptTemplate ?? undefined,
+      // Persist the timeframe immediately — do not block on LLM.
+      const placeholders = buildPlaceholderPlanSteps({
+        goalHint: goalText,
         startsAt: input.startsAt,
         endsAt: input.endsAt,
         cadence: input.cadence,
@@ -114,13 +128,73 @@ export const workRouter = createTRPCRouter({
         endsAt: input.endsAt,
         cadence: input.cadence,
         timezone: input.timezone,
-        promptTemplate: planned.promptTemplate ?? input.promptTemplate,
+        promptTemplate: `Timed goal prompt: ${goalText}`,
         notify: input.notify,
-        steps: planned.steps,
+        steps: placeholders.steps,
       });
 
       return {
         ...plan,
+        goal: goalText,
+        reasoning: placeholders.reasoning,
+        scheduleSlots: placeholders.steps,
+        pendingRefine: true as const,
+      };
+    }),
+
+  /** LLM-refine timed prompts after the timeframe is already set. */
+  refinePlanSteps: protectedProcedure
+    .input(
+      z.object({
+        planId: z.string().min(1).max(64),
+        goal: z.string().min(1).max(4000).optional(),
+        conversationContext: z.string().max(12_000).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      await ensurePersistenceSchema();
+      const [plan] = await db
+        .select()
+        .from(workPlans)
+        .where(
+          and(
+            eq(workPlans.id, input.planId),
+            eq(workPlans.accountId, ctx.accountId),
+          ),
+        )
+        .limit(1);
+      if (!plan) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Plan not found" });
+      }
+
+      const goalText =
+        input.goal?.trim() ||
+        plan.promptTemplate?.trim() ||
+        "Stay on track with ongoing work.";
+
+      const planned = await generatePlanSteps({
+        accountId: ctx.accountId,
+        workflowId: plan.workflowId,
+        goalHint: goalText,
+        conversationContext: input.conversationContext,
+        startsAt: plan.startsAt,
+        endsAt: plan.endsAt,
+        cadence: plan.cadence,
+        timeZone: plan.timezone,
+      });
+
+      await updateWorkPlan({
+        planId: plan.id,
+        accountId: ctx.accountId,
+        patch: {
+          promptTemplate: planned.promptTemplate,
+          steps: planned.steps,
+        },
+      });
+
+      return {
+        planId: plan.id,
+        goal: goalText,
         reasoning: planned.reasoning,
         scheduleSlots: planned.steps,
       };

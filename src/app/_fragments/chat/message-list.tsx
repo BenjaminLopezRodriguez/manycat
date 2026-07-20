@@ -196,6 +196,34 @@ type MessageListProps = {
   onRequestChanges: (messageId: number) => void;
 };
 
+/** Day + time tile for work schedule cards: `Tue` / `3:40PM`. */
+function formatScheduleWhen(iso: string): { day: string; time: string } {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return { day: "—", time: "—" };
+  const day = new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(d);
+  const time = new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  })
+    .format(d)
+    .replace(/\s/g, "")
+    .toUpperCase();
+  return { day, time };
+}
+
+/** Coerce prompt field in case a stale/object payload sneaks through. */
+function promptText(prompt: unknown): string {
+  if (typeof prompt === "string") return prompt;
+  if (prompt && typeof prompt === "object") {
+    const o = prompt as Record<string, unknown>;
+    for (const key of ["prompt", "text", "content", "message"]) {
+      if (typeof o[key] === "string") return o[key];
+    }
+  }
+  return "";
+}
+
 function fileName(path: string) {
   const parts = path.split("/").filter(Boolean);
   return parts.at(-1) ?? path;
@@ -623,26 +651,35 @@ export default function MessageList({
                       </p>
                     ) : null}
                     <ul className="flex flex-col gap-2">
-                      {m.slots.map((slot) => (
-                        <li key={`${slot.at}-${slot.label}`}>
-                          <div className="bg-muted/40 flex flex-col gap-2 rounded-2xl border px-3 py-2.5">
-                            <p className="text-sm leading-snug whitespace-pre-wrap">
-                              {slot.prompt}
-                            </p>
-                            <div className="flex flex-wrap items-center gap-2">
-                              <span className="bg-background text-foreground inline-block rounded-lg border px-2 py-1 font-mono text-[11px] leading-none">
-                                [prompt {slot.label}]
-                              </span>
-                              {m.notify ? (
-                                <span className="text-muted-foreground text-[10px]">
-                                  notifies
+                      {m.slots.map((slot) => {
+                        const when = formatScheduleWhen(slot.at);
+                        return (
+                          <li key={`${slot.at}-${slot.label}`}>
+                            <div className="bg-muted/40 flex items-start gap-3 rounded-2xl border px-3 py-2.5">
+                              <div
+                                className="text-foreground flex w-11 shrink-0 flex-col items-center justify-center text-center"
+                                title={slot.label}
+                              >
+                                <span className="text-[11px] leading-none font-semibold tracking-wide uppercase">
+                                  {when.day}
                                 </span>
-                              ) : null}
+                                <span className="text-muted-foreground mt-1.5 text-[10px] leading-none font-medium tabular-nums">
+                                  {when.time}
+                                </span>
+                              </div>
+                              <p className="text-foreground min-w-0 flex-1 text-[15px] leading-snug font-medium whitespace-pre-wrap">
+                                {promptText(slot.prompt)}
+                              </p>
                             </div>
-                          </div>
-                        </li>
-                      ))}
+                          </li>
+                        );
+                      })}
                     </ul>
+                    {m.notify ? (
+                      <p className="text-muted-foreground text-[11px]">
+                        You&apos;ll be notified when each runs
+                      </p>
+                    ) : null}
                     {!m.reasoning && m.goal ? (
                       <p className="text-muted-foreground text-xs">
                         Goal: {m.goal}

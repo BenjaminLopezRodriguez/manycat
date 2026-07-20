@@ -290,11 +290,23 @@ export default function Chat() {
     setWorkflows((prev) => {
       const existing = prev.find((w) => w.id === wfId);
       if (existing) {
-        return prev.map((w) =>
-          w.id === wfId
-            ? { ...w, messages: [...w.messages, scheduleMsg] }
-            : w,
-        );
+        return prev.map((w) => {
+          if (w.id !== wfId) return w;
+          const idx = w.messages.findIndex(
+            (m) => m.type === "work-schedule" && m.planId === schedule.planId,
+          );
+          if (idx >= 0) {
+            const messages = [...w.messages];
+            const prevMsg = messages[idx] as WorkScheduleMsg;
+            messages[idx] = {
+              ...scheduleMsg,
+              id: prevMsg.id,
+              time: prevMsg.time,
+            };
+            return { ...w, messages };
+          }
+          return { ...w, messages: [...w.messages, scheduleMsg] };
+        });
       }
       return [
         ...prev,
@@ -2987,6 +2999,33 @@ function ModeThreadView({
   const lastMsg = active?.messages.at(-1);
   const lastStreamText = lastMsg?.type === "text" ? lastMsg.text : undefined;
 
+  const workGoal = React.useMemo(() => {
+    if (text.trim()) return text.trim();
+    const msgs = active?.messages ?? [];
+    for (let i = msgs.length - 1; i >= 0; i--) {
+      const m = msgs[i];
+      if (m?.type === "text" && m.from === "user" && m.text.trim()) {
+        return m.text.trim();
+      }
+    }
+    if (active?.name && active.name !== "Work chat") return active.name;
+    return undefined;
+  }, [text, active?.messages, active?.name]);
+
+  const workConversationContext = React.useMemo(() => {
+    const msgs = active?.messages ?? [];
+    const lines: string[] = [];
+    for (const m of msgs.slice(-12)) {
+      if (m.type !== "text" || !m.text.trim()) continue;
+      const who = m.from === "user" ? "User" : "Assistant";
+      lines.push(`${who}: ${m.text.trim().slice(0, 500)}`);
+    }
+    if (text.trim() && !lines.at(-1)?.endsWith(text.trim().slice(0, 500))) {
+      lines.push(`User (draft): ${text.trim().slice(0, 500)}`);
+    }
+    return lines.join("\n").slice(0, 8000);
+  }, [active?.messages, text]);
+
   React.useEffect(() => {
     if (!studio) return;
     bottomRef.current?.scrollIntoView({ block: "end" });
@@ -3101,7 +3140,8 @@ function ModeThreadView({
                 {mode === "workspace" ? (
                   <WorkPlanButton
                     workflowId={planWorkflowId}
-                    goalHint={text || active?.name}
+                    goalHint={workGoal}
+                    conversationContext={workConversationContext}
                     notify={notify ?? true}
                     onNotifyChange={(next) => onNotifyChange?.(next)}
                     onCreated={(planId) =>

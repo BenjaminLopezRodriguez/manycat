@@ -94,6 +94,7 @@ export async function updateWorkPlan(opts: {
     timezone?: string;
     promptTemplate?: string;
     status?: WorkPlanStatus;
+    steps?: { at: string; label: string; prompt: string }[];
   };
 }) {
   const [existing] = await db
@@ -136,6 +137,7 @@ export async function updateWorkPlan(opts: {
       timezone: opts.patch.timezone ?? existing.timezone,
       promptTemplate:
         opts.patch.promptTemplate ?? existing.promptTemplate,
+      ...(opts.patch.steps !== undefined ? { steps: opts.patch.steps } : {}),
       status,
       nextDueAt,
     })

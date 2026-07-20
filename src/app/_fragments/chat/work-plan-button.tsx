@@ -76,6 +76,7 @@ export type WorkScheduleCreated = {
 export function WorkPlanButton({
   workflowId,
   goalHint,
+  conversationContext,
   notify,
   onNotifyChange,
   onCreated,
@@ -83,6 +84,8 @@ export function WorkPlanButton({
 }: {
   workflowId: string;
   goalHint?: string;
+  /** Recent Work chat so the planner can reason about the goal. */
+  conversationContext?: string;
   notify: boolean;
   onNotifyChange: (next: boolean) => void;
   onCreated?: (planId: string) => void;
@@ -93,6 +96,7 @@ export function WorkPlanButton({
   const [stepIndex, setStepIndex] = React.useState(DEFAULT_STEP);
 
   const createPlan = api.work.createPlan.useMutation();
+  const refinePlan = api.work.refinePlanSteps.useMutation();
   const saving = createPlan.isPending;
 
   const hours = DURATION_STEPS[stepIndex]?.hours ?? 24;
@@ -108,15 +112,20 @@ export function WorkPlanButton({
     startsAt.setSeconds(0, 0);
     const endsAt = new Date(startsAt.getTime() + hours * 60 * 60 * 1000);
     const cadence = cadenceForDuration(hours);
-    const goalText = goalHint?.trim() ? goalHint.trim() : "Goal timeframe";
+    const goalText = goalHint?.trim()
+      ? goalHint.trim()
+      : "Stay on track with ongoing work.";
+    const ctx = conversationContext?.trim() || undefined;
 
+    // Set the timeframe immediately (no LLM wait).
     const plan = await createPlan.mutateAsync({
       workflowId,
       startsAt,
       endsAt,
       cadence,
       timezone: timeZone,
-      promptTemplate: goalText,
+      goal: goalText,
+      conversationContext: ctx,
       notify,
     });
 
@@ -131,12 +140,35 @@ export function WorkPlanButton({
     onSchedule?.({
       planId: plan.id,
       workflowId,
-      goal: goalText,
+      goal: plan.goal ?? goalText,
       notify,
       reasoning: plan.reasoning,
       slots,
     });
     setOpen(false);
+
+    // Refine prompts in the background; upsert the same schedule cards.
+    void refinePlan
+      .mutateAsync({
+        planId: plan.id,
+        goal: goalText,
+        conversationContext: ctx,
+      })
+      .then((refined) => {
+        onSchedule?.({
+          planId: refined.planId,
+          workflowId,
+          goal: refined.goal,
+          notify,
+          reasoning: refined.reasoning,
+          slots: refined.scheduleSlots.map((s) => ({
+            at: s.at,
+            label: s.label,
+            prompt: s.prompt,
+          })),
+        });
+      })
+      .catch(() => undefined);
   }
 
   const panel = (
