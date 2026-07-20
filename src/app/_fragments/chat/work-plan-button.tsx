@@ -98,7 +98,7 @@ export function WorkPlanButton({
 
   const hours = DURATION_STEPS[stepIndex]?.hours ?? 24;
   const timeZone =
-    Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+    Intl.DateTimeFormat().resolvedOptions().timeZone ?? "UTC";
 
   React.useEffect(() => {
     if (!open) setStepIndex(DEFAULT_STEP);
@@ -133,10 +133,17 @@ export function WorkPlanButton({
     }).map((s) => ({ at: s.at.toISOString(), label: s.label }));
 
     onCreated?.(plan.id);
+    const goalText = (() => {
+      const fromHint = goalHint?.trim();
+      if (fromHint) return fromHint;
+      const fromAgenda = agenda.slice(0, 80).trim();
+      if (fromAgenda) return fromAgenda;
+      return "Goal timeframe";
+    })();
     onSchedule?.({
       planId: plan.id,
       workflowId,
-      goal: goalHint?.trim() || agenda.slice(0, 80) || "Goal timeframe",
+      goal: goalText,
       notify,
       slots,
     });

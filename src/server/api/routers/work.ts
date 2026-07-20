@@ -88,7 +88,7 @@ export const workRouter = createTRPCRouter({
         accountId: ctx.accountId,
         workflowId: input.workflowId,
         mode: "workspace",
-        name: input.promptTemplate?.slice(0, 48) || "Work plan",
+        name: input.promptTemplate?.slice(0, 48) ?? "Work plan",
         status: "idle",
       });
       await ensureOwnerMembership({
@@ -153,7 +153,7 @@ export const workRouter = createTRPCRouter({
         accountId: ctx.accountId,
         workflowId: input.workflowId,
         mode: "workspace",
-        name: input.goalHint?.slice(0, 48) || "Work chat",
+        name: input.goalHint?.slice(0, 48) ?? "Work chat",
         status: "idle",
       });
       await ensureOwnerMembership({

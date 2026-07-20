@@ -193,7 +193,7 @@ export async function generateAgenda(opts: {
   goalHint?: string;
 }): Promise<string> {
   const notes = await notesForAgenda({ workflowId: opts.workflowId });
-  const hint = opts.goalHint?.trim() || "Stay on track with ongoing work.";
+  const hint = opts.goalHint?.trim() ?? "Stay on track with ongoing work.";
 
   if (!isChatModelConfigured()) {
     const noteBlock =

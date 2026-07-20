@@ -428,7 +428,7 @@ export default function Chat() {
           initials: name.slice(0, 2).toUpperCase() || "WK",
           avatarClass: "bg-amber-200 text-amber-900",
           repo: "workspace",
-          status: (s.status as WorkflowStatus) ?? "idle",
+          status: s.status ?? "idle",
           unread: s.unread ?? 0,
           messages: (s.messages ?? []).filter(isMsg),
           workspace: [],

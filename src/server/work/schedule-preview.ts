@@ -16,14 +16,14 @@ export function formatPromptSlotLabel(at: Date, timeZone?: string): string {
     hour: "numeric",
     minute: "2-digit",
     hour12: true,
-    timeZone: timeZone || undefined,
+    timeZone: timeZone ?? undefined,
   })
     .format(at)
     .replace(/\s/g, "")
     .toLowerCase();
   const weekday = new Intl.DateTimeFormat("en-US", {
     weekday: "long",
-    timeZone: timeZone || undefined,
+    timeZone: timeZone ?? undefined,
   }).format(at);
   return `${time} ${weekday}`;
 }

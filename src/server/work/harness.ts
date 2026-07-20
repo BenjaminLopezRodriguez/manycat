@@ -40,9 +40,7 @@ function parseToolCall(text: string): {
   goal: string;
   notify: boolean;
 } | null {
-  const match = text.match(
-    /<<<TOOL\s+set_goal_timeframe\s*\n([\s\S]*?)\nTOOL>>>/i,
-  );
+  const match = /<<<TOOL\s+set_goal_timeframe\s*\n([\s\S]*?)\nTOOL>>>/i.exec(text);
   if (!match?.[1]) return null;
   try {
     const raw = JSON.parse(match[1].trim()) as {
@@ -123,8 +121,8 @@ export async function runWorkHarness(opts: {
   schedule?: GoalTimeframeToolResult;
 }> {
   const timeZone =
-    opts.timeZone ||
-    Intl.DateTimeFormat().resolvedOptions().timeZone ||
+    opts.timeZone ??
+    Intl.DateTimeFormat().resolvedOptions().timeZone ??
     "UTC";
 
   const systemPrompt =
@@ -145,7 +143,7 @@ export async function runWorkHarness(opts: {
   if (!call) {
     // Strip accidental tool markup if model mixed prose + tool badly.
     const cleaned = first.replace(/<<<TOOL[\s\S]*?TOOL>>>/gi, "").trim();
-    return { reply: cleaned || first };
+    return { reply: cleaned.length > 0 ? cleaned : first };
   }
 
   const schedule = await executeGoalTimeframe({

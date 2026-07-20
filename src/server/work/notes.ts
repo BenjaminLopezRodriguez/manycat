@@ -58,7 +58,7 @@ export async function extractAndStoreNotes(opts: {
         },
         { role: "user", content: opts.messageText.slice(0, 2000) },
       ]);
-      const match = raw.match(/\[[\s\S]*\]/);
+      const match = /\[[\s\S]*\]/.exec(raw);
       if (match) {
         const parsed = JSON.parse(match[0]) as {
           text?: string;
