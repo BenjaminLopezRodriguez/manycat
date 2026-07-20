@@ -1,6 +1,6 @@
 import { runChatCompletion, type ChatMessage } from "@/server/ai/modal-chat";
-import { createWorkPlan, generateAgenda } from "@/server/work/plans";
-import { expandScheduleSlots } from "@/server/work/schedule-preview";
+import { createWorkPlan } from "@/server/work/plans";
+import { generatePlanSteps } from "@/server/work/plan-steps";
 import type { WorkPlanCadence } from "@/server/db/schema";
 
 export type GoalTimeframeToolResult = {
@@ -10,7 +10,8 @@ export type GoalTimeframeToolResult = {
   notify: boolean;
   goal: string;
   promptTemplate: string;
-  slots: { at: string; label: string }[];
+  reasoning?: string;
+  slots: { at: string; label: string; prompt: string }[];
 };
 
 const TOOL_HINT = `
@@ -71,10 +72,14 @@ async function executeGoalTimeframe(opts: {
   const endsAt = new Date(startsAt.getTime() + opts.hours * 60 * 60 * 1000);
   const cadence = cadenceForHours(opts.hours);
 
-  const promptTemplate = await generateAgenda({
+  const planned = await generatePlanSteps({
     accountId: opts.accountId,
     workflowId: opts.workflowId,
     goalHint: opts.goal,
+    startsAt,
+    endsAt,
+    cadence,
+    timeZone: opts.timeZone,
   });
 
   const plan = await createWorkPlan({
@@ -84,16 +89,10 @@ async function executeGoalTimeframe(opts: {
     endsAt,
     cadence,
     timezone: opts.timeZone,
-    promptTemplate,
+    promptTemplate: planned.promptTemplate,
     notify: opts.notify,
+    steps: planned.steps,
   });
-
-  const slots = expandScheduleSlots({
-    startsAt: plan.startsAt,
-    endsAt: plan.endsAt,
-    cadence: plan.cadence,
-    timeZone: opts.timeZone,
-  }).map((s) => ({ at: s.at.toISOString(), label: s.label }));
 
   return {
     planId: plan.id,
@@ -101,8 +100,9 @@ async function executeGoalTimeframe(opts: {
     hours: opts.hours,
     notify: opts.notify,
     goal: opts.goal,
-    promptTemplate,
-    slots,
+    promptTemplate: planned.promptTemplate,
+    reasoning: planned.reasoning,
+    slots: planned.steps,
   };
 }
 
@@ -167,9 +167,12 @@ export async function runWorkHarness(opts: {
           planId: schedule.planId,
           hours: schedule.hours,
           notify: schedule.notify,
-          slots: schedule.slots.map((s) => `[prompt ${s.label}]`),
+          slots: schedule.slots.map(
+            (s) => `[prompt ${s.label}] ${s.prompt.slice(0, 80)}`,
+          ),
+          reasoning: schedule.reasoning,
         }) +
-        `\n\nConfirm briefly that the goal timeframe is set and mention the first few timed prompts.`,
+        `\n\nConfirm briefly. The UI already shows each timed prompt card — keep your reply short.`,
     },
   ]);
 

@@ -616,24 +616,38 @@ export default function MessageList({
             return (
               <Message key={m.id} align="start">
                 <MessageContent className="max-w-none">
-                  <div className="bg-muted/40 flex flex-col gap-2 rounded-2xl border px-3 py-2.5">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-sm font-medium leading-snug">
-                        {m.goal || "Goal timeframe"}
+                  <div className="flex flex-col gap-2.5">
+                    {m.reasoning ? (
+                      <p className="text-muted-foreground text-sm leading-relaxed">
+                        {m.reasoning}
                       </p>
-                      <span className="text-muted-foreground shrink-0 text-[10px]">
-                        {m.notify ? "notifies" : "silent"}
-                      </span>
-                    </div>
-                    <ul className="flex flex-wrap gap-1.5">
+                    ) : null}
+                    <ul className="flex flex-col gap-2">
                       {m.slots.map((slot) => (
                         <li key={`${slot.at}-${slot.label}`}>
-                          <span className="bg-background text-foreground inline-block rounded-lg border px-2 py-1 font-mono text-[11px] leading-none">
-                            [prompt {slot.label}]
-                          </span>
+                          <div className="bg-muted/40 flex flex-col gap-2 rounded-2xl border px-3 py-2.5">
+                            <p className="text-sm leading-snug whitespace-pre-wrap">
+                              {slot.prompt}
+                            </p>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="bg-background text-foreground inline-block rounded-lg border px-2 py-1 font-mono text-[11px] leading-none">
+                                [prompt {slot.label}]
+                              </span>
+                              {m.notify ? (
+                                <span className="text-muted-foreground text-[10px]">
+                                  notifies
+                                </span>
+                              ) : null}
+                            </div>
+                          </div>
                         </li>
                       ))}
                     </ul>
+                    {!m.reasoning && m.goal ? (
+                      <p className="text-muted-foreground text-xs">
+                        Goal: {m.goal}
+                      </p>
+                    ) : null}
                   </div>
                   <MessageFooter>{m.time}</MessageFooter>
                 </MessageContent>

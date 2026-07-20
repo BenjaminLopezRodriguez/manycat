@@ -258,6 +258,10 @@ export const workPlans = createTable(
     cadence: d.jsonb().$type<WorkPlanCadence>().notNull(),
     timezone: d.varchar({ length: 64 }).notNull().default("UTC"),
     promptTemplate: d.text().notNull().default(""),
+    /** Per-fire prompt steps [{at,label,prompt}] for multi-step goals. */
+    steps: d
+      .jsonb()
+      .$type<{ at: string; label: string; prompt: string }[]>(),
     status: d
       .varchar({ length: 16 })
       .$type<WorkPlanStatus>()

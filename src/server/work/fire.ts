@@ -68,9 +68,17 @@ async function fireOnePlan(plan: WorkPlanRow, now: Date) {
     firedAt: now,
   });
 
+  const dueIso = plan.nextDueAt.toISOString();
+  const stepPrompt = Array.isArray(plan.steps)
+    ? plan.steps.find((s) => s.at === dueIso)?.prompt
+    : undefined;
   const prompt =
-    plan.promptTemplate.trim() ||
-    "Timed goal prompt: what should we push forward next?";
+    (stepPrompt?.trim() && stepPrompt.trim().length > 0
+      ? stepPrompt.trim()
+      : null) ??
+    (plan.promptTemplate.trim().length > 0
+      ? plan.promptTemplate.trim()
+      : "Timed goal prompt: what should we push forward next?");
 
   const userMsg: PersistedMsg = {
     id: msgId(),

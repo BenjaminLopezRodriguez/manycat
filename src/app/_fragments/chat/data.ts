@@ -77,13 +77,21 @@ export type MilestoneMsg = MsgBase & {
   text: string;
 };
 
-/** Timed prompts inside a goal timeframe — shown as [prompt 2:10pm Monday] tiles. */
+/** Timed prompts inside a goal timeframe — one card per step. */
 export type WorkScheduleMsg = MsgBase & {
   type: "work-schedule";
   planId: string;
   goal: string;
   notify: boolean;
-  slots: { label: string; at: string }[];
+  /** Optional planning rationale (shown above the cards). */
+  reasoning?: string;
+  slots: {
+    /** e.g. "2:10pm Monday" */
+    label: string;
+    at: string;
+    /** Prompt text that will run at that time. */
+    prompt: string;
+  }[];
 };
 
 export type ImageMsg = MsgBase & {
@@ -164,7 +172,9 @@ export function messagePreview(m: Msg): string {
     case "milestone":
       return m.text;
     case "work-schedule":
-      return `Timed prompts: ${m.slots.map((s) => s.label).join(", ")}`;
+      return m.slots[0]?.prompt
+        ? `Timed: ${m.slots[0].prompt.slice(0, 80)}`
+        : `Timed prompts: ${m.slots.map((s) => s.label).join(", ")}`;
     case "image":
       return `Image: ${m.prompt}`;
   }

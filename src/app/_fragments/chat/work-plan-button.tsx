@@ -26,7 +26,6 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { api } from "@/trpc/react";
 import type { WorkPlanCadence } from "@/server/db/schema";
-import { expandScheduleSlots } from "@/server/work/schedule-preview";
 
 /** Discrete plan windows from 6 hours to 1 week. */
 const DURATION_STEPS = [
@@ -70,7 +69,8 @@ export type WorkScheduleCreated = {
   workflowId: string;
   goal: string;
   notify: boolean;
-  slots: { label: string; at: string }[];
+  reasoning?: string;
+  slots: { label: string; at: string; prompt: string }[];
 };
 
 export function WorkPlanButton({
@@ -92,9 +92,8 @@ export function WorkPlanButton({
   const [open, setOpen] = React.useState(false);
   const [stepIndex, setStepIndex] = React.useState(DEFAULT_STEP);
 
-  const generateAgenda = api.work.generateAgenda.useMutation();
   const createPlan = api.work.createPlan.useMutation();
-  const saving = generateAgenda.isPending || createPlan.isPending;
+  const saving = createPlan.isPending;
 
   const hours = DURATION_STEPS[stepIndex]?.hours ?? 24;
   const timeZone =
@@ -109,11 +108,7 @@ export function WorkPlanButton({
     startsAt.setSeconds(0, 0);
     const endsAt = new Date(startsAt.getTime() + hours * 60 * 60 * 1000);
     const cadence = cadenceForDuration(hours);
-
-    const { agenda } = await generateAgenda.mutateAsync({
-      workflowId,
-      goalHint,
-    });
+    const goalText = goalHint?.trim() ? goalHint.trim() : "Goal timeframe";
 
     const plan = await createPlan.mutateAsync({
       workflowId,
@@ -121,30 +116,24 @@ export function WorkPlanButton({
       endsAt,
       cadence,
       timezone: timeZone,
-      promptTemplate: agenda,
+      promptTemplate: goalText,
       notify,
     });
 
-    const slots = expandScheduleSlots({
-      startsAt: new Date(plan.startsAt),
-      endsAt: new Date(plan.endsAt),
-      cadence: plan.cadence,
-      timeZone,
-    }).map((s) => ({ at: s.at.toISOString(), label: s.label }));
+    const slots =
+      plan.scheduleSlots?.map((s) => ({
+        at: s.at,
+        label: s.label,
+        prompt: s.prompt,
+      })) ?? [];
 
     onCreated?.(plan.id);
-    const goalText = (() => {
-      const fromHint = goalHint?.trim();
-      if (fromHint) return fromHint;
-      const fromAgenda = agenda.slice(0, 80).trim();
-      if (fromAgenda) return fromAgenda;
-      return "Goal timeframe";
-    })();
     onSchedule?.({
       planId: plan.id,
       workflowId,
       goal: goalText,
       notify,
+      reasoning: plan.reasoning,
       slots,
     });
     setOpen(false);

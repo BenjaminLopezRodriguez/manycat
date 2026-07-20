@@ -29,6 +29,7 @@ export type CreateWorkPlanInput = {
   timezone?: string;
   promptTemplate?: string;
   notify?: boolean;
+  steps?: { at: string; label: string; prompt: string }[];
 };
 
 export async function createWorkPlan(input: CreateWorkPlanInput) {
@@ -59,6 +60,7 @@ export async function createWorkPlan(input: CreateWorkPlanInput) {
     cadence: input.cadence,
     timezone: input.timezone ?? "UTC",
     promptTemplate,
+    steps: input.steps,
     status: nextDueAt ? "active" : "ended",
     nextDueAt,
     notify: input.notify ?? true,

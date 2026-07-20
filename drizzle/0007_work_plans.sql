@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS "manycat_work_plan" (
   "cadence" jsonb NOT NULL,
   "timezone" varchar(64) NOT NULL DEFAULT 'UTC',
   "promptTemplate" text NOT NULL DEFAULT '',
+  "steps" jsonb,
   "status" varchar(16) NOT NULL DEFAULT 'active',
   "nextDueAt" timestamptz,
   "googleEventId" varchar(256),

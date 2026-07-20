@@ -543,4 +543,7 @@ export async function ensurePersistenceSchema() {
   await db.execute(sql`
     ALTER TABLE "manycat_work_plan" ADD COLUMN IF NOT EXISTS "notify" boolean NOT NULL DEFAULT true
   `);
+  await db.execute(sql`
+    ALTER TABLE "manycat_work_plan" ADD COLUMN IF NOT EXISTS "steps" jsonb
+  `);
 }

@@ -283,6 +283,7 @@ export default function Chat() {
       planId: schedule.planId,
       goal: schedule.goal,
       notify: schedule.notify,
+      reasoning: schedule.reasoning,
       slots: schedule.slots,
       time: nowTime(),
     };
@@ -1339,6 +1340,7 @@ export default function Chat() {
             planId: schedule.planId,
             goal: schedule.goal,
             notify: schedule.notify,
+            reasoning: schedule.reasoning,
             slots: schedule.slots,
             time: nowTime(),
           };

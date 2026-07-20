@@ -18,6 +18,7 @@ import {
   pauseWorkPlan,
   updateWorkPlan,
 } from "@/server/work/plans";
+import { generatePlanSteps } from "@/server/work/plan-steps";
 import {
   extractAndStoreNotes,
   listIntelligenceChips,
@@ -95,16 +96,34 @@ export const workRouter = createTRPCRouter({
         workflowId: input.workflowId,
         ownerAccountId: ctx.accountId,
       });
-      return createWorkPlan({
+
+      const planned = await generatePlanSteps({
+        accountId: ctx.accountId,
+        workflowId: input.workflowId,
+        goalHint: input.promptTemplate ?? undefined,
+        startsAt: input.startsAt,
+        endsAt: input.endsAt,
+        cadence: input.cadence,
+        timeZone: input.timezone,
+      });
+
+      const plan = await createWorkPlan({
         accountId: ctx.accountId,
         workflowId: input.workflowId,
         startsAt: input.startsAt,
         endsAt: input.endsAt,
         cadence: input.cadence,
         timezone: input.timezone,
-        promptTemplate: input.promptTemplate,
+        promptTemplate: planned.promptTemplate ?? input.promptTemplate,
         notify: input.notify,
+        steps: planned.steps,
       });
+
+      return {
+        ...plan,
+        reasoning: planned.reasoning,
+        scheduleSlots: planned.steps,
+      };
     }),
 
   updatePlan: protectedProcedure
